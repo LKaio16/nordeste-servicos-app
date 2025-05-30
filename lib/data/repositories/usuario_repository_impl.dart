@@ -15,7 +15,7 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
   UsuarioRepositoryImpl(this.apiClient);
 
   @override
-  Future<List<Usuario>> getUsers() async {
+  Future<List<Usuario>> getUsuarios() async {
     try {
       final response = await apiClient.get('/usuarios'); // Endpoint da sua API para listar usuários
 

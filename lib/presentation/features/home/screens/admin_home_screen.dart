@@ -542,7 +542,7 @@ class QuickActionButtonWidget extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 4.0), // Espaçamento entre os botões
         child: ElevatedButton(
           onPressed: () {
-            // Navegar para a rota associada
+            Navigator.of(context).pushNamed(action.rota);
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryBlue,

@@ -13,6 +13,7 @@ import 'package:nordeste_servicos_app/presentation/features/home/providers/os_da
 import 'package:nordeste_servicos_app/presentation/features/orcamentos/providers/orcamento_dashboard_provider.dart';
 import 'package:nordeste_servicos_app/domain/entities/usuario.dart'; // Importe a entidade Usuario
 import 'package:nordeste_servicos_app/data/models/perfil_usuario_model.dart'; // Importe o PerfilUsuarioModel
+import 'package:nordeste_servicos_app/presentation/features/os/screens/nova_os_screen.dart';
 
 void main() {
   runApp(
@@ -67,7 +68,8 @@ class MyApp extends ConsumerWidget {
       home: _getHomeScreen(),
       routes: {
         '/adminHome': (context) => const AdminHomeScreen(),
-        '/tecnicoHome': (context) => const TecnicoHomeScreen(), // Adicione a rota para a tela do técnico
+        '/tecnicoHome': (context) => const TecnicoHomeScreen(),
+        '/nova-os': (context) => const NovaOsScreen(),// Adicione a rota para a tela do técnico
         // Se você não for navegar diretamente para o login via rota, não precisa aqui
         // '/login': (context) => LoginScreen(),
       },

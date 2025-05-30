@@ -23,32 +23,38 @@ abstract class OsRepository {
   Future<OrdemServico> getOrdemServicoById(int id);
 
   /// Cria uma nova ordem de serviço.
-  Future<OrdemServico> createOrdemServico(OrdemServico os); // Pode precisar de um DTO de criação
+  Future<OrdemServico> createOrdemServico(
+      OrdemServico os); // Pode precisar de um DTO de criação
 
   /// Atualiza uma ordem de serviço existente.
-  Future<OrdemServico> updateOrdemServico(OrdemServico os); // Pode precisar de um DTO de atualização
+  Future<OrdemServico> updateOrdemServico(
+      OrdemServico os); // Pode precisar de um DTO de atualização
 
   /// Deleta uma ordem de serviço pelo seu ID.
   Future<void> deleteOrdemServico(int id);
 
-  // Métodos para gerenciar detalhes da OS (alternativa a repositórios separados para detalhes)
-  // Future<List<RegistroTempo>> getRegistrosTempoByOsId(int osId);
-  // Future<RegistroTempo> createRegistroTempo(RegistroTempo registro); // Pode precisar de DTO
-  // Future<void> deleteRegistroTempo(int id);
+// Métodos para gerenciar detalhes da OS (alternativa a repositórios separados para detalhes)
+// Future<List<RegistroTempo>> getRegistrosTempoByOsId(int osId);
+// Future<RegistroTempo> createRegistroTempo(RegistroTempo registro); // Pode precisar de DTO
+// Future<void> deleteRegistroTempo(int id);
 
-  // Future<List<ItemOSUtilizado>> getItensUtilizadosByOsId(int osId);
-  // Future<ItemOSUtilizado> createItemOSUtilizado(ItemOSUtilizado item); // Pode precisar de DTO
-  // Future<void> deleteItemOSUtilizado(int id);
+// Future<List<ItemOSUtilizado>> getItensUtilizadosByOsId(int osId);
+// Future<ItemOSUtilizado> createItemOSUtilizado(ItemOSUtilizado item); // Pode precisar de DTO
+// Future<void> deleteItemOSUtilizado(int id);
 
-  // Future<List<RegistroDeslocamento>> getRegistrosDeslocamentoByOsId(int osId);
-  // Future<RegistroDeslocamento> createRegistroDeslocamento(RegistroDeslocamento registro); // Pode precisar de DTO
-  // Future<void> deleteRegistroDeslocamento(int id);
+// Future<List<RegistroDeslocamento>> getRegistrosDeslocamentoByOsId(int osId);
+// Future<RegistroDeslocamento> createRegistroDeslocamento(RegistroDeslocamento registro); // Pode precisar de DTO
+// Future<void> deleteRegistroDeslocamento(int id);
 
-  // Future<List<FotoOS>> getFotosByOsId(int osId);
-  // Future<FotoOS> uploadFoto(int osId, File fotoFile); // Lidar com File em camada superior ou DTO
-  // Future<void> deleteFoto(int fotoId);
+// Future<List<FotoOS>> getFotosByOsId(int osId);
+// Future<FotoOS> uploadFoto(int osId, File fotoFile); // Lidar com File em camada superior ou DTO
+// Future<void> deleteFoto(int fotoId);
 
-  // Future<AssinaturaOS?> getAssinaturaByOsId(int osId);
-  // Future<AssinaturaOS> uploadAssinatura(int osId, File signatureFile); // Lidar com File em camada superior ou DTO
-  // Future<void> deleteAssinatura(int osId); // Deleta pelo ID da OS ou da Assinatura?
+// Future<AssinaturaOS?> getAssinaturaByOsId(int osId);
+// Future<AssinaturaOS> uploadAssinatura(int osId, File signatureFile); // Lidar com File em camada superior ou DTO
+// Future<void> deleteAssinatura(int osId); // Deleta pelo ID da OS ou da Assinatura?
+
+  /// Obtém o próximo número de OS disponível (ex: #2550).
+  /// Retorna null se não conseguir obter.
+  Future<String?> getNextOsNumber();
 }

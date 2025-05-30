@@ -6,7 +6,7 @@ import '../../core/error/exceptions.dart';
 
 abstract class UsuarioRepository {
   /// Obtém a lista de todos os usuários.
-  Future<List<Usuario>> getUsers();
+  Future<List<Usuario>> getUsuarios();
 
   /// Obtém um usuário pelo seu ID.
   Future<Usuario> getUserById(int id);
