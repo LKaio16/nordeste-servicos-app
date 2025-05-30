@@ -3,6 +3,8 @@
 import 'package:dio/dio.dart';
 import '../../core/network/api_client.dart';
 import '../../core/error/exceptions.dart'; // Incluindo UnauthorizedException se definida
+import '../../domain/entities/auth_result.dart';
+import '../models/login_response_model.dart';
 import '../models/usuario_model.dart';
 import '../../domain/entities/usuario.dart';
 import '../../domain/repositories/usuario_repository.dart';
@@ -143,7 +145,7 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
   }
 
   @override
-  Future<Usuario> login(String email, String password) async {
+  Future<AuthResult> login(String email, String password) async { // Altere o tipo de retorno
     try {
       final Map<String, dynamic> loginData = {
         'email': email,
@@ -154,10 +156,13 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json = response.data;
-        final UsuarioModel usuarioModel = UsuarioModel.fromJson(json);
-        // TODO: Se a API retornar um token, você precisa armazená-lo e possivelmente retornar o usuário junto.
+        final LoginResponseModel loginResponseModel = LoginResponseModel.fromJson(json);
 
-        return usuarioModel.toEntity();
+        // Retorna um AuthResult contendo o usuário e o token
+        return AuthResult(
+          user: loginResponseModel.toUsuarioEntity(),
+          token: loginResponseModel.token,
+        );
 
       } else {
         throw ApiException('Falha no login: Status ${response.statusCode}');
@@ -167,9 +172,10 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
       if (e.response?.statusCode == 401) {
         throw ApiException('Credenciais inválidas.');
       }
-      rethrow;
+      // Outros erros da Dio (rede, timeout, etc.)
+      throw ApiException('Erro de rede durante o login: ${e.message}');
     } on ApiException {
-      rethrow;
+      rethrow; // Re-lança a ApiException que já tratamos (ex: credenciais inválidas)
     } catch (e) {
       throw ApiException('Erro inesperado durante o login: ${e.toString()}');
     }

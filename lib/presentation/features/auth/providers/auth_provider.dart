@@ -2,85 +2,115 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/storage/secure_storage_service.dart';
+import '../../../../domain/entities/usuario.dart';
 import '../../../../domain/repositories/usuario_repository.dart';
-import 'auth_state.dart'; // Importe a classe de estado
+import '../../../../domain/entities/auth_result.dart';
+import 'auth_state.dart';
+import '../../../shared/providers/repository_providers.dart';
+import '../../../../data/models/perfil_usuario_model.dart';
 
-import '../../../shared/providers/repository_providers.dart'; // Importe os providers de repositório
-
-
-// Define o StateNotifierProvider para o estado de autenticação
 final authProvider = StateNotifierProvider<AuthStateNotifier, AuthState>((ref) {
-  // Obtém a instância do UsuarioRepository através do provider
   final usuarioRepository = ref.read(usuarioRepositoryProvider);
-  return AuthStateNotifier(usuarioRepository);
+  final secureStorageService = ref.read(secureStorageServiceProvider);
+  return AuthStateNotifier(usuarioRepository, secureStorageService);
 });
 
-// StateNotifier que gerencia o estado AuthState
 class AuthStateNotifier extends StateNotifier<AuthState> {
   final UsuarioRepository _usuarioRepository;
+  final SecureStorageService _secureStorageService;
 
-  AuthStateNotifier(this._usuarioRepository) : super(AuthState()); // Estado inicial é AuthState()
+  AuthStateNotifier(this._usuarioRepository, this._secureStorageService) : super(AuthState()) {
+    print("AuthProvider: Initializing and checking auth status...");
+    _checkAuthStatus(); // Chame no construtor
+  }
 
-  // Método para realizar o login real
-  Future<void> login(String email, String password) async {
-    // 1. Atualiza o estado para isLoading = true e limpa erros anteriores
+  Future<void> _checkAuthStatus() async {
+    // Garanta que o estado de carregamento seja definido ao iniciar
     state = state.copyWith(isLoading: true, errorMessage: null);
+    print("AuthProvider: _checkAuthStatus started, isLoading = true.");
 
     try {
-      // CHAMA O MÉTODO DE LOGIN REAL NO REPOSITÓRIO
-      final usuarioLogado = await _usuarioRepository.login(email, password);
+      final storedData = await _secureStorageService.getLoginData();
+      final String? token = storedData['token'];
+      final String? userIdStr = storedData['id'];
+      final String? userName = storedData['name'];
+      final String? userEmail = storedData['email'];
+      final String? userCracha = storedData['cracha'];
+      final String? userPerfilStr = storedData['perfil'];
 
-      // Se a chamada acima não lançou exceção, o login foi bem-sucedido
-      // 2. Atualiza o estado para indicar sucesso no login e armazena o usuário
+      print("AuthProvider: Fetched stored data: $storedData");
+
+      if (token != null && userIdStr != null && userName != null && userEmail != null && userCracha != null && userPerfilStr != null) {
+        final Usuario restoredUser = Usuario(
+          id: int.tryParse(userIdStr),
+          nome: userName,
+          email: userEmail,
+          cracha: userCracha,
+          perfil: PerfilUsuarioModel.values.firstWhere(
+                  (e) => e.toString().split('.').last == userPerfilStr,
+              orElse: () {
+                print('Aviso: Perfil de usuário restaurado inválido "$userPerfilStr". Revertendo para TECNICO.');
+                return PerfilUsuarioModel.TECNICO;
+              }),
+        );
+
+        state = state.copyWith(
+          isAuthenticated: true,
+          authenticatedUser: restoredUser,
+          isLoading: false, // Importante: define isLoading como false
+        );
+        print("AuthProvider: Session restored for: ${restoredUser.nome}. Token: $token. isLoading = false.");
+      } else {
+        // Se alguma informação vital estiver faltando, não autentica
+        state = state.copyWith(isAuthenticated: false, isLoading: false); // Importante: define isLoading como false
+        print("AuthProvider: No persistent session found or incomplete data. isLoading = false.");
+      }
+    } catch (e) {
+      // Captura qualquer erro durante a restauração da sessão e define isLoading como false
+      state = state.copyWith(isAuthenticated: false, isLoading: false, errorMessage: 'Falha ao restaurar sessão: ${e.toString()}');
+      print("AuthProvider: Error restoring session: ${e.toString()}. isLoading = false.");
+      await _secureStorageService.deleteLoginData(); // Limpa dados potencialmente corrompidos
+    }
+  }
+
+  @override
+  Future<void> login(String email, String password) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    print("AuthProvider: Login started, isLoading = true.");
+
+    try {
+      final AuthResult authResult = await _usuarioRepository.login(email, password);
+
+      await _secureStorageService.saveLoginData(
+        token: authResult.token,
+        user: authResult.user,
+      );
+
       state = state.copyWith(
-        isLoading: false,
+        isLoading: false, // Importante: define isLoading como false
         isAuthenticated: true,
         errorMessage: null,
-        authenticatedUser: usuarioLogado, // Armazena o usuário retornado
+        authenticatedUser: authResult.user,
       );
-      print("Login bem-sucedido! Usuário: ${usuarioLogado.nome}"); // Para debug
-
-      // TODO: Armazenar token de autenticação e dados do usuário logado de forma persistente
-      // (SharedPreferences, SecureStorage). Isso é crucial para manter o usuário logado
-      // entre as sessões ou reaberturas do app.
-
-      // TODO: Redirecionar para a tela principal (Dashboard)
-      // A navegação geralmente é feita na UI, mas pode ser triggered por um listener no provider.
+      print("AuthProvider: Login successful! User: ${authResult.user.nome}. isLoading = false.");
 
     } on ApiException catch (e) {
-      // Captura exceções customizadas da API/rede lançadas pelo repositório
-      state = state.copyWith(isLoading: false, isAuthenticated: false, errorMessage: e.message, authenticatedUser: null);
-      print("Erro na API durante o login: ${e.message}"); // Para debug
-    }
-    // TODO: Se você definiu UnauthorizedException, pode capturá-la especificamente:
-    /*
-    on UnauthorizedException catch (e) {
-       state = state.copyWith(isLoading: false, isAuthenticated: false, errorMessage: 'Credenciais inválidas.', authenticatedUser: null);
-       print("Login falhou: Credenciais inválidas."); // Para debug
-    }
-    */
-    catch (e) {
-      // Captura outros erros inesperados que não são DioException ou ApiException
-      state = state.copyWith(isLoading: false, isAuthenticated: false, errorMessage: 'Ocorreu um erro inesperado durante o login.', authenticatedUser: null);
-      print("Erro inesperado durante o login: ${e.toString()}"); // Para debug
+      state = state.copyWith(isLoading: false, isAuthenticated: false, errorMessage: e.message, authenticatedUser: null); // Define isLoading como false
+      print("AuthProvider: API error during login: ${e.message}. isLoading = false.");
+    } catch (e) {
+      state = state.copyWith(isLoading: false, isAuthenticated: false, errorMessage: 'Ocorreu um erro inesperado durante o login.', authenticatedUser: null); // Define isLoading como false
+      print("AuthProvider: Unexpected error during login: ${e.toString()}. isLoading = false.");
     }
   }
 
-  // Método para realizar o logout (simples)
-  void logout() {
-    // TODO: Chamar endpoint de logout na API (se houver), limpar token/dados armazenados
-    state = AuthState(); // Reseta o estado para o padrão (não autenticado)
-    print("Logout realizado."); // Para debug
-    // TODO: Redirecionar para a tela de Login
+  @override
+  void logout() async {
+    print("AuthProvider: Logout initiated.");
+    await _secureStorageService.deleteLoginData();
+    // Ao fazer logout, resetamos o estado e definimos isAuthenticated como false
+    // e também isLoading como false (pois não estamos mais "carregando" um login)
+    state = AuthState(isAuthenticated: false, isLoading: false, authenticatedUser: null, errorMessage: null);
+    print("AuthProvider: Logout completed. Persistent data cleared. isLoading = false.");
   }
-
-// TODO: Adicionar método para verificar status de login inicial ao abrir o app
-/*
-  Future<void> checkAuthStatus() async {
-      // Verifica se há token ou credenciais armazenadas
-      // Se sim, tenta obter dados do usuário ou validar token
-      // state = state.copyWith(isAuthenticated: true, authenticatedUser: dadosDoUsuario);
-      // Se não, state = AuthState(); (já é o padrão)
-  }
-  */
 }

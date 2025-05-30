@@ -1,10 +1,12 @@
 // lib/presentation/shared/providers/repository_providers.dart
 
 // Importe os pacotes necessários do Riverpod
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Importe as classes que você quer prover (ApiClient e implementações de repositório)
 import '../../../core/network/api_client.dart';
+import '../../../core/storage/secure_storage_service.dart';
 import '../../../data/repositories/cliente_repository_impl.dart';
 import '../../../domain/repositories/cliente_repository.dart'; // Importe a interface
 import '../../../data/repositories/usuario_repository_impl.dart';
@@ -32,11 +34,14 @@ import '../../../domain/repositories/peca_material_repository.dart';
 import '../../../data/repositories/tipo_servico_repository_impl.dart';
 import '../../../domain/repositories/tipo_servico_repository.dart';
 
-
+final dioProvider = Provider<Dio>((ref) => Dio());
 // Provider para o ApiClient
 // Ele cria uma instância única do ApiClient que pode ser acessada em toda a aplicação.
+// Atualize o provider do ApiClient para injetar o SecureStorageService
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(); // Retorna uma nova instância de ApiClient
+  final dio = ref.read(dioProvider);
+  final secureStorageService = ref.read(secureStorageServiceProvider);
+  return ApiClient(dio, secureStorageService);
 });
 
 // Provider para ClienteRepository (implementação)
@@ -59,11 +64,6 @@ final equipamentoRepositoryProvider = Provider<EquipamentoRepository>((ref) {
 // Provider para OsRepository (implementação)
 final osRepositoryProvider = Provider<OsRepository>((ref) {
   return OsRepositoryImpl(ref.read(apiClientProvider));
-});
-
-// Provider para OrcamentoRepository (implementação)
-final orcamentoRepositoryProvider = Provider<OrcamentoRepository>((ref) {
-  return OrcamentoRepositoryImpl(ref.read(apiClientProvider));
 });
 
 // Provider para ItemOrcamentoRepository (implementação)
@@ -104,6 +104,11 @@ final pecaMaterialRepositoryProvider = Provider<PecaMaterialRepository>((ref) {
 // Provider para TipoServicoRepository (implementação)
 final tipoServicoRepositoryProvider = Provider<TipoServicoRepository>((ref) {
   return TipoServicoRepositoryImpl(ref.read(apiClientProvider));
+});
+
+final orcamentoRepositoryProvider = Provider<OrcamentoRepository>((ref) {
+  final apiClient = ref.read(apiClientProvider);
+  return OrcamentoRepositoryImpl(apiClient);
 });
 
 // TODO: Adicionar providers para Use Cases aqui se você os criar na camada domain/usecases

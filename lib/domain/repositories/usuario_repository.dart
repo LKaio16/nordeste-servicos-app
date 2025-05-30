@@ -1,5 +1,6 @@
 // lib/domain/repositories/usuario_repository.dart
 
+import '../entities/auth_result.dart';
 import '../entities/usuario.dart';
 import '../../core/error/exceptions.dart';
 
@@ -23,5 +24,5 @@ abstract class UsuarioRepository {
   /// Recebe email/usuário e senha.
   /// Retorna o usuário autenticado em caso de sucesso.
   /// Lança [ApiException], [UnauthorizedException] (se tratar 401), ou outras exceções em caso de falha.
-  Future<Usuario> login(String email, String password); // Adicionado este método
+  Future<AuthResult> login(String email, String password); // Altere o tipo de retorno
 }
