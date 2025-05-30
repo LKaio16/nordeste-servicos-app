@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nordeste_servicos_app/presentation/features/auth/presentation/screens/login_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/auth/providers/auth_provider.dart';
 import 'package:nordeste_servicos_app/presentation/features/auth/providers/auth_state.dart';
+import 'package:nordeste_servicos_app/presentation/features/clientes/screens/novo_cliente_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/home/screens/admin_home_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/home/screens/home_screen_tecnico.dart';
 import 'package:nordeste_servicos_app/presentation/features/home/providers/os_dashboard_data_provider.dart';
@@ -69,7 +70,8 @@ class MyApp extends ConsumerWidget {
       routes: {
         '/adminHome': (context) => const AdminHomeScreen(),
         '/tecnicoHome': (context) => const TecnicoHomeScreen(),
-        '/nova-os': (context) => const NovaOsScreen(),// Adicione a rota para a tela do técnico
+        '/nova-os': (context) => const NovaOsScreen(),
+        '/novo-cliente': (context) => const NovoClienteScreen(),
         // Se você não for navegar diretamente para o login via rota, não precisa aqui
         // '/login': (context) => LoginScreen(),
       },
@@ -77,3 +79,4 @@ class MyApp extends ConsumerWidget {
     );
   }
 }
+

@@ -1,46 +1,84 @@
 // lib/data/models/cliente_model.dart
 
 import 'package:json_annotation/json_annotation.dart';
+import 'package:nordeste_servicos_app/data/models/tipo_cliente.dart';
+
+// Importar o enum TipoCliente e a entidade Cliente
 
 import '../../domain/entities/cliente.dart';
-//import 'package:nordeste_servicos/domain/entities/cliente.dart'; // Importe a entidade (se usar camada domain)
 
-// Esta linha é necessária para o gerador de código JSON
-part 'cliente_model.g.dart'; // O gerador criará este arquivo
+part 'cliente_model.g.dart'; // Gerado pelo build_runner
 
-// Anotação para indicar que esta classe deve ter código de serialização/desserialização gerado
+// Modelo para representar os dados do Cliente recebidos da API
 @JsonSerializable()
 class ClienteModel {
-  final int? id; // Use int ou String dependendo do tipo do ID no seu banco/API
-  final String nomeRazaoSocial;
-  final String endereco;
-  final String telefone;
+  final int id; // ID geralmente não é nulo ao receber da API
+
+  // Informações Pessoais/Empresariais
+  final TipoCliente tipoCliente;
+  final String nomeCompleto;
+  final String cpfCnpj;
   final String email;
-  final String cnpjCpf;
+
+  // Contato
+  final String telefonePrincipal;
+  final String? telefoneAdicional; // Pode ser nulo
+
+  // Endereço
+  final String cep;
+  final String rua;
+  final String numero;
+  final String? complemento; // Pode ser nulo
+  final String bairro;
+  final String cidade;
+  final String estado;
+
+  // Campos antigos removidos
+  // final String nomeRazaoSocial;
+  // final String endereco;
+  // final String telefone;
+  // final String cnpjCpf;
 
   // Construtor
   ClienteModel({
-    this.id, // ID pode ser opcional na criação (vem da API na resposta)
-    required this.nomeRazaoSocial,
-    required this.endereco,
-    required this.telefone,
+    required this.id,
+    required this.tipoCliente,
+    required this.nomeCompleto,
+    required this.cpfCnpj,
     required this.email,
-    required this.cnpjCpf,
+    required this.telefonePrincipal,
+    this.telefoneAdicional,
+    required this.cep,
+    required this.rua,
+    required this.numero,
+    this.complemento,
+    required this.bairro,
+    required this.cidade,
+    required this.estado,
   });
 
-// Métodos gerados pelo json_serializable:
-factory ClienteModel.fromJson(Map<String, dynamic> json) => _$ClienteModelFromJson(json);
-Map<String, dynamic> toJson() => _$ClienteModelToJson(this);
+  // Métodos gerados pelo json_serializable:
+  factory ClienteModel.fromJson(Map<String, dynamic> json) => _$ClienteModelFromJson(json);
+  Map<String, dynamic> toJson() => _$ClienteModelToJson(this);
 
-// Opcional: Método para converter Model para Entity (se usar camada Domain)
+  // Método para converter Model para Entity (camada Domain)
   Cliente toEntity() {
     return Cliente(
       id: id,
-      nomeRazaoSocial: nomeRazaoSocial,
-      endereco: endereco,
-      telefone: telefone,
+      tipoCliente: tipoCliente,
+      nomeCompleto: nomeCompleto,
+      cpfCnpj: cpfCnpj,
       email: email,
-      cnpjCpf: cnpjCpf,
+      telefonePrincipal: telefonePrincipal,
+      telefoneAdicional: telefoneAdicional,
+      cep: cep,
+      rua: rua,
+      numero: numero,
+      complemento: complemento,
+      bairro: bairro,
+      cidade: cidade,
+      estado: estado,
     );
   }
 }
+

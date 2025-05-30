@@ -1,6 +1,8 @@
 // lib/domain/repositories/cliente_repository.dart
 
 import '../entities/cliente.dart';
+// *** CORREÇÃO: Importar o DTO para usar nas assinaturas ***
+import '../../data/models/cliente_request_dto.dart'; // Ajuste o caminho se necessário
 import '/core/error/exceptions.dart';
 
 abstract class ClienteRepository {
@@ -12,15 +14,18 @@ abstract class ClienteRepository {
   /// Lança [ApiException] ou [NotFoundException] se o cliente não for encontrado.
   Future<Cliente> getClienteById(int id);
 
+  // *** CORREÇÃO: createCliente recebe ClienteRequestDTO ***
   /// Cria um novo cliente.
   /// Lança [ApiException] ou [BusinessException] em caso de validação da API.
-  Future<Cliente> createCliente(Cliente cliente);
+  Future<Cliente> createCliente(ClienteRequestDTO dto);
 
+  // *** CORREÇÃO: updateCliente recebe ID e ClienteRequestDTO ***
   /// Atualiza um cliente existente.
   /// Lança [ApiException], [BusinessException] ou [NotFoundException].
-  Future<Cliente> updateCliente(Cliente cliente);
+  Future<Cliente> updateCliente(int id, ClienteRequestDTO dto);
 
   /// Deleta um cliente pelo seu ID.
   /// Lança [ApiException] ou [NotFoundException].
   Future<void> deleteCliente(int id);
 }
+

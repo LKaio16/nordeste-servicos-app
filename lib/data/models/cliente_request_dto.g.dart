@@ -1,13 +1,13 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'cliente_model.dart';
+part of 'cliente_request_dto.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-ClienteModel _$ClienteModelFromJson(Map<String, dynamic> json) => ClienteModel(
-      id: (json['id'] as num).toInt(),
+ClienteRequestDTO _$ClienteRequestDTOFromJson(Map<String, dynamic> json) =>
+    ClienteRequestDTO(
       tipoCliente: $enumDecode(_$TipoClienteEnumMap, json['tipoCliente']),
       nomeCompleto: json['nomeCompleto'] as String,
       cpfCnpj: json['cpfCnpj'] as String,
@@ -23,19 +23,19 @@ ClienteModel _$ClienteModelFromJson(Map<String, dynamic> json) => ClienteModel(
       estado: json['estado'] as String,
     );
 
-Map<String, dynamic> _$ClienteModelToJson(ClienteModel instance) =>
+Map<String, dynamic> _$ClienteRequestDTOToJson(ClienteRequestDTO instance) =>
     <String, dynamic>{
-      'id': instance.id,
       'tipoCliente': _$TipoClienteEnumMap[instance.tipoCliente]!,
       'nomeCompleto': instance.nomeCompleto,
       'cpfCnpj': instance.cpfCnpj,
       'email': instance.email,
       'telefonePrincipal': instance.telefonePrincipal,
-      'telefoneAdicional': instance.telefoneAdicional,
+      if (instance.telefoneAdicional case final value?)
+        'telefoneAdicional': value,
       'cep': instance.cep,
       'rua': instance.rua,
       'numero': instance.numero,
-      'complemento': instance.complemento,
+      if (instance.complemento case final value?) 'complemento': value,
       'bairro': instance.bairro,
       'cidade': instance.cidade,
       'estado': instance.estado,

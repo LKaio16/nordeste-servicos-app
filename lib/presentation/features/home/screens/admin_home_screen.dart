@@ -109,7 +109,7 @@ final List<QuickAction> mockQuickActions = [
   QuickAction(
     titulo: 'Add Cliente',
     icon: Icons.person_add_outlined,
-    rota: '/add-cliente',
+    rota: '/novo-cliente',
   ),
   QuickAction(
     titulo: 'Add Técnico',

@@ -103,7 +103,7 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
     final clienteItems = state.clientes.map((Cliente cliente) {
       return DropdownMenuItem<String>(
         value: cliente.id.toString(), // Usar ID como valor
-        child: Text(cliente.nomeRazaoSocial),
+        child: Text(cliente.nomeCompleto),
       );
     }).toList();
 
