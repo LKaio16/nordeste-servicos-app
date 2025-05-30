@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart'; // Para formatação de data
+import 'package:google_fonts/google_fonts.dart'; // Importando Google Fonts para fontes modernas
 
 // Use package imports for robustness
 import 'package:nordeste_servicos_app/presentation/features/os/providers/nova_os_provider.dart';
@@ -11,14 +12,25 @@ import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
 import 'package:nordeste_servicos_app/domain/entities/equipamento.dart';
 import 'package:nordeste_servicos_app/domain/entities/usuario.dart'; // Assumindo que Tecnico é um Usuario
 
-// Definição de cores (reutilizando do admin_home_screen ou definindo novas se necessário)
+// Definição de cores modernizadas
 class AppColors {
-  static const Color primaryBlue = Color(0xFF0D47A1);
-  static const Color lightGrey = Color(0xFFF5F5F5);
-  static const Color darkGrey = Color(0xFF757575);
-  static const Color mediumOrange = Color(0xFFFF9800); // Cor do botão Média
-  static const Color errorRed = Color(0xFFE53935);
-  static const Color successGreen = Color(0xFF4CAF50);
+  // Cores principais
+  static const Color primaryBlue = Color(0xFF1A73E8); // Azul principal mais vibrante
+  static const Color secondaryBlue = Color(0xFF4285F4); // Azul secundário
+  static const Color accentBlue = Color(0xFF8AB4F8); // Azul claro para acentos
+  static const Color darkBlue = Color(0xFF0D47A1); // Azul escuro para detalhes
+
+  // Cores de status
+  static const Color successGreen = Color(0xFF34A853); // Verde mais moderno
+  static const Color warningOrange = Color(0xFFFFA000); // Laranja mais vibrante
+  static const Color errorRed = Color(0xFFEA4335); // Vermelho mais moderno
+
+  // Cores de fundo e texto
+  static const Color backgroundGray = Color(0xFFF8F9FA); // Fundo cinza claro
+  static const Color cardBackground = Colors.white; // Fundo dos cards
+  static const Color textDark = Color(0xFF202124); // Texto escuro
+  static const Color textLight = Color(0xFF5F6368); // Texto cinza
+  static const Color dividerColor = Color(0xFFEEEEEE); // Cor para divisores
 }
 
 class NovaOsScreen extends ConsumerStatefulWidget {
@@ -28,7 +40,7 @@ class NovaOsScreen extends ConsumerStatefulWidget {
   ConsumerState<NovaOsScreen> createState() => _NovaOsScreenState();
 }
 
-class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
+class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _descricaoController = TextEditingController();
 
@@ -39,18 +51,37 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
   DateTime _selectedDataAbertura = DateTime.now();
   DateTime? _selectedDataAgendamento;
 
+  // Adicionando animação para melhorar a experiência do usuário
+  late AnimationController _animationController;
+  late Animation<double> _fadeInAnimation;
+
   @override
   void initState() {
     super.initState();
+
+    // Configuração da animação
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.1, 1.0, curve: Curves.easeOut),
+      ),
+    );
+
     // Chama a função do provider para carregar os dados iniciais
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(novaOsProvider.notifier).loadInitialData();
+      _animationController.forward();
     });
   }
 
   @override
   void dispose() {
     _descricaoController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -60,6 +91,26 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
       initialDate: _selectedDataAgendamento ?? DateTime.now(),
       firstDate: DateTime.now(), // Não permitir agendar para o passado
       lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppColors.primaryBlue,
+              onPrimary: Colors.white,
+              onSurface: AppColors.textDark,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primaryBlue,
+                textStyle: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null && picked != _selectedDataAgendamento) {
       setState(() {
@@ -83,12 +134,38 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
       if (success && mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ordem de Serviço criada com sucesso!'), backgroundColor: AppColors.successGreen),
+          SnackBar(
+            content: Text(
+              'Ordem de Serviço criada com sucesso!',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            backgroundColor: AppColors.successGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            margin: EdgeInsets.all(12),
+          ),
         );
       } else if (mounted) {
         // Erro já é tratado pelo estado do provider, mas podemos mostrar um SnackBar aqui também
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ref.read(novaOsProvider).submissionError ?? 'Erro ao criar OS.'), backgroundColor: AppColors.errorRed),
+          SnackBar(
+            content: Text(
+              ref.read(novaOsProvider).submissionError ?? 'Erro ao criar OS.',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            backgroundColor: AppColors.errorRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            margin: EdgeInsets.all(12),
+          ),
         );
       }
     }
@@ -103,7 +180,10 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
     final clienteItems = state.clientes.map((Cliente cliente) {
       return DropdownMenuItem<String>(
         value: cliente.id.toString(), // Usar ID como valor
-        child: Text(cliente.nomeCompleto),
+        child: Text(
+          cliente.nomeCompleto,
+          style: GoogleFonts.poppins(),
+        ),
       );
     }).toList();
 
@@ -111,21 +191,35 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
     final equipamentoItems = state.equipamentos.map((Equipamento equipamento) {
       return DropdownMenuItem<String>(
         value: equipamento.id.toString(),
-        child: Text('${equipamento.marcaModelo} (${equipamento.numeroSerieChassi})'),
+        child: Text(
+          '${equipamento.marcaModelo} (${equipamento.numeroSerieChassi})',
+          style: GoogleFonts.poppins(),
+        ),
       );
     }).toList();
 
     final tecnicoItems = state.tecnicos.map((Usuario tecnico) {
       return DropdownMenuItem<String>(
         value: tecnico.id.toString(),
-        child: Text(tecnico.nome),
+        child: Text(
+          tecnico.nome,
+          style: GoogleFonts.poppins(),
+        ),
       );
     }).toList();
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
-        title: const Text('Nova Ordem de Serviço'),
+        title: Text(
+          'Nova Ordem de Serviço',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
         backgroundColor: AppColors.primaryBlue,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
@@ -133,110 +227,257 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
       ),
       body: Stack(
         children: [
+          // Elementos decorativos de fundo
+          Positioned(
+            top: -50,
+            right: -50,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                color: AppColors.accentBlue.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -80,
+            left: -80,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+
           if (state.isLoading)
-            const Center(child: CircularProgressIndicator())
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 50,
+                    height: 50,
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
+                      strokeWidth: 3,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Carregando dados...',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ],
+              ),
+            )
           else if (state.errorMessage != null)
             Center(
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, color: AppColors.errorRed, size: 48),
-                      const SizedBox(height: 16),
-                      Text('Erro ao carregar dados: ${state.errorMessage}', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.errorRed)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => ref.read(novaOsProvider.notifier).loadInitialData(),
-                        child: const Text('Tentar Novamente'),
-                      )
-                    ]),
+                padding: const EdgeInsets.all(24.0),
+                child: Card(
+                  elevation: 4,
+                  shadowColor: AppColors.errorRed.withOpacity(0.3),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.errorRed.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.error_outline,
+                            color: AppColors.errorRed,
+                            size: 48,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Erro ao carregar dados',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          state.errorMessage!,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: AppColors.textLight,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () => ref.read(novaOsProvider.notifier).loadInitialData(),
+                          icon: Icon(Icons.refresh, color: Colors.white),
+                          label: Text(
+                            'Tentar Novamente',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryBlue,
+                            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             )
           else
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildOsNumberDisplay(state.nextOsNumber), // Número da OS
-                    const SizedBox(height: 16),
-                    _buildDropdownFormField(
-                      label: 'Cliente*',
-                      hint: 'Selecione o cliente',
-                      value: _selectedClienteId,
-                      items: clienteItems,
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedClienteId = value;
-                          _selectedEquipamentoId = null; // Limpa equipamento ao trocar cliente
-                          // TODO: Chamar ref.read(novaOsProvider.notifier).loadEquipamentosPorCliente(value!);
-                        });
-                      },
-                      validator: (value) => value == null ? 'Campo obrigatório' : null,
+            SafeArea(
+              child: FadeTransition(
+                opacity: _fadeInAnimation,
+                child: SingleChildScrollView(
+                  physics: BouncingScrollPhysics(),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Card(
+                    elevation: 4,
+                    shadowColor: AppColors.primaryBlue.withOpacity(0.2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    const SizedBox(height: 16),
-                    _buildDropdownFormField(
-                      label: 'Equipamento*',
-                      hint: _selectedClienteId == null ? 'Selecione um cliente primeiro' : 'Selecione o equipamento',
-                      value: _selectedEquipamentoId,
-                      items: equipamentoItems, // Idealmente filtrados pelo cliente
-                      onChanged: _selectedClienteId == null ? null : (value) {
-                        setState(() {
-                          _selectedEquipamentoId = value;
-                        });
-                      },
-                      validator: (value) => value == null ? 'Campo obrigatório' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextFormField(
-                      controller: _descricaoController,
-                      label: 'Descrição do Problema*',
-                      hint: 'Descreva o problema relatado',
-                      maxLines: 4,
-                      validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDropdownFormField(
-                      label: 'Técnico Responsável*',
-                      hint: 'Selecione o técnico',
-                      value: _selectedTecnicoId,
-                      items: tecnicoItems,
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedTecnicoId = value;
-                        });
-                      },
-                      validator: (value) => value == null ? 'Campo obrigatório' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildPrioridadeSelector(),
-                    const SizedBox(height: 16),
-                    _buildDateField(
-                      label: 'Data de Abertura',
-                      selectedDate: _selectedDataAbertura,
-                      isEditable: false,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDateField(
-                      label: 'Data de Agendamento',
-                      selectedDate: _selectedDataAgendamento,
-                      isEditable: true,
-                      onTap: () => _selectDate(context),
-                    ),
-                    const SizedBox(height: 24),
-                    if (state.submissionError != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Text(
-                          'Erro ao criar OS: ${state.submissionError}',
-                          style: const TextStyle(color: AppColors.errorRed),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildFormHeader(state.nextOsNumber),
+                            const SizedBox(height: 24),
+                            _buildDropdownFormField(
+                              label: 'Cliente*',
+                              hint: 'Selecione o cliente',
+                              value: _selectedClienteId,
+                              items: clienteItems,
+                              icon: Icons.business_outlined,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedClienteId = value;
+                                  _selectedEquipamentoId = null; // Limpa equipamento ao trocar cliente
+                                  // TODO: Chamar ref.read(novaOsProvider.notifier).loadEquipamentosPorCliente(value!);
+                                });
+                              },
+                              validator: (value) => value == null ? 'Campo obrigatório' : null,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildDropdownFormField(
+                              label: 'Equipamento*',
+                              hint: _selectedClienteId == null ? 'Selecione um cliente primeiro' : 'Selecione o equipamento',
+                              value: _selectedEquipamentoId,
+                              items: equipamentoItems, // Idealmente filtrados pelo cliente
+                              icon: Icons.build_outlined,
+                              onChanged: _selectedClienteId == null ? null : (value) {
+                                setState(() {
+                                  _selectedEquipamentoId = value;
+                                });
+                              },
+                              validator: (value) => value == null ? 'Campo obrigatório' : null,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildTextFormField(
+                              controller: _descricaoController,
+                              label: 'Descrição do Problema*',
+                              hint: 'Descreva o problema relatado',
+                              icon: Icons.description_outlined,
+                              maxLines: 4,
+                              validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildDropdownFormField(
+                              label: 'Técnico Responsável*',
+                              hint: 'Selecione o técnico',
+                              value: _selectedTecnicoId,
+                              items: tecnicoItems,
+                              icon: Icons.engineering_outlined,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedTecnicoId = value;
+                                });
+                              },
+                              validator: (value) => value == null ? 'Campo obrigatório' : null,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildPrioridadeSelector(),
+                            const SizedBox(height: 20),
+                            _buildDateField(
+                              label: 'Data de Abertura',
+                              selectedDate: _selectedDataAbertura,
+                              isEditable: false,
+                              icon: Icons.event_note_outlined,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildDateField(
+                              label: 'Data de Agendamento',
+                              selectedDate: _selectedDataAgendamento,
+                              isEditable: true,
+                              icon: Icons.calendar_month_outlined,
+                              onTap: () => _selectDate(context),
+                            ),
+                            const SizedBox(height: 32),
+                            if (state.submissionError != null)
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                margin: const EdgeInsets.only(bottom: 16),
+                                decoration: BoxDecoration(
+                                  color: AppColors.errorRed.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: AppColors.errorRed.withOpacity(0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: AppColors.errorRed,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Erro ao criar OS: ${state.submissionError}',
+                                        style: GoogleFonts.poppins(
+                                          color: AppColors.errorRed,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            _buildActionButtons(isSubmitting: state.isSubmitting),
+                          ],
                         ),
                       ),
-                    _buildActionButtons(isSubmitting: state.isSubmitting),
-                  ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -244,8 +485,36 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
           if (state.isSubmitting)
             Container(
               color: Colors.black.withOpacity(0.3),
-              child: const Center(
-                child: CircularProgressIndicator(),
+              child: Center(
+                child: Card(
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'Criando Ordem de Serviço...',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
         ],
@@ -253,22 +522,64 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
     );
   }
 
-  Widget _buildOsNumberDisplay(String? nextOsNumber) {
+  Widget _buildFormHeader(String? nextOsNumber) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Número da OS',
-          style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.add_circle_outline,
+                color: AppColors.primaryBlue,
+                size: 24,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text(
+              'Nova Ordem de Serviço',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          nextOsNumber ?? '#----', // Mostra o número ou placeholder
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primaryBlue,
-          ),
+        SizedBox(height: 16),
+        Divider(color: AppColors.dividerColor),
+        SizedBox(height: 16),
+        Row(
+          children: [
+            Icon(
+              Icons.tag_outlined,
+              color: AppColors.primaryBlue,
+              size: 20,
+            ),
+            SizedBox(width: 8),
+            Text(
+              'Número da OS:',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textLight,
+              ),
+            ),
+            SizedBox(width: 8),
+            Text(
+              nextOsNumber ?? '#----',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryBlue,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -281,39 +592,93 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
     required List<DropdownMenuItem<String>> items,
     required ValueChanged<String?>? onChanged,
     required FormFieldValidator<String>? validator,
+    required IconData icon,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[800]),
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textDark,
+          ),
         ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: value,
-          items: items,
-          onChanged: onChanged,
-          validator: validator,
-          decoration: InputDecoration(
-            hintText: hint,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.grey[400]!),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.grey[400]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
-            filled: onChanged == null, // Desabilita visualmente se onChanged for null
-            fillColor: onChanged == null ? Colors.grey[200] : null,
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryBlue.withOpacity(0.1),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
-          isExpanded: true,
+          child: DropdownButtonFormField<String>(
+            value: value,
+            items: items,
+            onChanged: onChanged,
+            validator: validator,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: GoogleFonts.poppins(
+                color: AppColors.textLight.withOpacity(0.7),
+              ),
+              prefixIcon: Icon(
+                icon,
+                color: AppColors.primaryBlue,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Colors.grey.shade200,
+                  width: 1.5,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppColors.primaryBlue,
+                  width: 1.5,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppColors.errorRed,
+                  width: 1.5,
+                ),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppColors.errorRed,
+                  width: 1.5,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              filled: onChanged == null,
+              fillColor: onChanged == null ? Colors.grey.shade100 : null,
+            ),
+            style: GoogleFonts.poppins(
+              color: AppColors.textDark,
+              fontSize: 15,
+            ),
+            icon: Icon(
+              Icons.arrow_drop_down,
+              color: AppColors.primaryBlue,
+            ),
+            dropdownColor: Colors.white,
+            isExpanded: true,
+          ),
         ),
       ],
     );
@@ -323,6 +688,7 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
     required TextEditingController controller,
     required String label,
     required String hint,
+    required IconData icon,
     int maxLines = 1,
     FormFieldValidator<String>? validator,
   }) {
@@ -331,29 +697,76 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[800]),
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textDark,
+          ),
         ),
         const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          maxLines: maxLines,
-          validator: validator,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey[500]),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.grey[400]!),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryBlue.withOpacity(0.1),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: controller,
+            maxLines: maxLines,
+            validator: validator,
+            style: GoogleFonts.poppins(
+              color: AppColors.textDark,
+              fontSize: 15,
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide(color: Colors.grey[400]!),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: GoogleFonts.poppins(
+                color: AppColors.textLight.withOpacity(0.7),
+              ),
+              prefixIcon: Icon(
+                icon,
+                color: AppColors.primaryBlue,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: Colors.grey.shade200,
+                  width: 1.5,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppColors.primaryBlue,
+                  width: 1.5,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppColors.errorRed,
+                  width: 1.5,
+                ),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppColors.errorRed,
+                  width: 1.5,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
           ),
         ),
       ],
@@ -363,8 +776,8 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
   Widget _buildPrioridadeSelector() {
     // Cores baseadas na imagem de referência
     const Map<String, Color> prioridadeColors = {
-      'Baixa': AppColors.successGreen, // Ajustar se necessário
-      'Média': AppColors.mediumOrange,
+      'Baixa': AppColors.successGreen,
+      'Média': AppColors.warningOrange,
       'Alta': AppColors.errorRed,
     };
 
@@ -373,45 +786,90 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
       children: [
         Text(
           'Prioridade',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[800]),
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textDark,
+          ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: ['Baixa', 'Média', 'Alta'].map((prioridade) {
             bool isSelected = _selectedPrioridade == prioridade;
             Color selectedColor = prioridadeColors[prioridade] ?? AppColors.primaryBlue;
 
+            // Ícones para cada prioridade
+            IconData priorityIcon;
+            if (prioridade == 'Baixa') {
+              priorityIcon = Icons.arrow_downward;
+            } else if (prioridade == 'Média') {
+              priorityIcon = Icons.remove;
+            } else {
+              priorityIcon = Icons.arrow_upward;
+            }
+
             return Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                child: ChoiceChip(
-                  label: SizedBox(
-                    width: double.infinity, // Faz o label ocupar todo o espaço
-                    child: Text(
-                      prioridade,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black87,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedPrioridade = prioridade;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: isSelected
+                          ? LinearGradient(
+                        colors: [
+                          selectedColor,
+                          selectedColor.withOpacity(0.8),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                          : null,
+                      color: isSelected ? null : AppColors.backgroundGray,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: isSelected
+                          ? [
+                        BoxShadow(
+                          color: selectedColor.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ]
+                          : null,
+                      border: isSelected
+                          ? null
+                          : Border.all(
+                        color: Colors.grey.shade300,
+                        width: 1.5,
                       ),
                     ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          priorityIcon,
+                          color: isSelected ? Colors.white : selectedColor,
+                          size: 20,
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          prioridade,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            color: isSelected ? Colors.white : AppColors.textDark,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() {
-                        _selectedPrioridade = prioridade;
-                      });
-                    }
-                  },
-                  selectedColor: selectedColor,
-                  backgroundColor: AppColors.lightGrey,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                      side: BorderSide(color: isSelected ? Colors.transparent : Colors.grey[400]!)
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
                 ),
               ),
             );
@@ -425,46 +883,69 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
     required String label,
     required DateTime? selectedDate,
     required bool isEditable,
+    required IconData icon,
     VoidCallback? onTap,
   }) {
     String formattedDate = selectedDate != null
-        ? (label == 'Data de Agendamento' ? DateFormat('dd/MM/yyyy').format(selectedDate) : DateFormat('yyyy-MM-dd').format(selectedDate))
-        : (label == 'Data de Agendamento' ? 'dd/mm/aaaa' : '');
+        ? (label == 'Data de Agendamento' ? DateFormat('dd/MM/yyyy').format(selectedDate) : DateFormat('dd/MM/yyyy').format(selectedDate))
+        : (label == 'Data de Agendamento' ? 'Selecione uma data' : '');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[800]),
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textDark,
+          ),
         ),
         const SizedBox(height: 8),
         InkWell(
           onTap: isEditable ? onTap : null,
-          child: InputDecorator(
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: BorderSide(color: Colors.grey[400]!),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+              border: Border.all(
+                color: isEditable ? Colors.grey.shade200 : Colors.grey.shade300,
+                width: 1.5,
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: BorderSide(color: Colors.grey[400]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 14.0), // Ajuste padding vertical
-              suffixIcon: isEditable ? const Icon(Icons.calendar_today, color: AppColors.darkGrey) : null,
-              filled: !isEditable, // Preenche se não for editável
-              fillColor: !isEditable ? Colors.grey[200] : null,
             ),
-            child: Text(
-              formattedDate,
-              style: TextStyle(
-                color: selectedDate != null ? Colors.black87 : Colors.grey[500],
-                fontSize: 16,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(
+                children: [
+                  Icon(
+                    icon,
+                    color: AppColors.primaryBlue,
+                    size: 20,
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    formattedDate,
+                    style: GoogleFonts.poppins(
+                      color: selectedDate != null ? AppColors.textDark : AppColors.textLight.withOpacity(0.7),
+                      fontSize: 15,
+                    ),
+                  ),
+                  Spacer(),
+                  if (isEditable)
+                    Icon(
+                      Icons.calendar_today,
+                      color: AppColors.primaryBlue,
+                      size: 20,
+                    ),
+                ],
               ),
             ),
           ),
@@ -478,34 +959,89 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
-          child: OutlinedButton(
+          child: OutlinedButton.icon(
             onPressed: isSubmitting ? null : () {
               Navigator.of(context).pop();
             },
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: isSubmitting ? Colors.grey : AppColors.primaryBlue),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+            icon: Icon(
+              Icons.cancel_outlined,
+              color: isSubmitting ? Colors.grey : AppColors.textLight,
             ),
-            child: Text('Cancelar', style: TextStyle(color: isSubmitting ? Colors.grey : AppColors.primaryBlue)),
+            label: Text(
+              'Cancelar',
+              style: GoogleFonts.poppins(
+                color: isSubmitting ? Colors.grey : AppColors.textLight,
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(
+                color: isSubmitting ? Colors.grey.shade300 : Colors.grey.shade400,
+                width: 1.5,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: ElevatedButton(
-            onPressed: isSubmitting ? null : _submitForm,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isSubmitting ? Colors.grey : AppColors.primaryBlue,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Container(
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: isSubmitting
+                  ? null
+                  : LinearGradient(
+                colors: [AppColors.primaryBlue, AppColors.secondaryBlue],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: isSubmitting
+                  ? null
+                  : [
+                BoxShadow(
+                  color: AppColors.primaryBlue.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ],
             ),
-            child: isSubmitting
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                : const Text('Criar OS', style: TextStyle(color: Colors.white)),
+            child: ElevatedButton.icon(
+              onPressed: isSubmitting ? null : _submitForm,
+              icon: isSubmitting
+                  ? SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+                  : Icon(Icons.check_circle_outline, color: Colors.white),
+              label: Text(
+                'Criar OS',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isSubmitting ? Colors.grey : Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 }
-

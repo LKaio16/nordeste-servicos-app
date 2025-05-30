@@ -2,21 +2,34 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart'; // Importando Google Fonts para fontes modernas
 
 import '../../../../domain/entities/usuario.dart';
-import '../../auth/providers/auth_provider.dart'; // Seu AuthProvider
+import '../../auth/providers/auth_provider.dart';
 import '../../auth/providers/auth_state.dart';
-import '../providers/os_dashboard_data_provider.dart'; // O que você já tem para OS
-import 'package:nordeste_servicos_app/presentation/features/orcamentos/providers/orcamento_dashboard_provider.dart'; // O NOVO para Orçamentos
-import 'package:nordeste_servicos_app/presentation/features/dashboard/models/dashboard_data.dart'; // Importe DashboardData
+import '../providers/os_dashboard_data_provider.dart';
+import 'package:nordeste_servicos_app/presentation/features/orcamentos/providers/orcamento_dashboard_provider.dart';
+import 'package:nordeste_servicos_app/presentation/features/dashboard/models/dashboard_data.dart';
 
-// Definição de cores
+// Definição de cores modernizadas
 class AppColors {
-  static const Color primaryBlue = Color(0xFF0D47A1);
-  static const Color successGreen = Color(0xFF4CAF50);
-  static const Color warningOrange = Color(0xFFFF9800);
-  static const Color errorRed = Color(0xFFE53935);
-  static const Color lightGrey = Color(0xFFF5F5F5);
+  // Cores principais
+  static const Color primaryBlue = Color(0xFF1A73E8); // Azul principal mais vibrante
+  static const Color secondaryBlue = Color(0xFF4285F4); // Azul secundário
+  static const Color accentBlue = Color(0xFF8AB4F8); // Azul claro para acentos
+  static const Color darkBlue = Color(0xFF0D47A1); // Azul escuro para detalhes
+
+  // Cores de status
+  static const Color successGreen = Color(0xFF34A853); // Verde mais moderno
+  static const Color warningOrange = Color(0xFFFFA000); // Laranja mais vibrante
+  static const Color errorRed = Color(0xFFEA4335); // Vermelho mais moderno
+
+  // Cores de fundo e texto
+  static const Color backgroundGray = Color(0xFFF8F9FA); // Fundo cinza claro
+  static const Color cardBackground = Colors.white; // Fundo dos cards
+  static const Color textDark = Color(0xFF202124); // Texto escuro
+  static const Color textLight = Color(0xFF5F6368); // Texto cinza
+  static const Color dividerColor = Color(0xFFEEEEEE); // Cor para divisores
 }
 
 // Modelos de Dados (mantidos aqui, mas considere mover para arquivos próprios em 'models')
@@ -156,13 +169,30 @@ class AdminHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<AdminHomeScreen> createState() => _AdminHomeScreenState();
 }
 
-class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
+class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
-  bool _initialDataLoaded = false; // Flag para garantir que o carregamento inicial ocorra apenas uma vez
+  bool _initialDataLoaded = false;
+
+  // Adicionando animação para melhorar a experiência do usuário
+  late AnimationController _animationController;
+  late Animation<double> _fadeInAnimation;
 
   @override
   void initState() {
     super.initState();
+
+    // Configuração da animação
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(0.1, 1.0, curve: Curves.easeOut),
+      ),
+    );
+    _animationController.forward();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authState = ref.read(authProvider);
@@ -172,6 +202,12 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
         _initialDataLoaded = true;
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   void _onItemTapped(int index) {
@@ -184,13 +220,13 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       // Já está na Home/Dashboard
         break;
       case 1:
-      // Navigator.of(context).pushNamed('/lista-os'); // Exemplo
+      // Navigator.of(context).pushNamed('/lista-os');
         break;
       case 2:
-      // Navigator.of(context).pushNamed('/lista-orcamentos'); // Exemplo
+      // Navigator.of(context).pushNamed('/lista-orcamentos');
         break;
       case 3:
-      // Navigator.of(context).pushNamed('/gestao'); // Exemplo
+      // Navigator.of(context).pushNamed('/gestao');
         break;
     }
   }
@@ -199,39 +235,108 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
   Widget build(BuildContext context) {
     final osDashboardState = ref.watch(osDashboardProvider);
     final orcamentoDashboardState = ref.watch(orcamentoDashboardProvider);
+    final size = MediaQuery.of(context).size;
 
     if (osDashboardState.isLoading || orcamentoDashboardState.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Scaffold(
+        backgroundColor: AppColors.backgroundGray,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 50,
+                height: 50,
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
+                  strokeWidth: 3,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Carregando dados...',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  color: AppColors.textDark,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     if (osDashboardState.errorMessage != null || orcamentoDashboardState.errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: AppColors.errorRed, size: 48),
-            const SizedBox(height: 16),
-            if (osDashboardState.errorMessage != null)
-              Text(
-                'Erro OS: ${osDashboardState.errorMessage}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.errorRed, fontSize: 16),
+      return Scaffold(
+        backgroundColor: AppColors.backgroundGray,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.errorRed.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.error_outline,
+                  color: AppColors.errorRed,
+                  size: 48,
+                ),
               ),
-            if (orcamentoDashboardState.errorMessage != null)
-              Text(
-                'Erro Orçamentos: ${orcamentoDashboardState.errorMessage}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.errorRed, fontSize: 16),
+              const SizedBox(height: 24),
+              if (osDashboardState.errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 8.0),
+                  child: Text(
+                    'Erro OS: ${osDashboardState.errorMessage}',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      color: AppColors.errorRed,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              if (orcamentoDashboardState.errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 8.0),
+                  child: Text(
+                    'Erro Orçamentos: ${orcamentoDashboardState.errorMessage}',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      color: AppColors.errorRed,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  ref.read(osDashboardProvider.notifier).fetchOsDashboardData();
+                  ref.read(orcamentoDashboardProvider.notifier).fetchOrcamentoDashboardData();
+                },
+                icon: Icon(Icons.refresh, color: Colors.white),
+                label: Text(
+                  'Tentar Novamente',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
               ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                ref.read(osDashboardProvider.notifier).fetchOsDashboardData();
-                ref.read(orcamentoDashboardProvider.notifier).fetchOrcamentoDashboardData();
-              },
-              child: const Text('Tentar Novamente'),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
@@ -240,81 +345,221 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
     final DashboardData displayOrcamentoData = orcamentoDashboardState.data!;
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundGray,
       appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: DashboardCardWidget(
-                    title: 'OS',
-                    count: displayOsData.totalOS,
-                    icon: Icons.description_outlined,
-                    statusItems: [
-                      StatusItem(
-                        label: 'Em andamento',
-                        value: displayOsData.osEmAndamento,
-                        color: AppColors.successGreen,
-                      ),
-                      StatusItem(
-                        label: 'Pendentes',
-                        value: displayOsData.osPendentes,
-                        color: AppColors.warningOrange,
-                      ),
-                    ],
+      body: SafeArea(
+        child: FadeTransition(
+          opacity: _fadeInAnimation,
+          child: Stack(
+            children: [
+              // Elementos decorativos de fundo
+              Positioned(
+                top: -50,
+                right: -50,
+                child: Container(
+                  width: 150,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentBlue.withOpacity(0.2),
+                    shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: DashboardCardWidget(
-                    title: 'Orçamentos',
-                    count: displayOrcamentoData.totalOrcamentos,
-                    icon: Icons.request_quote_outlined,
-                    statusItems: [
-                      StatusItem(
-                        label: 'Aprovados',
-                        value: displayOrcamentoData.orcamentosAprovados,
-                        color: AppColors.successGreen,
-                      ),
-                      StatusItem(
-                        label: 'Rejeitados',
-                        value: displayOrcamentoData.orcamentosRejeitados,
-                        color: AppColors.errorRed,
-                      ),
-                    ],
+              ),
+              Positioned(
+                bottom: -80,
+                left: -80,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.15),
+                    shape: BoxShape.circle,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            QuickActionsWidget(actions: mockQuickActions), // MODIFICADO
-            const SizedBox(height: 24),
-            TechnicianPerformanceWidget(technicians: mockTechnicians),
-            const SizedBox(height: 24),
-            RecentActivitiesWidget(activities: mockRecentActivities),
-          ],
+              ),
+
+              // Conteúdo principal
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                physics: BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Cabeçalho de boas-vindas
+                    _buildWelcomeHeader(),
+                    const SizedBox(height: 24),
+
+                    // Cards de estatísticas
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DashboardCardWidget(
+                            title: 'OS',
+                            count: displayOsData.totalOS,
+                            icon: Icons.description_outlined,
+                            statusItems: [
+                              StatusItem(
+                                label: 'Em andamento',
+                                value: displayOsData.osEmAndamento,
+                                color: AppColors.successGreen,
+                              ),
+                              StatusItem(
+                                label: 'Pendentes',
+                                value: displayOsData.osPendentes,
+                                color: AppColors.warningOrange,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: DashboardCardWidget(
+                            title: 'Orçamentos',
+                            count: displayOrcamentoData.totalOrcamentos,
+                            icon: Icons.request_quote_outlined,
+                            statusItems: [
+                              StatusItem(
+                                label: 'Aprovados',
+                                value: displayOrcamentoData.orcamentosAprovados,
+                                color: AppColors.successGreen,
+                              ),
+                              StatusItem(
+                                label: 'Rejeitados',
+                                value: displayOrcamentoData.orcamentosRejeitados,
+                                color: AppColors.errorRed,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Ações rápidas
+                    QuickActionsWidget(actions: mockQuickActions),
+                    const SizedBox(height: 24),
+
+                    // Desempenho de técnicos
+                    TechnicianPerformanceWidget(technicians: mockTechnicians),
+                    const SizedBox(height: 24),
+
+                    // Atividades recentes
+                    RecentActivitiesWidget(activities: mockRecentActivities),
+
+                    // Espaço extra no final para evitar que o conteúdo fique sob a barra de navegação
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
+  Widget _buildWelcomeHeader() {
+    final authState = ref.watch(authProvider);
+    final Usuario? adminUser = authState.authenticatedUser;
+    final String nome = adminUser?.nome?.split(' ').first ?? 'Usuário';
+
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primaryBlue, AppColors.secondaryBlue],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryBlue.withOpacity(0.3),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.white,
+            child: CircleAvatar(
+              radius: 26,
+              backgroundImage: NetworkImage(
+                adminUser?.cracha != null
+                    ? 'https://i.pravatar.cc/150?img=${adminUser!.cracha.hashCode % 20}'
+                    : 'https://i.pravatar.cc/150?img=3',
+              ),
+            ),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Bem-vindo, $nome',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  'Painel de Controle - Nordeste Serviços',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: AppColors.primaryBlue,
-      title: const AdminHeaderWidget(),
+      elevation: 0,
+      title: Row(
+        children: [
+          Image.asset(
+            '../assets/images/logo.png', // Caminho da logo
+            height: 32,
+            color: Colors.white,
+          ),
+          SizedBox(width: 8),
+          Text(
+            'OS Manager',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.settings, color: Colors.white),
+          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+          onPressed: () {
+            // Ação de notificações
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.settings_outlined, color: Colors.white),
           onPressed: () {
             // Ação de configurações
           },
         ),
         IconButton(
-          icon: const Icon(Icons.logout, color: Colors.white),
+          icon: const Icon(Icons.logout_outlined, color: Colors.white),
           onPressed: () {
             ref.read(authProvider.notifier).logout();
           },
@@ -324,87 +569,61 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
   }
 
   Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      currentIndex: _selectedIndex,
-      onTap: _onItemTapped,
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: AppColors.primaryBlue,
-      unselectedItemColor: Colors.grey,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Início',
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, -5),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: AppColors.primaryBlue,
+        unselectedItemColor: AppColors.textLight,
+        selectedLabelStyle: GoogleFonts.poppins(
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.description_outlined),
-          label: 'OS',
+        unselectedLabelStyle: GoogleFonts.poppins(
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.request_quote_outlined),
-          label: 'Orçamentos',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.add_circle_outline),
-          label: 'Gestão',
-        ),
-      ],
+        elevation: 0,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_outlined),
+            activeIcon: Icon(Icons.dashboard),
+            label: 'Início',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.description_outlined),
+            activeIcon: Icon(Icons.description),
+            label: 'OS',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.request_quote_outlined),
+            activeIcon: Icon(Icons.request_quote),
+            label: 'Orçamentos',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings_outlined),
+            activeIcon: Icon(Icons.settings),
+            label: 'Gestão',
+          ),
+        ],
+      ),
     );
   }
 }
 
-// Widgets Customizados (AdminHeaderWidget, DashboardCardWidget, StatusItemWidget, QuickActionsWidget,
-// QuickActionButtonWidget, TechnicianPerformanceWidget, TechnicianItemWidget,
-// RecentActivitiesWidget, ActivityItemWidget) permanecem inalterados.
-// Apenas garanta que eles estão no mesmo arquivo ou importados corretamente.
-
-class AdminHeaderWidget extends ConsumerWidget {
-  const AdminHeaderWidget({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-    final Usuario? adminUser = authState.authenticatedUser;
-
-    final String avatarUrl = adminUser?.cracha != null
-        ? 'https://i.pravatar.cc/150?img=${adminUser!.cracha.hashCode % 20}'
-        : 'https://i.pravatar.cc/150?img=3';
-
-    final String tituloPortal = adminUser?.nome ?? 'Carregando...';
-    final String subtituloPortal = adminUser?.perfil.name ?? 'Carregando...';
-
-    return Row(
-      children: [
-        CircleAvatar(
-          backgroundImage: NetworkImage(avatarUrl),
-          radius: 18,
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              tituloPortal,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            Text(
-              subtituloPortal,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.normal,
-                color: Colors.white70,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
+// Widgets Customizados Redesenhados
 
 class DashboardCardWidget extends StatelessWidget {
   final String title;
@@ -423,12 +642,13 @@ class DashboardCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
+      elevation: 4,
+      shadowColor: AppColors.primaryBlue.withOpacity(0.2),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -437,23 +657,37 @@ class DashboardCardWidget extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
                   ),
                 ),
-                Icon(icon, color: AppColors.primaryBlue),
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: AppColors.primaryBlue,
+                    size: 24,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             Text(
               count.toString(),
-              style: const TextStyle(
-                fontSize: 32,
+              style: GoogleFonts.poppins(
+                fontSize: 36,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primaryBlue,
               ),
             ),
+            const SizedBox(height: 16),
+            Divider(color: AppColors.dividerColor),
             const SizedBox(height: 8),
             ...statusItems.map((item) => StatusItemWidget(item: item)),
           ],
@@ -471,22 +705,31 @@ class StatusItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 4.0),
+      padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            '${item.label}: ',
-            style: TextStyle(
+            item.label,
+            style: GoogleFonts.poppins(
               fontSize: 14,
-              color: Colors.grey[700],
+              color: AppColors.textLight,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          Text(
-            item.value.toString(),
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: item.color,
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: item.color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              item.value.toString(),
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: item.color,
+              ),
             ),
           ),
         ],
@@ -495,10 +738,6 @@ class StatusItemWidget extends StatelessWidget {
   }
 }
 
-// ===============================================
-// INÍCIO DAS MODIFICAÇÕES DE LAYOUT PARA AÇÕES RÁPIDAS
-// ===============================================
-
 class QuickActionsWidget extends StatelessWidget {
   final List<QuickAction> actions;
 
@@ -506,24 +745,35 @@ class QuickActionsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Ações Rápidas',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+    return Card(
+      elevation: 4,
+      shadowColor: AppColors.primaryBlue.withOpacity(0.2),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Ações Rápidas',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: actions
+                  .map((action) => QuickActionButtonWidget(action: action))
+                  .toList(),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround, // Ajusta o espaçamento dos botões
-          children: actions
-              .map((action) => QuickActionButtonWidget(action: action))
-              .toList(),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -535,50 +785,65 @@ class QuickActionButtonWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos Expanded para que o botão preencha o espaço horizontal disponível
-    // e adicionamos um Padding para criar um espaçamento entre eles.
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4.0), // Espaçamento entre os botões
-        child: ElevatedButton(
-          onPressed: () {
+        padding: const EdgeInsets.symmetric(horizontal: 6.0),
+        child: InkWell(
+          onTap: () {
             Navigator.of(context).pushNamed(action.rota);
           },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryBlue,
-            // Aumentar o padding vertical para deixar o botão mais "cheio"
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12), // Deixar as bordas mais arredondadas
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min, // Ocupa o mínimo de espaço vertical necessário
-            children: [
-              Icon(action.icon, color: Colors.white, size: 28), // Ícone um pouco maior
-              const SizedBox(height: 8),
-              Text(
-                action.titulo,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14, // Fonte um pouco maior
-                  fontWeight: FontWeight.w600, // Levemente mais negrito
-                ),
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis, // Para lidar com textos longos
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.primaryBlue, AppColors.secondaryBlue],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ],
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryBlue.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    action.icon,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  action.titulo,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-
-// ===============================================
-// FIM DAS MODIFICAÇÕES DE LAYOUT PARA AÇÕES RÁPIDAS
-// ===============================================
-
 
 class TechnicianPerformanceWidget extends StatelessWidget {
   final List<Technician> technicians;
@@ -587,19 +852,47 @@ class TechnicianPerformanceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Desempenho por Técnico',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+    return Card(
+      elevation: 4,
+      shadowColor: AppColors.primaryBlue.withOpacity(0.2),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Desempenho por Técnico',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.people_alt_outlined,
+                    color: AppColors.primaryBlue,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...technicians.map((tech) => TechnicianItemWidget(technician: tech)),
+          ],
         ),
-        const SizedBox(height: 12),
-        ...technicians.map((tech) => TechnicianItemWidget(technician: tech)),
-      ],
+      ),
     );
   }
 }
@@ -611,48 +904,87 @@ class TechnicianItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+    // Determinar a cor com base no desempenho
+    Color performanceColor;
+    if (technician.desempenho >= 0.8) {
+      performanceColor = AppColors.successGreen;
+    } else if (technician.desempenho >= 0.6) {
+      performanceColor = AppColors.warningOrange;
+    } else {
+      performanceColor = AppColors.errorRed;
+    }
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 5,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           CircleAvatar(
+            radius: 24,
             backgroundImage: NetworkImage(technician.avatarUrl),
-            radius: 16,
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      technician.nome,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      '${technician.totalOS} OS',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                Text(
+                  technician.nome,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
                 ),
-                const SizedBox(height: 4),
-                LinearProgressIndicator(
-                  value: technician.desempenho,
-                  backgroundColor: Colors.grey[300],
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    AppColors.successGreen,
+                SizedBox(height: 4),
+                Text(
+                  '${technician.totalOS} OS atribuídas',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: AppColors.textLight,
                   ),
                 ),
               ],
             ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: performanceColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${(technician.desempenho * 100).toInt()}%',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: performanceColor,
+                  ),
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Desempenho',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: AppColors.textLight,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -667,19 +999,65 @@ class RecentActivitiesWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Atividades Recentes',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+    return Card(
+      elevation: 4,
+      shadowColor: AppColors.primaryBlue.withOpacity(0.2),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Atividades Recentes',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.history,
+                    color: AppColors.primaryBlue,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...activities.map((activity) => ActivityItemWidget(activity: activity)),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  // Navegar para a página de todas as atividades
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primaryBlue,
+                ),
+                child: Text(
+                  'Ver todas as atividades',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        ...activities.map((activity) => ActivityItemWidget(activity: activity)),
-      ],
+      ),
     );
   }
 }
@@ -691,39 +1069,64 @@ class ActivityItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+    IconData activityIcon;
+    Color activityColor;
+
+    // Definir ícone e cor com base no tipo de atividade
+    switch (activity.tipo) {
+      case 'os_concluida':
+        activityIcon = Icons.check_circle_outline;
+        activityColor = AppColors.successGreen;
+        break;
+      case 'cliente_cadastrado':
+        activityIcon = Icons.person_add_alt_1;
+        activityColor = AppColors.primaryBlue;
+        break;
+      default:
+        activityIcon = Icons.info_outline;
+        activityColor = AppColors.textLight;
+    }
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: activityColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: _getActivityColor(activity.tipo).withOpacity(0.1),
+              color: activityColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              _getActivityIcon(activity.tipo),
-              color: _getActivityColor(activity.tipo),
+              activityIcon,
+              color: activityColor,
               size: 20,
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   activity.descricao,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textDark,
                   ),
                 ),
+                SizedBox(height: 4),
                 Text(
                   activity.tempoDecorrido,
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: AppColors.textLight,
                   ),
                 ),
               ],
@@ -732,17 +1135,5 @@ class ActivityItemWidget extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Color _getActivityColor(String tipo) {
-    if (tipo == 'os_concluida') return Colors.blue;
-    if (tipo == 'cliente_cadastrado') return Colors.green;
-    return Colors.grey;
-  }
-
-  IconData _getActivityIcon(String tipo) {
-    if (tipo == 'os_concluida') return Icons.check_circle_outline;
-    if (tipo == 'cliente_cadastrado') return Icons.person_add_outlined;
-    return Icons.info_outline;
   }
 }
