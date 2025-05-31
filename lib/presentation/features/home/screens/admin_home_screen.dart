@@ -127,7 +127,7 @@ final List<QuickAction> mockQuickActions = [
   QuickAction(
     titulo: 'Add Técnico',
     icon: Icons.engineering,
-    rota: '/add-tecnico',
+    rota: '/novo-tec',
   ),
 ];
 

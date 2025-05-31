@@ -152,7 +152,6 @@ class OsRepositoryImpl implements OsRepository {
     }
   }
 
-
   @override
   Future<OrdemServico> updateOrdemServico(OrdemServico os) async {
     try {

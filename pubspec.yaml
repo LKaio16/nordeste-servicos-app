@@ -43,6 +43,8 @@ dependencies:
 
   google_fonts: ^6.2.1
 
+  freezed: ^2.4.7
+
 
 dev_dependencies:
   flutter_test:

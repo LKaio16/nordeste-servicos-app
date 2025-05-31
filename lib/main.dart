@@ -8,6 +8,7 @@ import 'package:nordeste_servicos_app/presentation/features/auth/presentation/sc
 import 'package:nordeste_servicos_app/presentation/features/auth/providers/auth_provider.dart';
 import 'package:nordeste_servicos_app/presentation/features/auth/providers/auth_state.dart';
 import 'package:nordeste_servicos_app/presentation/features/clientes/screens/novo_cliente_screen.dart';
+import 'package:nordeste_servicos_app/presentation/features/funcionario/presentation/novo_tecnico_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/home/screens/admin_home_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/home/screens/home_screen_tecnico.dart';
 import 'package:nordeste_servicos_app/presentation/features/home/providers/os_dashboard_data_provider.dart';
@@ -72,6 +73,7 @@ class MyApp extends ConsumerWidget {
         '/tecnicoHome': (context) => const TecnicoHomeScreen(),
         '/nova-os': (context) => const NovaOsScreen(),
         '/novo-cliente': (context) => const NovoClienteScreen(),
+        '/novo-tec': (context) => const NovoTecnicoScreen(),
         // Se você não for navegar diretamente para o login via rota, não precisa aqui
         // '/login': (context) => LoginScreen(),
       },
