@@ -10,7 +10,7 @@ OrdemServicoModel _$OrdemServicoModelFromJson(Map<String, dynamic> json) =>
     OrdemServicoModel(
       id: (json['id'] as num?)?.toInt(),
       numeroOS: json['numeroOS'] as String,
-      status: $enumDecode(_$StatusOSModelEnumMap, json['status']),
+      status: const StatusOSModelConverter().fromJson(json['status'] as String),
       dataAbertura: json['dataAbertura'] == null
           ? null
           : DateTime.parse(json['dataAbertura'] as String),
@@ -32,15 +32,15 @@ OrdemServicoModel _$OrdemServicoModelFromJson(Map<String, dynamic> json) =>
       problemaRelatado: json['problemaRelatado'] as String?,
       analiseFalha: json['analiseFalha'] as String?,
       solucaoAplicada: json['solucaoAplicada'] as String?,
-      prioridade:
-          $enumDecodeNullable(_$PrioridadeOSModelEnumMap, json['prioridade']),
+      prioridade: const PrioridadeOSModelConverter()
+          .fromJson(json['prioridade'] as String?),
     );
 
 Map<String, dynamic> _$OrdemServicoModelToJson(OrdemServicoModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'numeroOS': instance.numeroOS,
-      'status': _$StatusOSModelEnumMap[instance.status]!,
+      'status': const StatusOSModelConverter().toJson(instance.status),
       'dataAbertura': instance.dataAbertura?.toIso8601String(),
       'dataAgendamento': instance.dataAgendamento?.toIso8601String(),
       'dataFechamento': instance.dataFechamento?.toIso8601String(),
@@ -54,23 +54,6 @@ Map<String, dynamic> _$OrdemServicoModelToJson(OrdemServicoModel instance) =>
       'problemaRelatado': instance.problemaRelatado,
       'analiseFalha': instance.analiseFalha,
       'solucaoAplicada': instance.solucaoAplicada,
-      'prioridade': _$PrioridadeOSModelEnumMap[instance.prioridade],
+      'prioridade':
+          const PrioridadeOSModelConverter().toJson(instance.prioridade),
     };
-
-const _$StatusOSModelEnumMap = {
-  StatusOSModel.EM_ABERTO: 'EM_ABERTO',
-  StatusOSModel.ATRIBUIDA: 'ATRIBUIDA',
-  StatusOSModel.EM_ANDAMENTO: 'EM_ANDAMENTO',
-  StatusOSModel.PENDENTE_PECAS: 'PENDENTE_PECAS',
-  StatusOSModel.AGUARDANDO_APROVACAO: 'AGUARDANDO_APROVACAO',
-  StatusOSModel.CONCLUIDA: 'CONCLUIDA',
-  StatusOSModel.ENCERRADA: 'ENCERRADA',
-  StatusOSModel.CANCELADA: 'CANCELADA',
-};
-
-const _$PrioridadeOSModelEnumMap = {
-  PrioridadeOSModel.BAIXA: 'BAIXA',
-  PrioridadeOSModel.MEDIA: 'MEDIA',
-  PrioridadeOSModel.ALTA: 'ALTA',
-  PrioridadeOSModel.URGENTE: 'URGENTE',
-};

@@ -5,9 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart'; // Importando Google Fonts para fontes modernas
 
 // Importar o enum TipoCliente (ajuste o caminho se necessário)
-import '../../../../data/models/tipo_cliente.dart';
+import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
 
 // Importar o provider e o estado
+import '../../../../data/models/tipo_cliente.dart';
 import '../providers/novo_cliente_provider.dart';
 import '../providers/novo_cliente_state.dart';
 

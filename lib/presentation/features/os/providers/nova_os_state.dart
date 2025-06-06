@@ -2,7 +2,7 @@
 
 import 'package:equatable/equatable.dart';
 
-import '../../../../domain/entities/cliente.dart';
+import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
 import '../../../../domain/entities/equipamento.dart';
 import '../../../../domain/entities/usuario.dart';
 

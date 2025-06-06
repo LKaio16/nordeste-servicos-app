@@ -1,3 +1,4 @@
+// admin_home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,11 +11,8 @@ import 'package:nordeste_servicos_app/presentation/features/os/screens/os_list_s
 import '../../../../domain/entities/usuario.dart';
 import '../../../shared/providers/navigation_providers.dart';
 import '../../auth/providers/auth_provider.dart';
-
-// Removido: import '../providers/os_dashboard_data_provider.dart'; // Dados agora são carregados na DashboardPage
-// Removido: import 'package:nordeste_servicos_app/presentation/features/orcamentos/providers/orcamento_dashboard_provider.dart';
-// Removido: import 'package:nordeste_servicos_app/presentation/features/dashboard/models/dashboard_data.dart';
-
+// Importe o provider da lista de OS para poder disparar o carregamento
+import '../../os/providers/os_list_provider.dart';
 
 
 // Definição de AppColors (mantenha como está no seu projeto)
@@ -49,9 +47,6 @@ class AdminHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Lê o índice atual do provider de navegação
     final selectedIndex = ref.watch(mainNavigationIndexProvider);
-
-    // A lógica de loading/error principal foi removida daqui.
-    // Cada página (como DashboardPage) deve gerenciar seu próprio estado de carregamento/erro.
 
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
@@ -185,18 +180,13 @@ class AdminHomeScreen extends ConsumerWidget {
       unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
       onTap: (index) {
         // Atualiza o estado do provider quando uma aba é tocada
-        // Isso fará o IndexedStack mudar a página exibida
         ref.read(mainNavigationIndexProvider.notifier).state = index;
+
+        // Se a aba de 'OS' (índice 1) for selecionada, recarrega as Ordens de Serviço
+        if (index == 1) {
+          ref.read(osListProvider.notifier).loadOrdensServico(refresh: true);
+        }
       },
     );
   }
 }
-
-// Mantenha ou mova seus widgets auxiliares (DashboardCardWidget, etc.)
-// Lembre-se que eles agora podem estar dentro da DashboardPage e podem precisar
-// receber dados via parâmetros ou ler de providers específicos.
-// class DashboardCardWidget extends StatelessWidget { /* ... */ }
-// class QuickActionsWidget extends StatelessWidget { /* ... */ }
-// class TechnicianPerformanceWidget extends StatelessWidget { /* ... */ }
-// class RecentActivitiesWidget extends StatelessWidget { /* ... */ }
-

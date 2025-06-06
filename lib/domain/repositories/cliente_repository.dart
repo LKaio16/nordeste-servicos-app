@@ -1,7 +1,7 @@
 // lib/domain/repositories/cliente_repository.dart
 
-import '../entities/cliente.dart';
-// *** CORREÇÃO: Importar o DTO para usar nas assinaturas ***
+import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
+
 import '../../data/models/cliente_request_dto.dart'; // Ajuste o caminho se necessário
 import '/core/error/exceptions.dart';
 

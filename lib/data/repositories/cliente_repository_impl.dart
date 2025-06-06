@@ -8,7 +8,7 @@ import '../../core/error/exceptions.dart'; // Importe as exceções customizadas
 import '../models/cliente_model.dart'; // Modelo para receber dados da API (já atualizado)
 import '../models/cliente_request_dto.dart'; // DTO para enviar dados para a API
 
-import '../../domain/entities/cliente.dart'; // Importe a entidade de domínio (já atualizada)
+import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
 import '../../domain/repositories/cliente_repository.dart'; // Importe a interface do repositório
 
 // Implementação concreta da interface ClienteRepository

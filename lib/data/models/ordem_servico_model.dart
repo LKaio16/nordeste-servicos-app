@@ -1,19 +1,24 @@
 // lib/data/models/ordem_servico_model.dart
 
 import 'package:json_annotation/json_annotation.dart';
+// Importe os enums do MODELO (camada de dados)
 import 'package:nordeste_servicos_app/data/models/prioridade_os_model.dart';
 import 'package:nordeste_servicos_app/data/models/status_os_model.dart';
 
-import '../../domain/entities/ordem_servico.dart'; // Importe a entidade OrdemServico
-
+// Importe a ENTIDADE (camada de domínio) e seus enums
+import '../../domain/entities/ordem_servico.dart';
 
 part 'ordem_servico_model.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(
+  // Explicitamente mapeia os enums para String ao serializar/desserializar JSON
+  // Isso garante que a API receba/envie os nomes corretos dos enums
+    converters: [StatusOSModelConverter(), PrioridadeOSModelConverter()]
+)
 class OrdemServicoModel {
   final int? id;
   final String numeroOS;
-  final StatusOSModel status;
+  final StatusOSModel status; // Enum do Model
   final DateTime? dataAbertura;
   final DateTime? dataAgendamento;
   final DateTime? dataFechamento;
@@ -30,7 +35,7 @@ class OrdemServicoModel {
   final String? analiseFalha;
   final String? solucaoAplicada;
 
-  final PrioridadeOSModel? prioridade; // Tipo correto
+  final PrioridadeOSModel? prioridade; // Enum do Model (opcional)
 
   OrdemServicoModel({
     this.id,
@@ -57,22 +62,36 @@ class OrdemServicoModel {
 
   Map<String, dynamic> toJson() => _$OrdemServicoModelToJson(this);
 
-  // Método para converter para Entity - CORRIGIDO
+  // Método para converter Model para Entity
   OrdemServico toEntity() {
-    // Mapeia do enum do Model para o enum da Entity
-    StatusOSModel statusEntity = StatusOSModel.values.firstWhere(
-          (e) => e.name == status.name,
-      orElse: () => StatusOSModel.EM_ABERTO, // Fallback
-    );
-    PrioridadeOSModel? prioridadeEntity = prioridade != null ? PrioridadeOSModel.values.firstWhere(
-          (e) => e.name == prioridade!.name,
-      orElse: () => PrioridadeOSModel.MEDIA, // Fallback
-    ) : null;
+    // Converte StatusOSModel (Model) para StatusOS (Entity)
+    StatusOSModel statusEntity;
+    try {
+      statusEntity = StatusOSModel.values.firstWhere(
+            (e) => e.name == status.name, // Compara pelo nome
+      );
+    } catch (e) {
+      print("WARN: Falha ao mapear StatusOSModel.${status.name} para StatusOS. Usando EM_ABERTO como fallback.");
+      statusEntity = StatusOSModel.EM_ABERTO; // Fallback seguro
+    }
+
+    // Converte PrioridadeOSModel? (Model) para PrioridadeOS? (Entity)
+    PrioridadeOSModel? prioridadeEntity;
+    if (prioridade != null) {
+      try {
+        prioridadeEntity = PrioridadeOSModel.values.firstWhere(
+              (e) => e.name == prioridade!.name, // Compara pelo nome
+        );
+      } catch (e) {
+        print("WARN: Falha ao mapear PrioridadeOSModel.${prioridade!.name} para PrioridadeOS. Usando null como fallback.");
+        prioridadeEntity = null; // Fallback seguro para prioridade opcional
+      }
+    }
 
     return OrdemServico(
       id: id,
       numeroOS: numeroOS,
-      status: statusEntity,
+      status: statusEntity, // Usa o enum da Entity convertido
       dataAbertura: dataAbertura,
       dataAgendamento: dataAgendamento,
       dataFechamento: dataFechamento,
@@ -86,26 +105,40 @@ class OrdemServicoModel {
       problemaRelatado: problemaRelatado,
       analiseFalha: analiseFalha,
       solucaoAplicada: solucaoAplicada,
-      prioridade: prioridadeEntity,
+      prioridade: prioridadeEntity, // Usa o enum da Entity convertido (ou null)
     );
   }
 
-  // *** NOVO MÉTODO fromEntity ***
+  // Método para converter Entity para Model
   factory OrdemServicoModel.fromEntity(OrdemServico entity) {
-    // Mapeia do enum da Entity para o enum do Model
-    StatusOSModel statusModel = StatusOSModel.values.firstWhere(
-          (m) => m.name == entity.status.name,
-      orElse: () => StatusOSModel.EM_ABERTO, // Fallback
-    );
-    PrioridadeOSModel? prioridadeModel = entity.prioridade != null ? PrioridadeOSModel.values.firstWhere(
-          (m) => m.name == entity.prioridade!.name,
-      orElse: () => PrioridadeOSModel.MEDIA, // Fallback
-    ) : null;
+    // Converte StatusOS (Entity) para StatusOSModel (Model)
+    StatusOSModel statusModel;
+    try {
+      statusModel = StatusOSModel.values.firstWhere(
+            (m) => m.name == entity.status.name, // Compara pelo nome
+      );
+    } catch (e) {
+      print("WARN: Falha ao mapear StatusOS.${entity.status.name} para StatusOSModel. Usando EM_ABERTO como fallback.");
+      statusModel = StatusOSModel.EM_ABERTO; // Fallback seguro
+    }
+
+    // Converte PrioridadeOS? (Entity) para PrioridadeOSModel? (Model)
+    PrioridadeOSModel? prioridadeModel;
+    if (entity.prioridade != null) {
+      try {
+        prioridadeModel = PrioridadeOSModel.values.firstWhere(
+              (m) => m.name == entity.prioridade!.name, // Compara pelo nome
+        );
+      } catch (e) {
+        print("WARN: Falha ao mapear PrioridadeOS.${entity.prioridade!.name} para PrioridadeOSModel. Usando null como fallback.");
+        prioridadeModel = null; // Fallback seguro
+      }
+    }
 
     return OrdemServicoModel(
       id: entity.id,
       numeroOS: entity.numeroOS,
-      status: statusModel,
+      status: statusModel, // Usa o enum do Model convertido
       dataAbertura: entity.dataAbertura,
       dataAgendamento: entity.dataAgendamento,
       dataFechamento: entity.dataFechamento,
@@ -120,8 +153,46 @@ class OrdemServicoModel {
       problemaRelatado: entity.problemaRelatado,
       analiseFalha: entity.analiseFalha,
       solucaoAplicada: entity.solucaoAplicada,
-      prioridade: prioridadeModel,
+      prioridade: prioridadeModel, // Usa o enum do Model convertido (ou null)
     );
   }
+}
+
+// --- Json Converters para Enums ---
+// Necessário para o build_runner gerar o código corretamente
+
+class StatusOSModelConverter implements JsonConverter<StatusOSModel, String> {
+  const StatusOSModelConverter();
+
+  @override
+  StatusOSModel fromJson(String json) {
+    try {
+      return StatusOSModel.values.firstWhere((e) => e.name == json);
+    } catch (e) {
+      print("WARN: StatusOSModel inválido recebido do JSON: '$json'. Usando EM_ABERTO.");
+      return StatusOSModel.EM_ABERTO; // Fallback seguro
+    }
+  }
+
+  @override
+  String toJson(StatusOSModel object) => object.name;
+}
+
+class PrioridadeOSModelConverter implements JsonConverter<PrioridadeOSModel?, String?> {
+  const PrioridadeOSModelConverter();
+
+  @override
+  PrioridadeOSModel? fromJson(String? json) {
+    if (json == null) return null;
+    try {
+      return PrioridadeOSModel.values.firstWhere((e) => e.name == json);
+    } catch (e) {
+      print("WARN: PrioridadeOSModel inválida recebida do JSON: '$json'. Usando null.");
+      return null; // Fallback seguro para prioridade opcional
+    }
+  }
+
+  @override
+  String? toJson(PrioridadeOSModel? object) => object?.name;
 }
 

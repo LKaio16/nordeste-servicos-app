@@ -5,7 +5,7 @@ import 'package:nordeste_servicos_app/data/models/tipo_cliente.dart';
 
 // Importar o enum TipoCliente e a entidade Cliente
 
-import '../../domain/entities/cliente.dart';
+import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
 
 part 'cliente_model.g.dart'; // Gerado pelo build_runner
 
