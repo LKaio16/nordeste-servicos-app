@@ -2,7 +2,7 @@
 
 import 'package:dio/dio.dart';
 import '../../core/network/api_client.dart';
-import '../../core/error/exceptions.dart'; // Incluindo UnauthorizedException se definida
+import '../../core/error/exceptions.dart';
 import '../../domain/entities/auth_result.dart';
 import '../models/login_response_model.dart';
 import '../models/usuario_model.dart';
@@ -17,10 +17,11 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
   @override
   Future<List<Usuario>> getUsuarios() async {
     try {
-      final response = await apiClient.get('/usuarios'); // Endpoint da sua API para listar usuários
+      final response = await apiClient.get('/usuarios');
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = response.data;
+        // Mapeia JSON para UsuarioModel e depois para Usuario Entity
         final List<UsuarioModel> usuarioModels = jsonList.map((json) => UsuarioModel.fromJson(json)).toList();
         final List<Usuario> usuarios = usuarioModels.map((model) => model.toEntity()).toList();
         return usuarios;
@@ -39,10 +40,11 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
   @override
   Future<Usuario> getUserById(int id) async {
     try {
-      final response = await apiClient.get('/usuarios/$id'); // Endpoint da sua API para buscar usuário por ID
+      final response = await apiClient.get('/usuarios/$id');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json = response.data;
+        // Mapeia JSON para UsuarioModel e depois para Usuario Entity
         final UsuarioModel usuarioModel = UsuarioModel.fromJson(json);
         return usuarioModel.toEntity();
       } else {
@@ -60,22 +62,12 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
   @override
   Future<Usuario> createUser(Usuario usuario) async {
     try {
-      // Converte a Entidade para o Modelo para poder usar o toJson()
-      final UsuarioModel usuarioModel = UsuarioModel(
-        // ID não é enviado na criação
-        nome: usuario.nome,
-        cracha: usuario.cracha,
-        email: usuario.email,
-        perfil: usuario.perfil,
-        // TODO: Se a API de criação de usuário espera SENHA, o UsuarioModel não tem esse campo.
-        // Você precisaria de um DTO/Model de requisição específico para a criação.
-        // Para a Opção A, estamos assumindo que a API aceita o UsuarioModel sem senha na criação
-        // ou que a senha é tratada em outro endpoint/fluxo (ex: convite, reset de senha).
-        // SE SUA API PRECISA DA SENHA NO POST DE CRIAÇÃO, esta Opção A pode não funcionar diretamente.
-      );
+      // *** CORREÇÃO AQUI: Use UsuarioModel.fromEntity para converter a entidade
+      //     para o modelo de forma segura, lidando com a nullability.
+      final UsuarioModel usuarioModel = UsuarioModel.fromEntity(usuario);
 
       // Usa o toJson() do Modelo para enviar o corpo da requisição
-      final response = await apiClient.post('/usuarios', data: usuarioModel.toJson()); // Endpoint da sua API para criar usuário
+      final response = await apiClient.post('/usuarios', data: usuarioModel.toJson());
 
       if (response.statusCode == 201) {
         final Map<String, dynamic> json = response.data;
@@ -96,18 +88,12 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
   @override
   Future<Usuario> updateUser(Usuario usuario) async {
     try {
-      // Converte a Entidade para o Modelo para poder usar o toJson()
-      final UsuarioModel usuarioModel = UsuarioModel(
-        id: usuario.id, // Incluir ID na atualização
-        nome: usuario.nome,
-        cracha: usuario.cracha,
-        email: usuario.email,
-        perfil: usuario.perfil,
-        // TODO: Se a API de atualização de usuário espera campos específicos ou senha, adapte.
-      );
+      // *** CORREÇÃO AQUI: Use UsuarioModel.fromEntity para converter a entidade
+      //     para o modelo de forma segura, lidando com a nullability.
+      final UsuarioModel usuarioModel = UsuarioModel.fromEntity(usuario);
 
       // Usa o toJson() do Modelo para enviar o corpo da requisição
-      final response = await apiClient.put('/usuarios/${usuario.id}', data: usuarioModel.toJson()); // Endpoint da sua API para atualizar usuário
+      final response = await apiClient.put('/usuarios/${usuario.id}', data: usuarioModel.toJson());
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> json = response.data;
@@ -128,7 +114,7 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
   @override
   Future<void> deleteUser(int id) async {
     try {
-      final response = await apiClient.delete('/usuarios/$id'); // Endpoint da sua API para deletar usuário
+      final response = await apiClient.delete('/usuarios/$id');
 
       if (response.statusCode == 204) {
         return;
@@ -145,7 +131,7 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
   }
 
   @override
-  Future<AuthResult> login(String email, String password) async { // Altere o tipo de retorno
+  Future<AuthResult> login(String email, String password) async {
     try {
       final Map<String, dynamic> loginData = {
         'email': email,
@@ -158,7 +144,6 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
         final Map<String, dynamic> json = response.data;
         final LoginResponseModel loginResponseModel = LoginResponseModel.fromJson(json);
 
-        // Retorna um AuthResult contendo o usuário e o token
         return AuthResult(
           user: loginResponseModel.toUsuarioEntity(),
           token: loginResponseModel.token,
@@ -172,10 +157,9 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
       if (e.response?.statusCode == 401) {
         throw ApiException('Credenciais inválidas.');
       }
-      // Outros erros da Dio (rede, timeout, etc.)
       throw ApiException('Erro de rede durante o login: ${e.message}');
     } on ApiException {
-      rethrow; // Re-lança a ApiException que já tratamos (ex: credenciais inválidas)
+      rethrow;
     } catch (e) {
       throw ApiException('Erro inesperado durante o login: ${e.toString()}');
     }

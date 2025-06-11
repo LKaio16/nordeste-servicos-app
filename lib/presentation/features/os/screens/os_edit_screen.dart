@@ -12,7 +12,7 @@ import '../../../../data/models/status_os_model.dart';
 import '../../../../domain/entities/ordem_servico.dart'; // Contém StatusOSModel, PrioridadeOSModel
 import '../../../../domain/entities/cliente.dart';
 import '../../../../domain/entities/equipamento.dart';
-import '../../../../domain/entities/usuario.dart';
+import '../../../../domain/entities/usuario.dart'; // Importe Usuario
 
 // Importar os providers
 import '../providers/os_detail_provider.dart';
@@ -52,7 +52,7 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
   // Variáveis para armazenar seleções de dropdowns e datas
   String? _selectedClienteId;
   String? _selectedEquipamentoId;
-  String? _selectedTecnicoId;
+  String? _selectedTecnicoId; // Este ainda armazena o ID como String
   // *** CORREÇÃO: Usar os ENUMS da ENTIDADE (StatusOSModel, PrioridadeOSModel) na tela ***
   StatusOSModel? _selectedStatus;
   PrioridadeOSModel? _selectedPrioridade;
@@ -76,6 +76,7 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
     super.dispose();
   }
 
+
   // Função para inicializar os controllers e variáveis com dados da OS original (Entidade)
   void _initializeFormFields(OrdemServico os) {
     if (!_initialDataLoaded) {
@@ -85,7 +86,8 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
 
       _selectedClienteId = os.clienteId.toString();
       _selectedEquipamentoId = os.equipamentoId.toString();
-      _selectedTecnicoId = os.tecnicoAtribuidoId?.toString();
+      // *** ALTERAÇÃO AQUI: Acessar o ID do técnico através do objeto aninhado ***
+      _selectedTecnicoId = os.tecnicoAtribuido?.id?.toString();
       // *** CORREÇÃO: Atribui os enums da ENTIDADE ***
       _selectedStatus = os.status;
       _selectedPrioridade = os.prioridade;
@@ -109,10 +111,10 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
     }
   }
 
-  Future<void> _submitForm() async {
+  Future<bool> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       final originalOs = ref.read(osEditProvider(widget.osId)).originalOs;
-      if (originalOs == null) return;
+      if (originalOs == null) return false; // Adicionado retorno para evitar null
 
       // *** DEBUG PRINT ***: Verifica os valores ANTES de criar a entidade atualizada
       if (kDebugMode) {
@@ -129,22 +131,26 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
         print("---------------------------------");
       }
 
-      // Cria a ENTIDADE OrdemServico atualizada com os dados do formulário
-      final updatedOsEntity = originalOs.copyWith(
-        clienteId: int.parse(_selectedClienteId!),
-        equipamentoId: int.parse(_selectedEquipamentoId!),
-        tecnicoAtribuidoId: _selectedTecnicoId != null ? int.parse(_selectedTecnicoId!) : null,
+      // Prepara os dados para o repositório.
+      // O repositório irá mapear isso para um DTO de requisição (OrdemServicoRequestDTO)
+      // que ainda espera o ID do técnico (tecnicoAtribuidoId).
+      final int clienteIdParsed = int.parse(_selectedClienteId!);
+      final int equipamentoIdParsed = int.parse(_selectedEquipamentoId!);
+      final int? tecnicoAtribuidoIdParsed = _selectedTecnicoId != null ? int.parse(_selectedTecnicoId!) : null;
+
+      final success = await ref.read(osEditProvider(widget.osId).notifier).updateOrdemServico(
+        // Passa os dados brutos para o notifier/repositório
+        osId: widget.osId, // Id da OS que está sendo editada
+        clienteId: clienteIdParsed,
+        equipamentoId: equipamentoIdParsed,
+        tecnicoAtribuidoId: tecnicoAtribuidoIdParsed,
         problemaRelatado: _problemaController.text,
         analiseFalha: _analiseController.text,
         solucaoAplicada: _solucaoController.text,
-        // *** CORREÇÃO: Passa os ENUMS da ENTIDADE selecionados na tela ***
         status: _selectedStatus!,
         prioridade: _selectedPrioridade,
         dataAgendamento: _selectedDataAgendamento,
       );
-
-      // Chama o provider passando a ENTIDADE atualizada
-      final success = await ref.read(osEditProvider(widget.osId).notifier).updateOrdemServico(updatedOsEntity);
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -166,7 +172,9 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
           ),
         );
       }
+      return success; // Retorna o status de sucesso
     }
+    return false; // Retorna falso se a validação do formulário falhar
   }
 
   @override
@@ -424,28 +432,43 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
     );
   }
 
-  // *** CORREÇÃO: Funções de texto usam os ENUMS da ENTIDADE ***
+  // *** CORREÇÃO: Funções de texto usam os ENUMS da ENTIDADE e cobrem todos os casos ***
   String _getStatusText(StatusOSModel status) {
     switch (status) {
-      case StatusOSModel.CONCLUIDA: return 'Concluída';
-      case StatusOSModel.EM_ANDAMENTO: return 'Em Andamento';
-      case StatusOSModel.EM_ABERTO: return 'Em Aberto';
-      case StatusOSModel.ENCERRADA: return 'Encerrada';
-      case StatusOSModel.CANCELADA: return 'Cancelada';
-      case StatusOSModel.PENDENTE_PECAS: return 'Pendente';
-      case StatusOSModel.ATRIBUIDA: return 'ATRIBUIDA';
-      case StatusOSModel.AGUARDANDO_APROVACAO: return 'AGUARDANDO_APROVACAO';
+      case StatusOSModel.CONCLUIDA:
+        return 'Concluída';
+      case StatusOSModel.EM_ANDAMENTO:
+        return 'Em Andamento';
+      case StatusOSModel.EM_ABERTO:
+        return 'Em Aberto';
+      case StatusOSModel.ENCERRADA:
+        return 'Encerrada';
+      case StatusOSModel.CANCELADA:
+        return 'Cancelada';
+      case StatusOSModel.PENDENTE_PECAS:
+        return 'Pendente';
+      case StatusOSModel.ATRIBUIDA: // Adicionado
+        return 'Atribuída';
+      case StatusOSModel.AGUARDANDO_APROVACAO: // Adicionado
+        return 'Aguardando Aprovação';
+      default: // Adicionado um default para segurança
+        return 'Desconhecido';
     }
   }
 
   String _getPrioridadeText(PrioridadeOSModel? prioridade) {
     if (prioridade == null) return 'Não definida';
     switch (prioridade) {
-      case PrioridadeOSModel.BAIXA: return 'Baixa';
-      case PrioridadeOSModel.MEDIA: return 'Média';
-      case PrioridadeOSModel.ALTA: return 'Alta';
-      case PrioridadeOSModel.URGENTE: return 'Urgente';
+      case PrioridadeOSModel.BAIXA:
+        return 'Baixa';
+      case PrioridadeOSModel.MEDIA:
+        return 'Média';
+      case PrioridadeOSModel.ALTA:
+        return 'Alta';
+      case PrioridadeOSModel.URGENTE:
+        return 'Urgente';
+      default: // Adicionado um default para segurança
+        return 'Desconhecida';
     }
   }
 }
-

@@ -1,27 +1,47 @@
+// lib/domain/entities/ordem_servico.dart
+
 import 'package:equatable/equatable.dart';
+// Importe as ENTIDADES aqui
+import 'package:nordeste_servicos_app/domain/entities/assinatura_os.dart';
+import 'package:nordeste_servicos_app/domain/entities/foto_os.dart';
+import 'package:nordeste_servicos_app/domain/entities/item_os_utilizado.dart';
+import 'package:nordeste_servicos_app/domain/entities/registro_tempo.dart';
+import 'package:nordeste_servicos_app/domain/entities/registro_deslocamento.dart';
+import 'package:nordeste_servicos_app/domain/entities/usuario.dart'; // <<< A ENTIDADE Usuario
+
+// Se StatusOS e PrioridadeOS são enums que você criou na camada de domínio, importe-os.
+// Se eles são apenas os enums da camada de dados que você está usando diretamente nas entidades
+// (uma decisão de design que pode ser aceitável para enums simples), então mantenha como está.
 import 'package:nordeste_servicos_app/data/models/prioridade_os_model.dart';
 import 'package:nordeste_servicos_app/data/models/status_os_model.dart';
 
 
-// Modelo de dados para Ordem de Serviço, baseado no OrdemServicoResponseDTO da API
 class OrdemServico extends Equatable {
-  final int? id; // Tornando ID opcional para criação, mas presente na edição/visualização
+  final int? id;
   final String numeroOS;
   final StatusOSModel status;
-  final PrioridadeOSModel? prioridade; // Tornando prioridade opcional
+  final PrioridadeOSModel? prioridade;
   final DateTime? dataAbertura;
   final DateTime? dataAgendamento;
   final DateTime? dataFechamento;
-  final DateTime? dataHoraEmissao; // Adicionado campo que estava no model mas não aqui
+  final DateTime? dataHoraEmissao;
+
   final int clienteId;
-  final String? nomeCliente; // Opcional, pode vir da API ou ser buscado separadamente
+  final String? nomeCliente;
   final int equipamentoId;
-  final String? descricaoEquipamento; // Opcional
-  final int? tecnicoAtribuidoId;
-  final String? nomeTecnicoAtribuido; // Opcional
+  final String? descricaoEquipamento;
+
+  final Usuario? tecnicoAtribuido; // <<< A ENTIDADE Usuario!
+
   final String? problemaRelatado;
-  final String? analiseFalha; // Adicionado campo que estava no model mas não aqui
-  final String? solucaoAplicada; // Adicionado campo que estava no model mas não aqui
+  final String? analiseFalha;
+  final String? solucaoAplicada;
+
+  final List<RegistroTempo>? registrosTempo;
+  final List<RegistroDeslocamento>? registrosDeslocamento;
+  final List<ItemOSUtilizado>? itensUtilizados;
+  final List<FotoOS>? fotos;
+  final AssinaturaOS? assinatura;
 
   const OrdemServico({
     this.id,
@@ -31,113 +51,24 @@ class OrdemServico extends Equatable {
     this.dataAbertura,
     this.dataAgendamento,
     this.dataFechamento,
-    this.dataHoraEmissao, // Adicionado
+    this.dataHoraEmissao,
     required this.clienteId,
     this.nomeCliente,
     required this.equipamentoId,
     this.descricaoEquipamento,
-    this.tecnicoAtribuidoId,
-    this.nomeTecnicoAtribuido,
+    this.tecnicoAtribuido,
     this.problemaRelatado,
-    this.analiseFalha, // Adicionado
-    this.solucaoAplicada, // Adicionado
+    this.analiseFalha,
+    this.solucaoAplicada,
+    this.registrosTempo,
+    this.registrosDeslocamento,
+    this.itensUtilizados,
+    this.fotos,
+    this.assinatura,
   });
 
-  // Fábrica para criar instância a partir de um JSON (mapa)
-  factory OrdemServico.fromJson(Map<String, dynamic> json) {
-    return OrdemServico(
-      id: json['id'] as int?,
-      numeroOS: json['numeroOS'] as String? ?? '',
-      status: _parseStatusOS(json['status'] as String?),
-      prioridade: _parsePrioridadeOS(json['prioridade'] as String?),
-      dataAbertura: json['dataAbertura'] != null ? DateTime.tryParse(json['dataAbertura'] as String) : null,
-      dataAgendamento: json['dataAgendamento'] != null ? DateTime.tryParse(json['dataAgendamento'] as String) : null,
-      dataFechamento: json['dataFechamento'] != null ? DateTime.tryParse(json['dataFechamento'] as String) : null,
-      dataHoraEmissao: json['dataHoraEmissao'] != null ? DateTime.tryParse(json['dataHoraEmissao'] as String) : null,
-      clienteId: json['clienteId'] as int? ?? 0,
-      nomeCliente: json['nomeCliente'] as String?,
-      equipamentoId: json['equipamentoId'] as int? ?? 0,
-      descricaoEquipamento: json['descricaoEquipamento'] as String?,
-      tecnicoAtribuidoId: json['tecnicoAtribuidoId'] as int?,
-      nomeTecnicoAtribuido: json['nomeTecnicoAtribuido'] as String?,
-      problemaRelatado: json['problemaRelatado'] as String?,
-      analiseFalha: json['analiseFalha'] as String?,
-      solucaoAplicada: json['solucaoAplicada'] as String?,
-    );
-  }
-
-  // Funções auxiliares para parsear Enums de String (case-insensitive)
-  // CORREÇÃO: Removido fallback para UNKNOWN. Usando um default ou lançando erro.
-  static StatusOSModel _parseStatusOS(String? statusString) {
-    if (statusString == null) return StatusOSModel.EM_ABERTO; // Default
-    try {
-      return StatusOSModel.values.firstWhere(
-            (e) => e.name.toUpperCase() == statusString.toUpperCase(),
-        // orElse: () => throw FormatException('StatusOS inválido: $statusString'), // Alternativa: lançar erro
-      );
-    } catch (e) {
-      print("Erro ao parsear StatusOS: $statusString. Usando EM_ABERTO como padrão.");
-      return StatusOSModel.EM_ABERTO; // Default em caso de erro no firstWhere
-    }
-  }
-
-  static PrioridadeOSModel? _parsePrioridadeOS(String? prioridadeString) {
-    if (prioridadeString == null) return null; // Prioridade pode ser nula
-    try {
-      return PrioridadeOSModel.values.firstWhere(
-            (e) => e.name.toUpperCase() == prioridadeString.toUpperCase(),
-        // orElse: () => throw FormatException('PrioridadeOS inválida: $prioridadeString'), // Alternativa
-      );
-    } catch (e) {
-      print("Erro ao parsear PrioridadeOS: $prioridadeString. Retornando null.");
-      return null; // Retorna null se não encontrar ou der erro
-    }
-  }
-
-  // *** MÉTODO copyWith ADICIONADO ***
-  OrdemServico copyWith({
-    int? id,
-    String? numeroOS,
-    StatusOSModel? status,
-    PrioridadeOSModel? prioridade,
-    DateTime? dataAbertura,
-    DateTime? dataAgendamento,
-    DateTime? dataFechamento,
-    DateTime? dataHoraEmissao,
-    int? clienteId,
-    String? nomeCliente,
-    int? equipamentoId,
-    String? descricaoEquipamento,
-    int? tecnicoAtribuidoId,
-    String? nomeTecnicoAtribuido,
-    String? problemaRelatado,
-    String? analiseFalha,
-    String? solucaoAplicada,
-  }) {
-    return OrdemServico(
-      id: id ?? this.id,
-      numeroOS: numeroOS ?? this.numeroOS,
-      status: status ?? this.status,
-      // Para prioridade, permite definir como null explicitamente se necessário
-      prioridade: prioridade ?? this.prioridade,
-      dataAbertura: dataAbertura ?? this.dataAbertura,
-      // Para datas, permite definir como null explicitamente
-      dataAgendamento: dataAgendamento ?? this.dataAgendamento,
-      dataFechamento: dataFechamento ?? this.dataFechamento,
-      dataHoraEmissao: dataHoraEmissao ?? this.dataHoraEmissao,
-      clienteId: clienteId ?? this.clienteId,
-      nomeCliente: nomeCliente ?? this.nomeCliente,
-      equipamentoId: equipamentoId ?? this.equipamentoId,
-      descricaoEquipamento: descricaoEquipamento ?? this.descricaoEquipamento,
-      // Permite definir tecnicoAtribuidoId como null
-      tecnicoAtribuidoId: tecnicoAtribuidoId ?? this.tecnicoAtribuidoId,
-      nomeTecnicoAtribuido: nomeTecnicoAtribuido ?? this.nomeTecnicoAtribuido,
-      problemaRelatado: problemaRelatado ?? this.problemaRelatado,
-      analiseFalha: analiseFalha ?? this.analiseFalha,
-      solucaoAplicada: solucaoAplicada ?? this.solucaoAplicada,
-    );
-  }
-
+  // REMOVA OS MÉTODOS fromJson, toJson e copyWith DAQUI!
+  // Eles pertencem ao OrdemServicoModel.
 
   @override
   List<Object?> get props => [
@@ -153,11 +84,14 @@ class OrdemServico extends Equatable {
     nomeCliente,
     equipamentoId,
     descricaoEquipamento,
-    tecnicoAtribuidoId,
-    nomeTecnicoAtribuido,
+    tecnicoAtribuido,
     problemaRelatado,
     analiseFalha,
     solucaoAplicada,
+    registrosTempo,
+    registrosDeslocamento,
+    itensUtilizados,
+    fotos,
+    assinatura,
   ];
 }
-

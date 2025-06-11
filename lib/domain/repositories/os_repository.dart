@@ -1,5 +1,6 @@
 // lib/domain/repositories/os_repository.dart
 
+import '../../data/models/prioridade_os_model.dart';
 import '../../domain/entities/ordem_servico.dart';
 import '../../domain/entities/registro_tempo.dart'; // Se quiser retornar a lista aqui
 import '../../domain/entities/item_os_utilizado.dart'; // Se quiser retornar a lista aqui
@@ -27,8 +28,18 @@ abstract class OsRepository {
       OrdemServico os); // Pode precisar de um DTO de criação
 
   /// Atualiza uma ordem de serviço existente.
-  Future<OrdemServico> updateOrdemServico(
-      OrdemServico os); // Pode precisar de um DTO de atualização
+  Future<void> updateOrdemServico({
+    required int osId, // ID da OS a ser atualizada
+    required int clienteId,
+    required int equipamentoId,
+    int? tecnicoAtribuidoId,
+    required String problemaRelatado,
+    String? analiseFalha,
+    String? solucaoAplicada,
+    required StatusOSModel status,
+    PrioridadeOSModel? prioridade,
+    DateTime? dataAgendamento,
+  });
 
   /// Deleta uma ordem de serviço pelo seu ID.
   Future<void> deleteOrdemServico(int id);

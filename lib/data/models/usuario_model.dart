@@ -12,36 +12,44 @@ part 'usuario_model.g.dart'; // O gerador criará este arquivo
 class UsuarioModel {
   final int? id;
   final String nome;
-  final String cracha;
-  final String email;
+  final String? cracha; // <<< TORNADO OPCIONAL
+  final String? email;  // <<< TORNADO OPCIONAL
 
-  // Não inclua a senha aqui no Model, ela não deve vir na ResponseDTO da API por segurança
-
-  final PerfilUsuarioModel perfil; // Use o enum model
+  final PerfilUsuarioModel perfil;
 
   // Construtor
   UsuarioModel({
     this.id,
     required this.nome,
-    required this.cracha,
-    required this.email,
+    this.cracha, // <<< REMOVIDO 'required'
+    this.email,  // <<< REMOVIDO 'required'
     required this.perfil,
   });
 
-// Métodos gerados pelo json_serializable:
   factory UsuarioModel.fromJson(Map<String, dynamic> json) =>
       _$UsuarioModelFromJson(json);
 
   Map<String, dynamic> toJson() => _$UsuarioModelToJson(this);
 
-// Método para converter Model para Entity (se usar camada Domain) - CORRIGIDO
+  // Método para converter Model para Entity - CORRIGIDO
   Usuario toEntity() {
     return Usuario(
       id: id,
       nome: nome,
-      cracha: cracha,
-      email: email,
-      perfil: perfil, // Atribuição direta, pois o tipo já é o mesmo (PerfilUsuarioModel)
+      cracha: cracha, // Continua passando o valor, que agora pode ser null
+      email: email,   // Continua passando o valor, que agora pode ser null
+      perfil: perfil,
+    );
+  }
+
+  factory UsuarioModel.fromEntity(Usuario entity) {
+    return UsuarioModel(
+      id: entity.id,
+      nome: entity.nome,
+      cracha: entity.cracha, // Passa o valor que pode ser null
+      email: entity.email,   // Passa o valor que pode ser null
+      perfil: entity.perfil, // Atribuição direta
     );
   }
 }
+

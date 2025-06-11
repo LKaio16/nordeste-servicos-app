@@ -7,11 +7,9 @@ import 'package:nordeste_servicos_app/data/models/status_os_model.dart';
 
 // Importações locais (ajuste os caminhos conforme sua estrutura de projeto)
 import '../../../../domain/entities/ordem_servico.dart';
-// Certifique-se de que este provedor seja um FutureProvider.family<OrdemServico, int>
+import '../../../shared/providers/repository_providers.dart';
 import '../providers/os_detail_provider.dart';
-// IMPORTANTE: Adicione o import do osListProvider
 import '../providers/os_list_provider.dart';
-
 
 import 'os_edit_screen.dart';
 
@@ -76,7 +74,7 @@ class AppColors {
 }
 
 // Tela de Visualização de OS - Agora um ConsumerWidget (stateless)
-class OsDetailScreen extends ConsumerWidget { // Alterado de ConsumerStatefulWidget para ConsumerWidget
+class OsDetailScreen extends ConsumerWidget {
   final int osId;
 
   const OsDetailScreen({required this.osId, Key? key}) : super(key: key);
@@ -124,9 +122,64 @@ class OsDetailScreen extends ConsumerWidget { // Alterado de ConsumerStatefulWid
     }
   }
 
+  // >>> NOVO MÉTODO PARA EXCLUIR OS
+  Future<void> _deleteOs(BuildContext context, WidgetRef ref) async {
+    // 1. Confirmação
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Confirmar Exclusão'),
+          content: Text('Tem certeza de que deseja excluir a Ordem de Serviço #${osId}? Esta ação é irreversível.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false), // Não confirmar
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true), // Confirmar
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Excluir', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      // 2. Chamar o repositório
+      try {
+        final osRepository = ref.read(osRepositoryProvider);
+        await osRepository.deleteOrdemServico(osId);
+
+        // 3. Sucesso: Mostrar SnackBar e navegar de volta
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ordem de Serviço #${osId} excluída com sucesso!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Invalida a lista de OS para que seja recarregada ao voltar para a tela anterior
+          ref.invalidate(osListProvider);
+          Navigator.of(context).pop(); // Volta para a tela anterior (lista de OS)
+        }
+      } catch (e) {
+        // 4. Erro: Mostrar SnackBar
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao excluir Ordem de Serviço: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) { // Removido o 'State' e adicionado 'ref'
-    // Observa o provedor de detalhes da OS. Isso automaticamente carrega os dados.
+  Widget build(BuildContext context, WidgetRef ref) {
     final osAsyncValue = ref.watch(osDetailProvider(osId));
 
     return Scaffold(
@@ -148,8 +201,6 @@ class OsDetailScreen extends ConsumerWidget { // Alterado de ConsumerStatefulWid
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            // Invalida o provedor da lista de OS para forçar uma nova requisição na OsListScreen
-            // quando ela for exibida novamente.
             ref.invalidate(osListProvider);
             Navigator.of(context).pop();
           },
@@ -159,7 +210,6 @@ class OsDetailScreen extends ConsumerWidget { // Alterado de ConsumerStatefulWid
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
-              // Invalida o provedor para forçar uma nova requisição
               ref.invalidate(osDetailProvider(osId));
             },
             tooltip: 'Atualizar',
@@ -167,30 +217,36 @@ class OsDetailScreen extends ConsumerWidget { // Alterado de ConsumerStatefulWid
           // Botão de Editar
           IconButton(
             icon: const Icon(Icons.edit, color: Colors.white),
-            onPressed: osAsyncValue.maybeWhen( // Use maybeWhen para acessar o dado se presente
+            onPressed: osAsyncValue.maybeWhen(
               data: (ordemServico) => () async {
                 await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => OsEditScreen(osId: osId),
                   ),
                 );
-                // Após retornar da OsEditScreen, invalida o provedor de detalhes
                 ref.invalidate(osDetailProvider(osId));
-                // E também invalida o provedor da lista para garantir atualização
                 ref.invalidate(osListProvider);
               },
-              orElse: () => null, // Desabilita o botão se não houver dados (loading/error)
+              orElse: () => null,
             ),
             tooltip: 'Editar OS',
+          ),
+          // >>> NOVO BOTÃO DE DELETAR
+          IconButton(
+            icon: const Icon(Icons.delete_forever, color: Colors.red), // Ícone de lixeira, cor vermelha
+            onPressed: osAsyncValue.maybeWhen(
+              data: (ordemServico) => () => _deleteOs(context, ref), // Chama a função de exclusão
+              orElse: () => null, // Desabilita se não houver dados
+            ),
+            tooltip: 'Excluir OS',
           ),
         ],
       ),
       body: osAsyncValue.when(
         data: (ordemServico) {
-          // Exibe os detalhes da OS
           return RefreshIndicator(
             onRefresh: () async {
-              ref.invalidate(osDetailProvider(osId)); // Invalida para recarregar
+              ref.invalidate(osDetailProvider(osId));
             },
             child: ListView(
               padding: const EdgeInsets.all(16.0),
@@ -203,7 +259,7 @@ class OsDetailScreen extends ConsumerWidget { // Alterado de ConsumerStatefulWid
                   children: [
                     _buildDetailRow(label: 'Cliente', value: ordemServico.nomeCliente),
                     _buildDetailRow(label: 'Equipamento', value: ordemServico.descricaoEquipamento),
-                    _buildDetailRow(label: 'Técnico Atribuído', value: ordemServico.nomeTecnicoAtribuido ?? 'Não atribuído'),
+                    _buildDetailRow(label: 'Técnico Atribuído', value: ordemServico.tecnicoAtribuido?.nome ?? 'Não atribuído'),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -264,13 +320,13 @@ class OsDetailScreen extends ConsumerWidget { // Alterado de ConsumerStatefulWid
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  err.toString(), // Exibe o erro
+                  err.toString(),
                   style: GoogleFonts.poppins(color: Colors.grey.shade600),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(osDetailProvider(osId)), // Invalida para tentar novamente
+                  onPressed: () => ref.invalidate(osDetailProvider(osId)),
                   icon: const Icon(Icons.refresh),
                   label: const Text('Tentar Novamente'),
                   style: ElevatedButton.styleFrom(
@@ -286,7 +342,7 @@ class OsDetailScreen extends ConsumerWidget { // Alterado de ConsumerStatefulWid
     );
   }
 
-  // Card do Cabeçalho
+  // Card do Cabeçalho (mantido)
   Widget _buildHeaderCard(OrdemServico os) {
     return Card(
       elevation: 2,
@@ -352,7 +408,7 @@ class OsDetailScreen extends ConsumerWidget { // Alterado de ConsumerStatefulWid
     );
   }
 
-  // Card genérico para seções de informação
+  // Card genérico para seções de informação (mantido)
   Widget _buildInfoCard({
     required String title,
     required IconData icon,
@@ -389,7 +445,7 @@ class OsDetailScreen extends ConsumerWidget { // Alterado de ConsumerStatefulWid
     );
   }
 
-  // Linha de detalhe (Label: Value)
+  // Linha de detalhe (Label: Value) (mantido)
   Widget _buildDetailRow({required String label, String? value}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
@@ -419,7 +475,7 @@ class OsDetailScreen extends ConsumerWidget { // Alterado de ConsumerStatefulWid
     );
   }
 
-  // Seção de detalhe para textos mais longos
+  // Seção de detalhe para textos mais longos (mantido)
   Widget _buildDetailSection({required String label, required String value}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

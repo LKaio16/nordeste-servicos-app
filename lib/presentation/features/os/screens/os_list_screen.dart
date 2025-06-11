@@ -279,6 +279,15 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
 
   // Widget para construir o card da Ordem de Serviço
   Widget _buildOsCard(OrdemServico os, Color primaryColor) {
+    print('OS ID: ${os.id}');
+    print('Nome do Cliente: ${os.nomeCliente}');
+    print('Tecnico Atribuido: ${os.tecnicoAtribuido}');
+    if (os.tecnicoAtribuido != null) {
+      print('Nome do Técnico: ${os.tecnicoAtribuido!.nome}');
+      print('ID do Técnico: ${os.tecnicoAtribuido!.id}');
+    } else {
+      print('Técnico atribuído é NULL');
+    }
     return Card(
       elevation: 2.0,
       margin: const EdgeInsets.only(bottom: 12.0),
@@ -369,7 +378,7 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
                       Icon(Icons.person_outline, size: 16, color: Colors.grey.shade600),
                       const SizedBox(width: 4),
                       Text(
-                        os.nomeTecnicoAtribuido ?? 'Não atribuído',
+                        os.tecnicoAtribuido?.nome ?? 'Não atribuído',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: Colors.grey.shade700,

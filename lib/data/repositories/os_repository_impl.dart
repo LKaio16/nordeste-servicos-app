@@ -8,6 +8,10 @@ import '../models/ordem_servico_model.dart'; // Importe o modelo de dados
 import '../../domain/entities/ordem_servico.dart'; // Importe a entidade de domínio
 import '../../domain/repositories/os_repository.dart'; // Importe a interface do repositório
 import '../../data/models/status_os_model.dart'; // Para usar o enum como parâmetro
+import '../models/cliente_model.dart'; // Certifique-se de importar o modelo de Cliente
+import '../models/equipamento_model.dart'; // Certifique-se de importar o modelo de Equipamento
+import '../models/prioridade_os_model.dart';
+import '../models/usuario_model.dart'; // Certifique-se de importar o modelo de Usuario
 
 
 class OsRepositoryImpl implements OsRepository {
@@ -76,55 +80,116 @@ class OsRepositoryImpl implements OsRepository {
   }
 
   @override
-  Future<OrdemServico> createOrdemServico(OrdemServico os) async {
+  Future<OrdemServico> createOrdemServico(OrdemServico ordemServico) async {
     try {
-      final OrdemServicoModel osModel = OrdemServicoModel.fromEntity(os);
-      // *** CORREÇÃO: Removido o parâmetro 'options' ***
-      final response = await apiClient.post(
-        '/ordens-servico',
-        data: osModel.toJson(),
-        // options: Options(responseType: ResponseType.json), // REMOVIDO
-      );
+      // CONVERTE A ENTIDADE OrdemServico PARA OrdemServicoModel
+      // É AQUI QUE O PROBLEMA ESTÁ, PRECISAMOS GARANTIR QUE tecnicoAtribuido É UM UsuarioModel
+      final OrdemServicoModel osModel = OrdemServicoModel.fromEntity(ordemServico);
+
+      // DEBUG: Verifique o JSON que será enviado
+      if (kDebugMode) {
+        print('JSON sendo enviado para createOrdemServico: ${osModel.toJson()}');
+      }
+
+      final response = await apiClient.post('/ordens-servico', data: osModel.toJson());
 
       if (response.statusCode == 201) {
-        // Se o status for 201, tenta fazer o parse do JSON
         final Map<String, dynamic> json = response.data;
         final OrdemServicoModel createdOsModel = OrdemServicoModel.fromJson(json);
         return createdOsModel.toEntity();
       } else {
-        // Trata outros códigos de sucesso inesperados
-        throw ApiException('Falha ao criar ordem de serviço: Status inesperado ${response.statusCode}');
+        throw ApiException('Falha ao criar Ordem de Serviço: Status ${response.statusCode}');
       }
-    } on DioException catch (e, stackTrace) { // Adicionado stackTrace
-      // Trata erros do Dio (rede, timeout, status != 2xx)
-      String errorMessage = 'Erro de rede ao criar ordem de serviço.';
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
       if (e.response != null) {
-        // Tenta extrair uma mensagem de erro mais específica do corpo da resposta
-        errorMessage = 'Falha ao criar OS (Status ${e.response?.statusCode}): ';
-        if (e.response?.data != null) {
-          // Verifica se a resposta é uma string simples (provável erro em texto plano)
-          if (e.response?.data is String) {
-            errorMessage += e.response!.data;
-          }
-          // Verifica se é um JSON com campo 'message' ou 'error'
-          else if (e.response?.data is Map<String, dynamic>) {
-            final responseData = e.response!.data as Map<String, dynamic>;
-            errorMessage += responseData['message'] ?? responseData['error'] ?? responseData.toString();
-          } else {
-            // Fallback para a representação em string dos dados
-            errorMessage += e.response!.data.toString();
-          }
+        throw ApiException('Erro da API ao criar OS: ${e.response!.data.toString()}');
+      }
+      throw ApiException('Erro de rede ao criar OS: ${e.message}');
+    } catch (e) {
+      throw ApiException('Erro inesperado ao criar OS: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<void> updateOrdemServico({
+    required int osId,
+    required int clienteId,
+    required int equipamentoId,
+    int? tecnicoAtribuidoId, // Continua recebendo o ID aqui
+    required String problemaRelatado,
+    String? analiseFalha,
+    String? solucaoAplicada,
+    required StatusOSModel status,
+    PrioridadeOSModel? prioridade,
+    DateTime? dataAgendamento,
+  }) async {
+    try {
+      final Map<String, dynamic> requestData = {
+        'clienteId': clienteId,
+        'equipamentoId': equipamentoId,
+        'problemaRelatado': problemaRelatado,
+        'status': status.name,
+        'prioridade': prioridade?.name,
+        'dataAgendamento': dataAgendamento?.toIso8601String(),
+        'analiseFalha': analiseFalha,
+        'solucaoAplicada': solucaoAplicada,
+      };
+
+      // *** MUDANÇA AQUI: Condicionalmente, adicione o objeto tecnicoAtribuido ***
+      if (tecnicoAtribuidoId != null) {
+        requestData['tecnicoAtribuido'] = {'id': tecnicoAtribuidoId};
+      } else {
+        // Se tecnicoAtribuidoId for nulo, e você quer explicitamente desatribuir
+        // ou permitir que o backend defina como nulo, você pode enviar:
+        requestData['tecnicoAtribuido'] = null;
+        // Ou, se você quer que o backend ignore o campo se for nulo,
+        // apenas não o adicione ao mapa, e o `removeWhere` abaixo cuidará disso.
+      }
+
+
+      // Remove chaves com valores nulos para um PATCH mais limpo, se sua API suporta
+      // Atenção: O `tecnicoAtribuido: null` será removido se esta linha for executada antes
+      // de decidir enviar `null` para desatribuir. Se sua API espera 'tecnicoAtribuido': null
+      // para desatribuição explícita, ajuste a ordem ou a condição.
+      requestData.removeWhere((key, value) => value == null);
+
+      if (kDebugMode) {
+        print('JSON sendo enviado para updateOrdemServico: $requestData');
+      }
+
+      final response = await apiClient.put(
+        '/ordens-servico/$osId',
+        data: requestData,
+      );
+
+      if (response.statusCode == 200) {
+        return;
+      } else {
+        throw ApiException('Falha ao atualizar ordem de serviço $osId: Status ${response.statusCode}');
+      }
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e, stackTrace) {
+      String errorMessage = 'Erro de rede ao atualizar ordem de serviço $osId.';
+      if (e.response != null) {
+        errorMessage = 'Falha ao atualizar OS (Status ${e.response?.statusCode}): ';
+        if (e.response?.data is String) {
+          errorMessage += e.response!.data;
+        }
+        else if (e.response?.data is Map<String, dynamic>) {
+          final responseData = e.response!.data as Map<String, dynamic>;
+          errorMessage += responseData['message'] ?? responseData['error'] ?? responseData.toString();
         } else {
-          errorMessage += e.message ?? 'Erro desconhecido da API.';
+          errorMessage += e.response!.data.toString();
         }
       } else {
-        // Erro sem resposta (ex: problema de rede)
-        errorMessage = 'Erro de conexão ao criar OS: ${e.message}';
+        errorMessage = 'Erro de conexão ao atualizar OS: ${e.message}';
       }
-      // *** LOG DETALHADO NO CONSOLE ***
       if (kDebugMode) {
         print('*******************************************');
-        print('*** ERRO DioException em createOrdemServico ***');
+        print('*** ERRO DioException em updateOrdemServico ***');
         print('Mensagem: $errorMessage');
         print('Erro Original: ${e.error}');
         print('Tipo do Erro: ${e.type}');
@@ -133,48 +198,21 @@ class OsRepositoryImpl implements OsRepository {
         print(stackTrace);
         print('*******************************************');
       }
-      throw ApiException(errorMessage); // Lança exceção personalizada com a mensagem detalhada
-    } on ApiException {
-      rethrow; // Relança exceções personalizadas já tratadas
-    } catch (e, stackTrace) { // Adicionado stackTrace
-      // Captura outros erros inesperados (ex: erro de parse se a API retornar JSON malformado no sucesso)
-      // *** LOG DETALHADO NO CONSOLE ***
+      throw ApiException(errorMessage);
+    } catch (e, stackTrace) {
       if (kDebugMode) {
         print('*******************************************');
-        print('*** ERRO Geral em createOrdemServico ***');
+        print('*** ERRO Geral em updateOrdemServico ***');
         print('Erro: ${e.toString()}');
         print('Tipo do Erro: ${e.runtimeType}');
         print('Stack Trace:');
         print(stackTrace);
         print('*******************************************');
       }
-      throw ApiException('Erro inesperado ao criar ordem de serviço: ${e.toString()}');
+      throw ApiException('Erro inesperado ao atualizar ordem de serviço $osId: ${e.toString()}');
     }
   }
 
-  @override
-  Future<OrdemServico> updateOrdemServico(OrdemServico os) async {
-    try {
-      final OrdemServicoModel osModel = OrdemServicoModel.fromEntity(os);
-
-      final response = await apiClient.put('/ordens-servico/${os.id}', data: osModel.toJson());
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> json = response.data;
-        final OrdemServicoModel updatedOsModel = OrdemServicoModel.fromJson(json);
-        return updatedOsModel.toEntity();
-      } else {
-        throw ApiException('Falha ao atualizar ordem de serviço ${os.id}: Status ${response.statusCode}');
-      }
-    } on ApiException {
-      rethrow;
-    } on DioException catch (e) {
-      // Tratamento de erro similar ao createOrdemServico pode ser adicionado aqui
-      throw ApiException('Erro de rede ao atualizar ordem de serviço ${os.id}: ${e.message}');
-    } catch (e) {
-      throw ApiException('Erro inesperado ao atualizar ordem de serviço ${os.id}: ${e.toString()}');
-    }
-  }
 
   @override
   Future<void> deleteOrdemServico(int id) async {
@@ -198,20 +236,12 @@ class OsRepositoryImpl implements OsRepository {
   @override
   Future<String?> getNextOsNumber() async {
     try {
-      // *** CORREÇÃO: Removido o parâmetro 'options' ***
-      final response = await apiClient.get(
-        '/ordens-servico/next-number',
-        // options: Options(responseType: ResponseType.plain), // REMOVIDO
-      );
+      final response = await apiClient.get('/ordens-servico/next-number');
 
       if (response.statusCode == 200) {
-        // A API retorna texto simples, então tratamos a resposta como String
-        // Se o seu ApiClient já faz parse JSON por padrão, pode precisar ajustar
-        // ou garantir que a API retorne JSON como { "nextNumber": "#1" }
         if (response.data is String) {
           return response.data as String?;
         } else {
-          // Se não for string, tenta converter para string
           if (kDebugMode) {
             print("WARN: getNextOsNumber recebeu tipo inesperado (${response.data.runtimeType}), tentando converter para String.");
           }
@@ -223,7 +253,7 @@ class OsRepositoryImpl implements OsRepository {
         }
         return null;
       }
-    } on DioException catch (e, stackTrace) { // Adicionado stackTrace
+    } on DioException catch (e, stackTrace) {
       if (kDebugMode) {
         print('*******************************************');
         print('*** ERRO DioException em getNextOsNumber ***');
@@ -236,7 +266,7 @@ class OsRepositoryImpl implements OsRepository {
         print('*******************************************');
       }
       return null;
-    } catch (e, stackTrace) { // Adicionado stackTrace
+    } catch (e, stackTrace) {
       if (kDebugMode) {
         print('*******************************************');
         print('*** ERRO Geral em getNextOsNumber ***');
@@ -250,28 +280,3 @@ class OsRepositoryImpl implements OsRepository {
     }
   }
 }
-
-// Adicione/verifique o método fromEntity no OrdemServicoModel se necessário
-// Exemplo:
-/*
-  factory OrdemServicoModel.fromEntity(OrdemServico entity) {
-    return OrdemServicoModel(
-      id: entity.id,
-      numeroOS: entity.numeroOS,
-      status: entity.status,
-      dataAbertura: entity.dataAbertura,
-      dataAgendamento: entity.dataAgendamento,
-      dataFechamento: entity.dataFechamento,
-      dataHoraEmissao: entity.dataHoraEmissao,
-      clienteId: entity.clienteId,
-      equipamentoId: entity.equipamentoId,
-      tecnicoAtribuidoId: entity.tecnicoAtribuidoId,
-      problemaRelatado: entity.problemaRelatado,
-      analiseFalha: entity.analiseFalha,
-      solucaoAplicada: entity.solucaoAplicada,
-      prioridade: entity.prioridade,
-      // Não incluir campos que são apenas do DTO de resposta (nomeCliente, etc.)
-    );
-  }
-*/
-

@@ -9,8 +9,8 @@ part of 'usuario_model.dart';
 UsuarioModel _$UsuarioModelFromJson(Map<String, dynamic> json) => UsuarioModel(
       id: (json['id'] as num?)?.toInt(),
       nome: json['nome'] as String,
-      cracha: json['cracha'] as String,
-      email: json['email'] as String,
+      cracha: json['cracha'] as String?,
+      email: json['email'] as String?,
       perfil: $enumDecode(_$PerfilUsuarioModelEnumMap, json['perfil']),
     );
 
