@@ -2,9 +2,6 @@
 
 import 'package:json_annotation/json_annotation.dart';
 import 'package:nordeste_servicos_app/data/models/tipo_cliente.dart';
-
-// Importar o enum TipoCliente e a entidade Cliente
-
 import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
 
 part 'cliente_model.g.dart'; // Gerado pelo build_runner
@@ -12,7 +9,7 @@ part 'cliente_model.g.dart'; // Gerado pelo build_runner
 // Modelo para representar os dados do Cliente recebidos da API
 @JsonSerializable()
 class ClienteModel {
-  final int id; // ID geralmente não é nulo ao receber da API
+  final int id;
 
   // Informações Pessoais/Empresariais
   final TipoCliente tipoCliente;
@@ -32,12 +29,6 @@ class ClienteModel {
   final String bairro;
   final String cidade;
   final String estado;
-
-  // Campos antigos removidos
-  // final String nomeRazaoSocial;
-  // final String endereco;
-  // final String telefone;
-  // final String cnpjCpf;
 
   // Construtor
   ClienteModel({
@@ -80,5 +71,27 @@ class ClienteModel {
       estado: estado,
     );
   }
-}
 
+  /// Converte uma instância da entidade [Cliente] para o modelo [ClienteModel].
+  factory ClienteModel.fromEntity(Cliente entity) {
+    // O '!' em entity.id! é usado porque o modelo espera um ID não nulo,
+    // e assumimos que uma entidade que está sendo convertida para ser enviada (ex: update) já possui um ID.
+    // Se você for criar um cliente, o ID é gerado pelo backend, então este método não seria usado para a requisição de criação.
+    return ClienteModel(
+      id: entity.id!,
+      tipoCliente: entity.tipoCliente,
+      nomeCompleto: entity.nomeCompleto,
+      cpfCnpj: entity.cpfCnpj,
+      email: entity.email,
+      telefonePrincipal: entity.telefonePrincipal,
+      telefoneAdicional: entity.telefoneAdicional,
+      cep: entity.cep,
+      rua: entity.rua,
+      numero: entity.numero,
+      complemento: entity.complemento,
+      bairro: entity.bairro,
+      cidade: entity.cidade,
+      estado: entity.estado,
+    );
+  }
+}

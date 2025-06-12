@@ -40,4 +40,15 @@ class EquipamentoModel {
       clienteId: clienteId,
     );
   }
+
+  factory EquipamentoModel.fromEntity(Equipamento entity) {
+    return EquipamentoModel(
+      id: entity.id,
+      tipo: entity.tipo,
+      marcaModelo: entity.marcaModelo,
+      numeroSerieChassi: entity.numeroSerieChassi,
+      horimetro: entity.horimetro,
+      clienteId: entity.clienteId,
+    );
+  }
 }

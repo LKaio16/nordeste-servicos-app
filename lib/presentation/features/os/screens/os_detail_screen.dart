@@ -257,8 +257,8 @@ class OsDetailScreen extends ConsumerWidget {
                   title: 'Informações Gerais',
                   icon: Icons.info_outline,
                   children: [
-                    _buildDetailRow(label: 'Cliente', value: ordemServico.nomeCliente),
-                    _buildDetailRow(label: 'Equipamento', value: ordemServico.descricaoEquipamento),
+                    _buildDetailRow(label: 'Cliente', value: ordemServico.cliente.nomeCompleto),
+                    _buildDetailRow(label: 'Equipamento', value: ordemServico.equipamento.marcaModelo + " - " + ordemServico.equipamento.numeroSerieChassi),
                     _buildDetailRow(label: 'Técnico Atribuído', value: ordemServico.tecnicoAtribuido?.nome ?? 'Não atribuído'),
                   ],
                 ),

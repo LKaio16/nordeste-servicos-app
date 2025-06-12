@@ -84,8 +84,8 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
       _analiseController.text = os.analiseFalha ?? '';
       _solucaoController.text = os.solucaoAplicada ?? '';
 
-      _selectedClienteId = os.clienteId.toString();
-      _selectedEquipamentoId = os.equipamentoId.toString();
+      _selectedClienteId = os.cliente.id.toString();
+      _selectedEquipamentoId = os.equipamento.id.toString();
       // *** ALTERAÇÃO AQUI: Acessar o ID do técnico através do objeto aninhado ***
       _selectedTecnicoId = os.tecnicoAtribuido?.id?.toString();
       // *** CORREÇÃO: Atribui os enums da ENTIDADE ***

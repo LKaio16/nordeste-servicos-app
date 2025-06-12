@@ -23,10 +23,9 @@ OrdemServicoModel _$OrdemServicoModelFromJson(Map<String, dynamic> json) =>
       dataHoraEmissao: json['dataHoraEmissao'] == null
           ? null
           : DateTime.parse(json['dataHoraEmissao'] as String),
-      clienteId: (json['clienteId'] as num).toInt(),
-      nomeCliente: json['nomeCliente'] as String?,
-      equipamentoId: (json['equipamentoId'] as num).toInt(),
-      descricaoEquipamento: json['descricaoEquipamento'] as String?,
+      cliente: ClienteModel.fromJson(json['cliente'] as Map<String, dynamic>),
+      equipamento: EquipamentoModel.fromJson(
+          json['equipamento'] as Map<String, dynamic>),
       tecnicoAtribuidoModel: json['tecnicoAtribuido'] == null
           ? null
           : UsuarioModel.fromJson(
@@ -47,10 +46,8 @@ Map<String, dynamic> _$OrdemServicoModelToJson(OrdemServicoModel instance) =>
       'dataAgendamento': instance.dataAgendamento?.toIso8601String(),
       'dataFechamento': instance.dataFechamento?.toIso8601String(),
       'dataHoraEmissao': instance.dataHoraEmissao?.toIso8601String(),
-      'clienteId': instance.clienteId,
-      'nomeCliente': instance.nomeCliente,
-      'equipamentoId': instance.equipamentoId,
-      'descricaoEquipamento': instance.descricaoEquipamento,
+      'cliente': instance.cliente.toJson(),
+      'equipamento': instance.equipamento.toJson(),
       'tecnicoAtribuido': instance.tecnicoAtribuidoModel?.toJson(),
       'problemaRelatado': instance.problemaRelatado,
       'analiseFalha': instance.analiseFalha,

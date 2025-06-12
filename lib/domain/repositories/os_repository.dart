@@ -2,15 +2,8 @@
 
 import '../../data/models/prioridade_os_model.dart';
 import '../../domain/entities/ordem_servico.dart';
-import '../../domain/entities/registro_tempo.dart'; // Se quiser retornar a lista aqui
-import '../../domain/entities/item_os_utilizado.dart'; // Se quiser retornar a lista aqui
-import '../../domain/entities/registro_deslocamento.dart'; // Se quiser retornar a lista aqui
-import '../../domain/entities/foto_os.dart'; // Se quiser retornar a lista aqui
-import '../../domain/entities/assinatura_os.dart'; // Se quiser retornar aqui
-import '../../data/models/status_os_model.dart'; // Para usar o enum como parâmetro
 import '../../data/models/status_os_model.dart';
-import '../entities/ordem_servico.dart';
-import '/core/error/exceptions.dart';
+
 
 abstract class OsRepository {
   /// Obtém a lista de ordens de serviço, com opções de filtro.

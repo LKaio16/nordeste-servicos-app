@@ -1,38 +1,34 @@
 // lib/data/models/ordem_servico_model.dart
 
 import 'package:json_annotation/json_annotation.dart';
-import 'package:nordeste_servicos_app/data/models/perfil_usuario_model.dart';
+import 'package:nordeste_servicos_app/data/models/cliente_model.dart';
+import 'package:nordeste_servicos_app/data/models/equipamento_model.dart'; // <<< 1. IMPORTAR
 import 'package:nordeste_servicos_app/data/models/prioridade_os_model.dart';
 import 'package:nordeste_servicos_app/data/models/status_os_model.dart';
 import 'package:nordeste_servicos_app/data/models/usuario_model.dart';
-
-// Importe a ENTIDADE (camada de domínio)
 import '../../domain/entities/ordem_servico.dart';
 import '../../domain/entities/usuario.dart';
 
-// Importe seus conversores const aqui
-// ASSUMINDO QUE VOCÊ TEM ESTES ARQUIVOS:
-
-
 part 'ordem_servico_model.g.dart';
 
-// *** CORREÇÃO AQUI: REATIVAR explicitToJson e adicionar conversores se usados a nível de classe ***
-@JsonSerializable(
-  explicitToJson: true, // <<< ISSO É CRÍTICO para objetos aninhados como UsuarioModel
-)
+@JsonSerializable(explicitToJson: true)
 class OrdemServicoModel {
   final int? id;
   final String numeroOS;
-  final StatusOSModel status; // Este campo será tratado pelo StatusOSModelConverter
+  final StatusOSModel status;
   final DateTime? dataAbertura;
   final DateTime? dataAgendamento;
   final DateTime? dataFechamento;
   final DateTime? dataHoraEmissao;
 
-  final int clienteId;
-  final String? nomeCliente;
-  final int equipamentoId;
-  final String? descricaoEquipamento;
+  @JsonKey(name: 'cliente')
+  final ClienteModel cliente;
+
+  // --- 2. SUBSTITUIR OS CAMPOS DE EQUIPAMENTO ---
+  // final int equipamentoId;
+  // final String? descricaoEquipamento;
+  @JsonKey(name: 'equipamento')
+  final EquipamentoModel equipamento; // <<< NOVO CAMPO
 
   @JsonKey(name: 'tecnicoAtribuido')
   final UsuarioModel? tecnicoAtribuidoModel;
@@ -40,9 +36,7 @@ class OrdemServicoModel {
   final String? problemaRelatado;
   final String? analiseFalha;
   final String? solucaoAplicada;
-
-  final PrioridadeOSModel? prioridade; // Este campo será tratado pelo PrioridadeOSModelConverter
-
+  final PrioridadeOSModel? prioridade;
 
   OrdemServicoModel({
     this.id,
@@ -52,10 +46,8 @@ class OrdemServicoModel {
     this.dataAgendamento,
     this.dataFechamento,
     this.dataHoraEmissao,
-    required this.clienteId,
-    this.nomeCliente,
-    required this.equipamentoId,
-    this.descricaoEquipamento,
+    required this.cliente,
+    required this.equipamento, // <<< 3. ATUALIZAR CONSTRUTOR
     this.tecnicoAtribuidoModel,
     this.problemaRelatado,
     this.analiseFalha,
@@ -68,30 +60,20 @@ class OrdemServicoModel {
 
   Map<String, dynamic> toJson() => _$OrdemServicoModelToJson(this);
 
-  // ... (seus métodos toEntity e fromEntity - eles já estão corretos com tecnicoAtribuidoModel) ...
-
   OrdemServico toEntity() {
-    // ... (lógica de conversão de status e prioridade) ...
-
-    Usuario? tecnicoAtribuidoEntity;
-    if (tecnicoAtribuidoModel != null) {
-      tecnicoAtribuidoEntity = tecnicoAtribuidoModel!.toEntity();
-    }
-
+    // ...
     return OrdemServico(
       id: id,
       numeroOS: numeroOS,
-      status: status, // Aqui já é o StatusOSModel, que é o mesmo da entidade
-      prioridade: prioridade, // Aqui já é o PrioridadeOSModel, que é o mesmo da entidade
+      status: status,
+      prioridade: prioridade,
       dataAbertura: dataAbertura,
       dataAgendamento: dataAgendamento,
       dataFechamento: dataFechamento,
       dataHoraEmissao: dataHoraEmissao,
-      clienteId: clienteId,
-      nomeCliente: nomeCliente,
-      equipamentoId: equipamentoId,
-      descricaoEquipamento: descricaoEquipamento,
-      tecnicoAtribuido: tecnicoAtribuidoEntity,
+      cliente: cliente.toEntity(),
+      equipamento: equipamento.toEntity(), // <<< 4. ATUALIZAR MAPEAMENTO
+      tecnicoAtribuido: tecnicoAtribuidoModel?.toEntity(),
       problemaRelatado: problemaRelatado,
       analiseFalha: analiseFalha,
       solucaoAplicada: solucaoAplicada,
@@ -99,21 +81,17 @@ class OrdemServicoModel {
   }
 
   factory OrdemServicoModel.fromEntity(OrdemServico entity) {
-    // ... (lógica de conversão de status e prioridade) ...
-
     return OrdemServicoModel(
       id: entity.id,
       numeroOS: entity.numeroOS,
-      status: entity.status, // Já é o StatusOSModel (enum)
-      prioridade: entity.prioridade, // Já é o PrioridadeOSModel (enum)
+      status: entity.status,
+      prioridade: entity.prioridade,
       dataAbertura: entity.dataAbertura,
       dataAgendamento: entity.dataAgendamento,
       dataFechamento: entity.dataFechamento,
       dataHoraEmissao: entity.dataHoraEmissao,
-      clienteId: entity.clienteId,
-      nomeCliente: entity.nomeCliente,
-      equipamentoId: entity.equipamentoId,
-      descricaoEquipamento: entity.descricaoEquipamento,
+      cliente: ClienteModel.fromEntity(entity.cliente),
+      equipamento: EquipamentoModel.fromEntity(entity.equipamento),
       tecnicoAtribuidoModel: entity.tecnicoAtribuido != null
           ? UsuarioModel.fromEntity(entity.tecnicoAtribuido!)
           : null,

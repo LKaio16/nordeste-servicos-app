@@ -82,7 +82,7 @@ class NovaOsNotifier extends StateNotifier<NovaOsState> {
   }
 
   Future<bool> createOrdemServico({
-    required String clienteId,
+    required String clienteId, // Recebe o ID do cliente como String (vindo da UI)
     required String equipamentoId,
     required String descricaoProblema,
     required String tecnicoId,
@@ -94,55 +94,61 @@ class NovaOsNotifier extends StateNotifier<NovaOsState> {
 
     if (kDebugMode) {
       print('--- createOrdemServico: Iniciando ---');
-      print('Cliente ID (String): $clienteId');
-      print('Equipamento ID (String): $equipamentoId');
-      print('Tecnico ID (String): $tecnicoId');
-      print('Prioridade (String): $prioridade');
-      print('Descrição: $descricaoProblema');
-      print('Data Abertura: $dataAbertura');
-      print('Data Agendamento: $dataAgendamento');
-      print('Próximo Número OS (do estado): ${state.nextOsNumber}');
+      // ... (outros prints de debug)
     }
 
     try {
-      if (kDebugMode) print('Tentando mapear prioridade...');
+      // Mapeamento de prioridade (já está correto)
       final PrioridadeOSModel prioridadeEnum = PrioridadeOSModel.values.firstWhere(
             (p) => p.name.toLowerCase() == prioridade.toLowerCase(),
         orElse: () => PrioridadeOSModel.MEDIA,
       );
-      if (kDebugMode) print('Prioridade mapeada para: $prioridadeEnum');
 
-      if (kDebugMode) print('Tentando converter IDs para int...');
+      // Conversão de IDs para int (já está correto)
       final int clienteIdInt = int.parse(clienteId);
-      if (kDebugMode) print('Cliente ID (int): $clienteIdInt');
       final int equipamentoIdInt = int.parse(equipamentoId);
-      if (kDebugMode) print('Equipamento ID (int): $equipamentoIdInt');
       final int tecnicoIdInt = int.parse(tecnicoId);
-      if (kDebugMode) print('Tecnico ID (int): $tecnicoIdInt');
 
-      // <<< CORREÇÃO AQUI: O tipo de tecnicoSelecionado DEVE SER Usuario? >>>
+      // --- 1. AJUSTE PRINCIPAL: BUSCAR O OBJETO CLIENTE COMPLETO ---
+      // Usando o clienteIdInt, encontre o Cliente na lista do estado.
+      final Cliente clienteSelecionado = state.clientes.firstWhere(
+            (c) => c.id == clienteIdInt,
+        orElse: () {
+          // Lança um erro se, por algum motivo, o cliente não for encontrado.
+          throw Exception('Cliente com ID $clienteIdInt não encontrado.');
+        },
+      );
+
+      final Equipamento equipamentoSelecionado = state.equipamentos.firstWhere(
+            (e) => e.id == equipamentoIdInt,
+        orElse: () => throw Exception('Equipamento com ID $equipamentoIdInt não encontrado.'),
+      );
+
+      // Busca pelo técnico (já está correto)
       final Usuario? tecnicoSelecionado = state.tecnicos.firstWhere(
             (t) => t.id == tecnicoIdInt,
         orElse: () {
-          // Melhor lançar uma exceção mais específica ou retornar null
           throw Exception('Técnico com ID $tecnicoIdInt não encontrado.');
         },
-      ); // REMOVA o 'as UsuarioModel?'
+      );
 
       if (kDebugMode) {
+        print('Cliente selecionado (Entidade Cliente): ${clienteSelecionado.nomeCompleto} (ID: ${clienteSelecionado.id})');
         print('Técnico selecionado (Entidade Usuario): ${tecnicoSelecionado?.nome} (ID: ${tecnicoSelecionado?.id})');
       }
 
-
-      // Cria o objeto OrdemServico com os dados do formulário
+      // --- 2. AJUSTE NA CRIAÇÃO DA ENTIDADE OrdemServico ---
+      // Agora passamos o objeto `clienteSelecionado` em vez do `clienteIdInt`.
       final novaOS = OrdemServico(
         numeroOS: state.nextOsNumber ?? '',
         status: StatusOSModel.EM_ABERTO,
         dataAbertura: dataAbertura,
         dataAgendamento: dataAgendamento,
-        clienteId: clienteIdInt,
-        equipamentoId: equipamentoIdInt,
-        tecnicoAtribuido: tecnicoSelecionado, // Agora o tipo é Usuario? e combina
+
+        cliente: clienteSelecionado, // <<< CAMPO ATUALIZADO
+
+        equipamento: equipamentoSelecionado,
+        tecnicoAtribuido: tecnicoSelecionado,
         problemaRelatado: descricaoProblema,
         prioridade: prioridadeEnum,
       );
