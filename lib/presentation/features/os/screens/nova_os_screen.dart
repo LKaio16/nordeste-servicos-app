@@ -1,5 +1,3 @@
-// lib/presentation/features/os/presentation/screens/nova_os_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart'; // Para formatação de data
@@ -9,29 +7,12 @@ import 'package:google_fonts/google_fonts.dart'; // Importando Google Fonts para
 import 'package:nordeste_servicos_app/presentation/features/os/providers/nova_os_provider.dart';
 import 'package:nordeste_servicos_app/presentation/features/os/providers/nova_os_state.dart';
 import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
-import 'package:nordeste_servicos_app/domain/entities/equipamento.dart';
-import 'package:nordeste_servicos_app/domain/entities/usuario.dart'; // Assumindo que Tecnico é um Usuario
+// REMOVED: import 'package:nordeste_servicos_app/domain/entities/equipamento.dart'; // Not needed directly here anymore for selection
+import 'package:nordeste_servicos_app/domain/entities/usuario.dart';
+
+import '../../../shared/styles/app_colors.dart'; // Assumindo que Tecnico é um Usuario
 
 // Definição de cores modernizadas
-class AppColors {
-  // Cores principais
-  static const Color primaryBlue = Color(0xFF1A73E8); // Azul principal mais vibrante
-  static const Color secondaryBlue = Color(0xFF4285F4); // Azul secundário
-  static const Color accentBlue = Color(0xFF8AB4F8); // Azul claro para acentos
-  static const Color darkBlue = Color(0xFF0D47A1); // Azul escuro para detalhes
-
-  // Cores de status
-  static const Color successGreen = Color(0xFF34A853); // Verde mais moderno
-  static const Color warningOrange = Color(0xFFFFA000); // Laranja mais vibrante
-  static const Color errorRed = Color(0xFFEA4335); // Vermelho mais moderno
-
-  // Cores de fundo e texto
-  static const Color backgroundGray = Color(0xFFF8F9FA); // Fundo cinza claro
-  static const Color cardBackground = Colors.white; // Fundo dos cards
-  static const Color textDark = Color(0xFF202124); // Texto escuro
-  static const Color textLight = Color(0xFF5F6368); // Texto cinza
-  static const Color dividerColor = Color(0xFFEEEEEE); // Cor para divisores
-}
 
 class NovaOsScreen extends ConsumerStatefulWidget {
   const NovaOsScreen({Key? key}) : super(key: key);
@@ -44,8 +25,15 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
   final _formKey = GlobalKey<FormState>();
   final _descricaoController = TextEditingController();
 
+  // NEW: Text controllers for equipment details
+  final _tipoEquipamentoController = TextEditingController();
+  final _marcaModeloEquipamentoController = TextEditingController();
+  final _numeroSerieChassiEquipamentoController = TextEditingController();
+  final _horimetroEquipamentoController = TextEditingController();
+
+
   String? _selectedClienteId;
-  String? _selectedEquipamentoId;
+  // REMOVED: String? _selectedEquipamentoId; // No longer selecting equipment by ID
   String? _selectedTecnicoId;
   String _selectedPrioridade = 'Média'; // Valor inicial
   DateTime _selectedDataAbertura = DateTime.now();
@@ -81,6 +69,10 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
   @override
   void dispose() {
     _descricaoController.dispose();
+    _tipoEquipamentoController.dispose(); // Dispose new controllers
+    _marcaModeloEquipamentoController.dispose();
+    _numeroSerieChassiEquipamentoController.dispose();
+    _horimetroEquipamentoController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -121,9 +113,35 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
+      // Validate horimetro separately as it's a numeric field
+      final String horimetroText = _horimetroEquipamentoController.text;
+      double? horimetroValue;
+      if (horimetroText.isNotEmpty) {
+        horimetroValue = double.tryParse(horimetroText);
+        if (horimetroValue == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Horímetro deve ser um número válido.',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+              ),
+              backgroundColor: AppColors.errorRed,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: EdgeInsets.all(12),
+            ),
+          );
+          return; // Stop submission if horimetro is invalid
+        }
+      }
+
       final success = await ref.read(novaOsProvider.notifier).createOrdemServico(
         clienteId: _selectedClienteId!,
-        equipamentoId: _selectedEquipamentoId!,
+        // NEW: Pass equipment details directly
+        tipoEquipamento: _tipoEquipamentoController.text,
+        marcaModeloEquipamento: _marcaModeloEquipamentoController.text,
+        numeroSerieChassiEquipamento: _numeroSerieChassiEquipamentoController.text,
+        horimetroEquipamento: horimetroValue, // Pass parsed double
         descricaoProblema: _descricaoController.text,
         tecnicoId: _selectedTecnicoId!,
         prioridade: _selectedPrioridade,
@@ -150,7 +168,6 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
           ),
         );
       } else if (mounted) {
-        // Erro já é tratado pelo estado do provider, mas podemos mostrar um SnackBar aqui também
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -187,16 +204,16 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
       );
     }).toList();
 
-    // TODO: Filtrar equipamentos baseado no cliente selecionado, se necessário
-    final equipamentoItems = state.equipamentos.map((Equipamento equipamento) {
-      return DropdownMenuItem<String>(
-        value: equipamento.id.toString(),
-        child: Text(
-          '${equipamento.marcaModelo} (${equipamento.numeroSerieChassi})',
-          style: GoogleFonts.poppins(),
-        ),
-      );
-    }).toList();
+    // REMOVED: No longer need equipmentItems as we're not selecting existing
+    // final equipamentoItems = state.equipamentos.map((Equipamento equipamento) {
+    //   return DropdownMenuItem<String>(
+    //     value: equipamento.id.toString(),
+    //     child: Text(
+    //       '${equipamento.marcaModelo} (${equipamento.numeroSerieChassi})',
+    //       style: GoogleFonts.poppins(),
+    //     ),
+    //   );
+    // }).toList();
 
     final tecnicoItems = state.tecnicos.map((Usuario tecnico) {
       return DropdownMenuItem<String>(
@@ -381,27 +398,52 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
                               onChanged: (value) {
                                 setState(() {
                                   _selectedClienteId = value;
-                                  _selectedEquipamentoId = null; // Limpa equipamento ao trocar cliente
+                                  // No need to clear equipment ID anymore
+                                  // _selectedEquipamentoId = null;
                                   // TODO: Chamar ref.read(novaOsProvider.notifier).loadEquipamentosPorCliente(value!);
                                 });
                               },
                               validator: (value) => value == null ? 'Campo obrigatório' : null,
                             ),
                             const SizedBox(height: 20),
-                            _buildDropdownFormField(
-                              label: 'Equipamento*',
-                              hint: _selectedClienteId == null ? 'Selecione um cliente primeiro' : 'Selecione o equipamento',
-                              value: _selectedEquipamentoId,
-                              items: equipamentoItems, // Idealmente filtrados pelo cliente
-                              icon: Icons.build_outlined,
-                              onChanged: _selectedClienteId == null ? null : (value) {
-                                setState(() {
-                                  _selectedEquipamentoId = value;
-                                });
-                              },
-                              validator: (value) => value == null ? 'Campo obrigatório' : null,
+                            // NEW: Equipment fields
+                            _buildSectionHeader('Detalhes do Equipamento'),
+                            const SizedBox(height: 16),
+                            _buildTextFormField(
+                              controller: _tipoEquipamentoController,
+                              label: 'Tipo de Equipamento*',
+                              hint: 'Ex: Gerador, Empilhadeira, Compressor',
+                              icon: Icons.category_outlined,
+                              validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
                             ),
                             const SizedBox(height: 20),
+                            _buildTextFormField(
+                              controller: _marcaModeloEquipamentoController,
+                              label: 'Marca/Modelo*',
+                              hint: 'Ex: Cummins C220D5, Hyster H2.5FT',
+                              icon: Icons.branding_watermark_outlined,
+                              validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildTextFormField(
+                              controller: _numeroSerieChassiEquipamentoController,
+                              label: 'Número de Série/Chassi*',
+                              hint: 'Ex: ABC123XYZ789',
+                              icon: Icons.numbers_outlined,
+                              validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildTextFormField(
+                              controller: _horimetroEquipamentoController,
+                              label: 'Horímetro (opcional)',
+                              hint: 'Ex: 1500.5',
+                              icon: Icons.hourglass_empty_outlined,
+                              keyboardType: TextInputType.numberWithOptions(decimal: true), // Allow decimal input
+                              // No validator here, as we'll validate the format during submission.
+                              // A non-numeric input will be handled by the tryParse in _submitForm.
+                            ),
+                            const SizedBox(height: 20),
+                            // END NEW EQUIPMENT FIELDS
                             _buildTextFormField(
                               controller: _descricaoController,
                               label: 'Descrição do Problema*',
@@ -585,6 +627,42 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
     );
   }
 
+  // NEW: Section header for equipment
+  Widget _buildSectionHeader(String title) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.accentBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.hardware_outlined,
+                color: AppColors.accentBlue,
+                size: 20,
+              ),
+            ),
+            SizedBox(width: 10),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 10),
+        Divider(color: AppColors.dividerColor.withOpacity(0.7)),
+      ],
+    );
+  }
+
   Widget _buildDropdownFormField({
     required String label,
     required String hint,
@@ -691,6 +769,7 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
     required IconData icon,
     int maxLines = 1,
     FormFieldValidator<String>? validator,
+    TextInputType? keyboardType, // Added for horimetro
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -720,6 +799,7 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
             controller: controller,
             maxLines: maxLines,
             validator: validator,
+            keyboardType: keyboardType, // Applied keyboard type
             style: GoogleFonts.poppins(
               color: AppColors.textDark,
               fontSize: 15,

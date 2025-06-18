@@ -138,7 +138,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                                 borderRadius: BorderRadius.circular(15),
                               ),
                               child: Image.asset(
-                                '../assets/images/logo.png',
+                                'assets/images/logo.png',
                                 height: 100,
                                 fit: BoxFit.contain,
                               ),

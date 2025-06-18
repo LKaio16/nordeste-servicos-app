@@ -14,23 +14,6 @@ import '../../auth/providers/auth_provider.dart';
 // Importe o provider da lista de OS para poder disparar o carregamento
 import '../../os/providers/os_list_provider.dart';
 
-
-// Definição de AppColors (mantenha como está no seu projeto)
-class AppColors {
-  static const Color primaryBlue = Color(0xFF1A73E8);
-  static const Color secondaryBlue = Color(0xFF4285F4);
-  static const Color accentBlue = Color(0xFF8AB4F8);
-  static const Color darkBlue = Color(0xFF0D47A1);
-  static const Color successGreen = Color(0xFF34A853);
-  static const Color warningOrange = Color(0xFFFFA000);
-  static const Color errorRed = Color(0xFFEA4335);
-  static const Color backgroundGray = Color(0xFFF8F9FA);
-  static const Color cardBackground = Colors.white;
-  static const Color textDark = Color(0xFF202124);
-  static const Color textLight = Color(0xFF5F6368);
-  static const Color dividerColor = Color(0xFFEEEEEE);
-}
-
 // Tela Principal Refatorada - AGORA É UM ConsumerWidget
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({Key? key}) : super(key: key);

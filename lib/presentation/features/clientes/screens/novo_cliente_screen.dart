@@ -4,34 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart'; // Importando Google Fonts para fontes modernas
 
-// Importar o enum TipoCliente (ajuste o caminho se necessário)
-import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
-
 // Importar o provider e o estado
 import '../../../../data/models/tipo_cliente.dart';
+import '../../../shared/styles/app_colors.dart';
 import '../providers/novo_cliente_provider.dart';
 import '../providers/novo_cliente_state.dart';
 
-// Definição de cores modernizadas
-class AppColors {
-  // Cores principais
-  static const Color primaryBlue = Color(0xFF1A73E8); // Azul principal mais vibrante
-  static const Color secondaryBlue = Color(0xFF4285F4); // Azul secundário
-  static const Color accentBlue = Color(0xFF8AB4F8); // Azul claro para acentos
-  static const Color darkBlue = Color(0xFF0D47A1); // Azul escuro para detalhes
-
-  // Cores de status
-  static const Color successGreen = Color(0xFF34A853); // Verde mais moderno
-  static const Color warningOrange = Color(0xFFFFA000); // Laranja mais vibrante
-  static const Color errorRed = Color(0xFFEA4335); // Vermelho mais moderno
-
-  // Cores de fundo e texto
-  static const Color backgroundGray = Color(0xFFF8F9FA); // Fundo cinza claro
-  static const Color cardBackground = Colors.white; // Fundo dos cards
-  static const Color textDark = Color(0xFF202124); // Texto escuro
-  static const Color textLight = Color(0xFF5F6368); // Texto cinza
-  static const Color dividerColor = Color(0xFFEEEEEE); // Cor para divisores
-}
 
 class NovoClienteScreen extends ConsumerStatefulWidget {
   const NovoClienteScreen({super.key});
@@ -182,6 +160,9 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
+        iconTheme: IconThemeData(
+          color: Colors.white
+        ),
         title: Text(
           'Novo Cliente',
           style: GoogleFonts.poppins(

@@ -1,6 +1,7 @@
 // lib/data/repositories/equipamento_repository_impl.dart
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../core/network/api_client.dart';
 import '../../core/error/exceptions.dart';
 import '../models/equipamento_model.dart';
@@ -60,33 +61,67 @@ class EquipamentoRepositoryImpl implements EquipamentoRepository {
     }
   }
 
+// lib/data/repositories/equipamento_repository_impl.dart
+
   @override
   Future<Equipamento> createEquipamento(Equipamento equipamento) async {
-      try {
-        final EquipamentoModel equipamentoModel = EquipamentoModel(
-           // ID não é enviado
-           tipo: equipamento.tipo,
-           marcaModelo: equipamento.marcaModelo,
-           numeroSerieChassi: equipamento.numeroSerieChassi,
-           horimetro: equipamento.horimetro,
-           clienteId: equipamento.clienteId,
-        );
+    try {
+      // Use the fromEntity factory constructor for proper conversion
+      final EquipamentoModel equipamentoModel = EquipamentoModel.fromEntity(equipamento);
+
+      // DEBUG: Verifique o JSON que será enviado (muito útil para depuração)
+      if (kDebugMode) {
+        print('JSON sendo enviado para createEquipamento: ${equipamentoModel.toJson()}');
+      }
 
       final response = await apiClient.post('/equipamentos', data: equipamentoModel.toJson());
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201 || response.statusCode == 200) { // Backend might return 200 OK for successful creation too
         final Map<String, dynamic> json = response.data;
         final EquipamentoModel createdEquipamentoModel = EquipamentoModel.fromJson(json);
         return createdEquipamentoModel.toEntity();
       } else {
-         throw ApiException('Falha ao criar equipamento: Status ${response.statusCode}');
+        // Provide more specific error details from the response if available
+        String errorMessage = 'Falha ao criar equipamento: Status ${response.statusCode}';
+        if (response.data != null && response.data is Map && (response.data as Map).containsKey('message')) {
+          errorMessage += ' - Mensagem: ${(response.data as Map)['message']}';
+        }
+        throw ApiException(errorMessage);
       }
     } on ApiException {
-       rethrow;
-    } on DioException catch (e) {
-        throw ApiException('Erro de rede ao criar equipamento: ${e.message}');
-    } catch (e) {
-       throw ApiException('Erro inesperado ao criar equipamento: ${e.toString()}');
+      rethrow;
+    } on DioException catch (e, stackTrace) { // Add stackTrace for better debugging
+      // Enhanced error logging for DioException
+      if (kDebugMode) {
+        print('*******************************************');
+        print('*** ERRO DioException em createEquipamento ***');
+        print('URI: ${e.requestOptions.uri}');
+        print('Mensagem: ${e.message}');
+        print('Status Code: ${e.response?.statusCode}');
+        print('Response Data: ${e.response?.data}');
+        print('Stack Trace:');
+        print(stackTrace);
+        print('*******************************************');
+      }
+      String userFacingMessage = 'Erro de rede ao criar equipamento. Verifique sua conexão ou tente novamente.';
+      if (e.response?.data != null && e.response!.data is Map && (e.response!.data as Map).containsKey('message')) {
+        userFacingMessage = (e.response!.data as Map)['message'];
+      } else if (e.message != null && e.message!.isNotEmpty) {
+        userFacingMessage = e.message!;
+      }
+      throw ApiException(userFacingMessage);
+    } catch (e, stackTrace) { // Add stackTrace for better debugging
+      // General unexpected error
+      if (kDebugMode) {
+        print('*******************************************');
+        print('*** ERRO Inesperado em createEquipamento ***');
+        print('Erro: ${e.toString()}');
+        print('Tipo do Erro: ${e.runtimeType}');
+        print('Stack Trace:');
+        print(stackTrace);
+        print('*******************************************');
+      }
+      throw ApiException('Erro inesperado ao criar equipamento: ${e.toString()}');
     }
   }
 

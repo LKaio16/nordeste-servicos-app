@@ -1,308 +1,250 @@
-// lib/features/ordem_servico/presentation/screens/os_list_screen.dart
+// lib/features/os/presentation/screens/os_list_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Import Riverpod
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart'; // Para formatação de data
+import 'package:intl/intl.dart';
 import 'package:nordeste_servicos_app/data/models/status_os_model.dart';
 
-// Importações locais (ajuste os caminhos conforme sua estrutura de projeto)
+// Importações locais
 import '../../../../domain/entities/ordem_servico.dart';
+import '../../../shared/styles/app_colors.dart';
 import '../providers/os_list_provider.dart';
-import 'os_detail_screen.dart'; // Importe o seu osListProvider (este já deve conter OsListState)
-// REMOVIDO: import '../providers/os_list_state.dart'; // Removido para evitar conflito
+import 'os_detail_screen.dart';
 
-// Página Lista OS integrada com Riverpod
-class OsListScreen extends ConsumerStatefulWidget {
+class OsListScreen extends ConsumerWidget {
   const OsListScreen({Key? key}) : super(key: key);
 
-  @override
-  ConsumerState<OsListScreen> createState() => _OsListScreenState();
-}
+  // --- Funções Auxiliares de Estilo (Helpers) ---
 
-class _OsListScreenState extends ConsumerState<OsListScreen> {
-
-  @override
-  void initState() {
-    super.initState();
-    // *** IMPORTANTE: REMOVIDA A LÓGICA DE CARREGAMENTO INICIAL DO INITSTATE. ***
-    // O carregamento agora é feito no construtor do OsListNotifier,
-    // que é disparado quando o provedor é criado ou invalidado.
-  }
-
-  // Função auxiliar para obter a cor do fundo do status
   Color _getStatusBackgroundColor(StatusOSModel status) {
     switch (status) {
       case StatusOSModel.CONCLUIDA:
       case StatusOSModel.ENCERRADA:
-        return Colors.green.shade100;
+        return AppColors.successGreen.withOpacity(0.1);
       case StatusOSModel.EM_ANDAMENTO:
-        return Colors.orange.shade100;
+        return AppColors.warningOrange.withOpacity(0.1);
       case StatusOSModel.EM_ABERTO:
       case StatusOSModel.PENDENTE_PECAS:
-        return Colors.blue.shade100;
+        return AppColors.primaryBlue.withOpacity(0.1);
       case StatusOSModel.CANCELADA:
-        return Colors.red.shade100;
-      default: // UNKNOWN ou outros
+        return AppColors.errorRed.withOpacity(0.1);
+      default:
         return Colors.grey.shade200;
     }
   }
 
-  // Função auxiliar para obter a cor do texto do status
   Color _getStatusTextColor(StatusOSModel status) {
     switch (status) {
       case StatusOSModel.CONCLUIDA:
       case StatusOSModel.ENCERRADA:
-        return Colors.green.shade800;
+        return AppColors.successGreen;
       case StatusOSModel.EM_ANDAMENTO:
-        return Colors.orange.shade800;
+        return AppColors.warningOrange;
       case StatusOSModel.EM_ABERTO:
       case StatusOSModel.PENDENTE_PECAS:
-        return Colors.blue.shade800;
+        return AppColors.primaryBlue;
       case StatusOSModel.CANCELADA:
-        return Colors.red.shade800;
-      default: // UNKNOWN ou outros
-        return Colors.grey.shade700;
+        return AppColors.errorRed;
+      default:
+        return AppColors.textLight;
     }
   }
 
-  // Função auxiliar para obter o texto do status (mais completo)
   String _getStatusText(StatusOSModel status) {
     switch (status) {
-      case StatusOSModel.CONCLUIDA:
-        return 'Concluída';
-      case StatusOSModel.EM_ANDAMENTO:
-        return 'Em Andamento';
-      case StatusOSModel.EM_ABERTO:
-        return 'Em Aberto';
-      case StatusOSModel.ENCERRADA:
-        return 'Encerrada';
-      case StatusOSModel.CANCELADA:
-        return 'Cancelada';
-      case StatusOSModel.PENDENTE_PECAS:
-        return 'Pendente';
-      default:
-        return 'Desconhecido';
+      case StatusOSModel.CONCLUIDA: return 'Concluída';
+      case StatusOSModel.EM_ANDAMENTO: return 'Em Andamento';
+      case StatusOSModel.EM_ABERTO: return 'Em Aberto';
+      case StatusOSModel.ENCERRADA: return 'Encerrada';
+      case StatusOSModel.CANCELADA: return 'Cancelada';
+      case StatusOSModel.PENDENTE_PECAS: return 'Pendente';
+      default: return 'Desconhecido';
     }
   }
 
-  // Função para formatar data (exemplo)
   String _formatDate(DateTime? date) {
     if (date == null) return '--/--/----';
     return DateFormat('dd/MM/yyyy').format(date);
   }
 
   @override
-  Widget build(BuildContext context) {
-    // Observar o estado do provider.
-    // Quando o provedor é invalidado e uma nova instância do Notifier é criada,
-    // o construtor do Notifier chamará loadOrdensServico, e esta tela será reconstruída.
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(osListProvider);
     final notifier = ref.read(osListProvider.notifier);
 
-    final Color primaryColor = Colors.indigo.shade700;
-
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        title: TextField(
-          style: GoogleFonts.poppins(fontSize: 14),
-          decoration: InputDecoration(
-            hintText: 'Buscar OS, cliente ou técnico...',
-            hintStyle: GoogleFonts.poppins(color: Colors.grey.shade600),
-            prefixIcon: Icon(Icons.search, color: Colors.grey.shade600),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 15.0),
-          ),
-          onSubmitted: (searchTerm) {
-            // TODO: Implementar busca chamando o notifier
-            notifier.loadOrdensServico(searchTerm: searchTerm, refresh: true);
-          },
-        ),
-        automaticallyImplyLeading: false,
-      ),
+      // A AppBar foi removida para dar lugar a um cabeçalho customizado no body
+      backgroundColor: AppColors.backgroundGray,
       body: Column(
         children: [
-          // Seção de Filtros
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-            color: Colors.white,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () { /* TODO: Implementar ação de abrir filtros avançados */ },
-                    icon: const Icon(Icons.filter_list, size: 18, color: Colors.white),
-                    label: Text('Filtros', style: GoogleFonts.poppins(color: Colors.white, fontSize: 13)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Status'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Data'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip('Técnico'),
-                  // TODO: Adicionar mais filtros se necessário
-                ],
-              ),
-            ),
-          ),
-          const Divider(height: 1, thickness: 1),
-          // Conteúdo Principal (Lista, Loading, Erro)
+          // NOVO: Cabeçalho da página com busca e filtros
+          _buildPageHeader(context, notifier),
+
+          // Conteúdo Principal
           Expanded(
-            child: _buildBodyContent(state, notifier, primaryColor),
+            child: _buildBodyContent(context, state, notifier),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: Navegar para a tela de Nova OS
-          // Navigator.of(context).pushNamed('/nova-os');
+          Navigator.of(context).pushNamed('/nova-os');
         },
-        backgroundColor: primaryColor,
+        backgroundColor: AppColors.primaryBlue,
+        shape: const CircleBorder(),
+        elevation: 4,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  // Constrói o conteúdo principal baseado no estado
-  Widget _buildBodyContent(OsListState state, OsListNotifier notifier, Color primaryColor) {
-    if (state.isLoading && state.ordensServico.isEmpty) {
-      // Mostra loading apenas na carga inicial ou quando não há dados prévios
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    } else if (state.errorMessage != null && state.ordensServico.isEmpty) {
-      // Mostra erro apenas se não houver dados antigos para exibir
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, color: Colors.red.shade400, size: 50),
-              const SizedBox(height: 16),
-              Text(
-                'Erro ao carregar Ordens de Serviço',
-                style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                state.errorMessage!,
-                style: GoogleFonts.poppins(color: Colors.grey.shade600),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: () => notifier.loadOrdensServico(refresh: true), // Tenta novamente
-                icon: const Icon(Icons.refresh),
-                label: const Text('Tentar Novamente'),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    } else if (state.ordensServico.isEmpty && !state.isLoading) {
-      // Mostra mensagem de lista vazia
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.list_alt_outlined, size: 60, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
-            Text(
-              'Nenhuma Ordem de Serviço encontrada',
-              style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey.shade700),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Crie uma nova OS ou ajuste os filtros.',
-              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey.shade500),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    } else {
-      // Mostra a lista (com RefreshIndicator)
-      return RefreshIndicator(
-        onRefresh: () => notifier.loadOrdensServico(refresh: true), // Puxar para atualizar
-        child: ListView.builder(
-          padding: const EdgeInsets.all(12.0),
-          itemCount: state.ordensServico.length,
-          itemBuilder: (context, index) {
-            final os = state.ordensServico[index];
-            return _buildOsCard(os, primaryColor);
-          },
-        ),
-      );
-    }
-  }
-
-  // Widget para construir os chips de filtro
-  Widget _buildFilterChip(String label) {
-    // TODO: Conectar este chip ao estado/provider para aplicar filtros
-    return ActionChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey.shade800)),
-          const SizedBox(width: 4),
-          Icon(Icons.arrow_drop_down, size: 18, color: Colors.grey.shade600),
+  // NOVO: Widget para o cabeçalho da página
+  Widget _buildPageHeader(BuildContext context, OsListNotifier notifier) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
         ],
       ),
-      onPressed: () {
-        // TODO: Implementar ação de abrir o filtro específico (ex: mostrar BottomSheet)
-      },
-      backgroundColor: Colors.grey.shade100,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.0),
-          side: BorderSide(color: Colors.grey.shade300, width: 0.5)
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Título da Página
+          Text(
+            'Ordens de Serviço',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Campo de Busca
+          TextField(
+            style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textDark),
+            decoration: InputDecoration(
+              hintText: 'Buscar OS, cliente ou técnico...',
+              hintStyle: GoogleFonts.poppins(color: AppColors.textLight),
+              prefixIcon: const Icon(Icons.search, color: AppColors.textLight),
+              filled: true,
+              fillColor: AppColors.backgroundGray,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
+            ),
+            onSubmitted: (searchTerm) {
+              notifier.loadOrdensServico(searchTerm: searchTerm, refresh: true);
+            },
+          ),
+          const SizedBox(height: 12),
+          // Seção de Filtros com novo design
+          SizedBox(
+            height: 38,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              children: [
+                _buildFilterChip(
+                  'Filtros',
+                  icon: Icons.filter_list,
+                  isPrimary: true,
+                  onPressed: () { /* TODO: Abrir filtros avançados */ },
+                ),
+                const SizedBox(width: 8),
+                _buildFilterChip('Status', onPressed: () {}),
+                const SizedBox(width: 8),
+                _buildFilterChip('Data', onPressed: () {}),
+                const SizedBox(width: 8),
+                _buildFilterChip('Técnico', onPressed: () {}),
+              ],
+            ),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     );
   }
 
-  // Widget para construir o card da Ordem de Serviço
-  Widget _buildOsCard(OrdemServico os, Color primaryColor) {
-    print('OS ID: ${os.id}');
-    print('Nome do Cliente: ${os.cliente.nomeCompleto}');
-    print('Tecnico Atribuido: ${os.tecnicoAtribuido}');
-    if (os.tecnicoAtribuido != null) {
-      print('Nome do Técnico: ${os.tecnicoAtribuido!.nome}');
-      print('ID do Técnico: ${os.tecnicoAtribuido!.id}');
-    } else {
-      print('Técnico atribuído é NULL');
+  // Conteúdo principal baseado no estado
+  Widget _buildBodyContent(BuildContext context, OsListState state, OsListNotifier notifier) {
+    if (state.isLoading && state.ordensServico.isEmpty) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue));
     }
-    return Card(
-      elevation: 2.0,
-      margin: const EdgeInsets.only(bottom: 12.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-      child: InkWell( // Adiciona InkWell para feedback de toque
-        onTap: () {
-          // Simplesmente navega para a tela de detalhes.
-          // A tela de detalhes cuidará da invalidação do osListProvider ao retornar.
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => OsDetailScreen(osId: os.id!),
+
+    if (state.errorMessage != null && state.ordensServico.isEmpty) {
+      return _buildErrorState(state.errorMessage!, () => notifier.loadOrdensServico(refresh: true));
+    }
+
+    if (state.ordensServico.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    // Lista com RefreshIndicator
+    return RefreshIndicator(
+      onRefresh: () => notifier.loadOrdensServico(refresh: true),
+      color: AppColors.primaryBlue,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16.0),
+        physics: const BouncingScrollPhysics(),
+        itemCount: state.ordensServico.length,
+        itemBuilder: (context, index) {
+          final os = state.ordensServico[index];
+          return _buildOsCard(context, os);
+        },
+      ),
+    );
+  }
+
+  // Chip de filtro com novo design
+  Widget _buildFilterChip(String label, {required VoidCallback onPressed, IconData? icon, bool isPrimary = false}) {
+    return ActionChip(
+      onPressed: onPressed,
+      backgroundColor: isPrimary ? AppColors.primaryBlue : AppColors.cardBackground,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20.0),
+        side: BorderSide(color: isPrimary ? Colors.transparent : AppColors.dividerColor, width: 1),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      label: Row(
+        children: [
+          if (icon != null)
+            Icon(icon, size: 18, color: isPrimary ? Colors.white : AppColors.primaryBlue),
+          if (icon != null) const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: isPrimary ? Colors.white : AppColors.textDark,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Card da OS com o novo design inspirado no dashboard
+  Widget _buildOsCard(BuildContext context, OrdemServico os) {
+    return Card(
+      elevation: 3,
+      shadowColor: AppColors.primaryBlue.withOpacity(0.1),
+      margin: const EdgeInsets.only(bottom: 16.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => OsDetailScreen(osId: os.id!)),
           );
         },
-        borderRadius: BorderRadius.circular(8.0),
+        borderRadius: BorderRadius.circular(12.0),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -310,100 +252,156 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        '#${os.numeroOS}',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: primaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Chip(
-                        label: Text(
-                          _getStatusText(os.status),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '#${os.numeroOS}',
                           style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: _getStatusTextColor(os.status),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: AppColors.primaryBlue,
                           ),
                         ),
-                        backgroundColor: _getStatusBackgroundColor(os.status),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                        labelPadding: EdgeInsets.zero,
-                        side: BorderSide.none,
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Text(
+                          os.cliente.nomeCompleto,
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            color: AppColors.textDark,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                  InkWell(
-                    onTap: () { /* TODO: Implementar menu de opções (ex: editar, excluir) */ },
-                    child: Icon(Icons.more_vert, color: Colors.grey.shade500, size: 20),
+                  Chip(
+                    label: Text(
+                      _getStatusText(os.status),
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _getStatusTextColor(os.status),
+                      ),
+                    ),
+                    backgroundColor: _getStatusBackgroundColor(os.status),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                os.cliente.nomeCompleto.toString(),
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                  color: Colors.black87,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
                 os.problemaRelatado.toString(),
                 style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: Colors.grey.shade700,
+                  fontSize: 14,
+                  color: AppColors.textLight,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 12),
-              const Divider(height: 1, thickness: 0.5),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              const Divider(color: AppColors.dividerColor, height: 1),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.person_outline, size: 16, color: Colors.grey.shade600),
-                      const SizedBox(width: 4),
-                      Text(
-                        os.tecnicoAtribuido?.nome ?? 'Não atribuído',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
+                  _buildCardInfoItem(
+                    icon: Icons.person_outline,
+                    text: os.tecnicoAtribuido?.nome ?? 'Não atribuído',
                   ),
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey.shade600),
-                      const SizedBox(width: 4),
-                      Text(
-                        _formatDate(os.dataAgendamento ?? os.dataAbertura),
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
+                  _buildCardInfoItem(
+                    icon: Icons.calendar_today_outlined,
+                    text: _formatDate(os.dataAgendamento ?? os.dataAbertura),
                   ),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Widget auxiliar para os ícones de informação no card
+  Widget _buildCardInfoItem({required IconData icon, required String text}) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppColors.textLight),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: AppColors.textLight,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Widget para o estado de erro
+  Widget _buildErrorState(String message, VoidCallback onRetry) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cloud_off_rounded, color: AppColors.errorRed.withOpacity(0.7), size: 60),
+            const SizedBox(height: 20),
+            Text(
+              'Erro ao Carregar',
+              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: GoogleFonts.poppins(color: AppColors.textLight, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              label: Text('Tentar Novamente', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget para o estado de lista vazia
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.list_alt_outlined, size: 60, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text(
+            'Nenhuma OS encontrada',
+            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Crie uma nova Ordem de Serviço ou ajuste os filtros.',
+            style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

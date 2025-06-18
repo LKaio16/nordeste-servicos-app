@@ -2,36 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/foundation.dart'; // Para kDebugMode
+import 'package:flutter/foundation.dart';
 
-// Importações locais (ajuste os caminhos conforme sua estrutura de projeto)
-
-// *** CORREÇÃO: Importar a ENTIDADE e seus ENUMS para usar na TELA ***
+// Importações locais
 import '../../../../data/models/prioridade_os_model.dart';
 import '../../../../data/models/status_os_model.dart';
-import '../../../../domain/entities/ordem_servico.dart'; // Contém StatusOSModel, PrioridadeOSModel
+import '../../../../domain/entities/ordem_servico.dart';
 import '../../../../domain/entities/cliente.dart';
 import '../../../../domain/entities/equipamento.dart';
-import '../../../../domain/entities/usuario.dart'; // Importe Usuario
+import '../../../../domain/entities/usuario.dart';
 
 // Importar os providers
+import '../../../shared/styles/app_colors.dart';
 import '../providers/os_detail_provider.dart';
 import '../providers/os_edit_provider.dart';
 import '../providers/os_edit_state.dart';
 
-
-// Reutilizando AppColors (ou importe de um arquivo central)
-class AppColors {
-  static const Color primaryBlue = Color(0xFF1A73E8);
-  static const Color textDark = Color(0xFF202124);
-  static const Color textLight = Color(0xFF5F6368);
-  static const Color backgroundGray = Color(0xFFF8F9FA);
-  static const Color dividerColor = Color(0xFFEEEEEE);
-  static const Color successGreen = Color(0xFF34A853);
-  static const Color errorRed = Color(0xFFEA4335);
-}
-
-// Tela de Edição de OS
+// Tela de Edição de OS com Design Melhorado
 class OsEditScreen extends ConsumerStatefulWidget {
   final int osId;
 
@@ -44,21 +31,26 @@ class OsEditScreen extends ConsumerStatefulWidget {
 class _OsEditScreenState extends ConsumerState<OsEditScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers para campos de texto
+  // Controllers para campos de texto da OS
   final _problemaController = TextEditingController();
   final _analiseController = TextEditingController();
   final _solucaoController = TextEditingController();
 
+  // Controllers para campos de texto do Equipamento
+  final _tipoEquipamentoController = TextEditingController();
+  final _marcaModeloEquipamentoController = TextEditingController();
+  final _numeroSerieChassiEquipamentoController = TextEditingController();
+  final _horimetroEquipamentoController = TextEditingController();
+
   // Variáveis para armazenar seleções de dropdowns e datas
   String? _selectedClienteId;
-  String? _selectedEquipamentoId;
-  String? _selectedTecnicoId; // Este ainda armazena o ID como String
-  // *** CORREÇÃO: Usar os ENUMS da ENTIDADE (StatusOSModel, PrioridadeOSModel) na tela ***
+  String? _selectedTecnicoId;
   StatusOSModel? _selectedStatus;
   PrioridadeOSModel? _selectedPrioridade;
   DateTime? _selectedDataAgendamento;
 
   bool _initialDataLoaded = false;
+  int? _originalEquipamentoId;
 
   @override
   void initState() {
@@ -73,11 +65,13 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
     _problemaController.dispose();
     _analiseController.dispose();
     _solucaoController.dispose();
+    _tipoEquipamentoController.dispose();
+    _marcaModeloEquipamentoController.dispose();
+    _numeroSerieChassiEquipamentoController.dispose();
+    _horimetroEquipamentoController.dispose();
     super.dispose();
   }
 
-
-  // Função para inicializar os controllers e variáveis com dados da OS original (Entidade)
   void _initializeFormFields(OrdemServico os) {
     if (!_initialDataLoaded) {
       _problemaController.text = os.problemaRelatado ?? '';
@@ -85,10 +79,14 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
       _solucaoController.text = os.solucaoAplicada ?? '';
 
       _selectedClienteId = os.cliente.id.toString();
-      _selectedEquipamentoId = os.equipamento.id.toString();
-      // *** ALTERAÇÃO AQUI: Acessar o ID do técnico através do objeto aninhado ***
+
+      _tipoEquipamentoController.text = os.equipamento?.tipo ?? '';
+      _marcaModeloEquipamentoController.text = os.equipamento?.marcaModelo ?? '';
+      _numeroSerieChassiEquipamentoController.text = os.equipamento?.numeroSerieChassi ?? '';
+      _horimetroEquipamentoController.text = os.equipamento?.horimetro?.toString() ?? '';
+      _originalEquipamentoId = os.equipamento?.id;
+
       _selectedTecnicoId = os.tecnicoAtribuido?.id?.toString();
-      // *** CORREÇÃO: Atribui os enums da ENTIDADE ***
       _selectedStatus = os.status;
       _selectedPrioridade = os.prioridade;
       _selectedDataAgendamento = os.dataAgendamento;
@@ -103,6 +101,19 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
       initialDate: _selectedDataAgendamento ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppColors.primaryBlue,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: AppColors.textDark,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null && picked != _selectedDataAgendamento) {
       setState(() {
@@ -114,36 +125,43 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
   Future<bool> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       final originalOs = ref.read(osEditProvider(widget.osId)).originalOs;
-      if (originalOs == null) return false; // Adicionado retorno para evitar null
+      if (originalOs == null) return false;
 
-      // *** DEBUG PRINT ***: Verifica os valores ANTES de criar a entidade atualizada
-      if (kDebugMode) {
-        print("--- Submitting OS Edit (Tela) ---");
-        print("Problema Relatado (Controller): ${_problemaController.text}");
-        print("Data Agendamento (State Var): $_selectedDataAgendamento");
-        print("Status (State Var - Entity Enum): $_selectedStatus");
-        print("Prioridade (State Var - Entity Enum): $_selectedPrioridade");
-        print("Cliente ID: $_selectedClienteId");
-        print("Equipamento ID: $_selectedEquipamentoId");
-        print("Tecnico ID: $_selectedTecnicoId");
-        print("Analise Falha: ${_analiseController.text}");
-        print("Solucao Aplicada: ${_solucaoController.text}");
-        print("---------------------------------");
+      final String horimetroText = _horimetroEquipamentoController.text;
+      double? horimetroValue;
+      if (horimetroText.isNotEmpty) {
+        horimetroValue = double.tryParse(horimetroText);
+        if (horimetroValue == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Horímetro do equipamento deve ser um número válido.',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+              ),
+              backgroundColor: AppColors.errorRed,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+          return false;
+        }
       }
 
-      // Prepara os dados para o repositório.
-      // O repositório irá mapear isso para um DTO de requisição (OrdemServicoRequestDTO)
-      // que ainda espera o ID do técnico (tecnicoAtribuidoId).
-      final int clienteIdParsed = int.parse(_selectedClienteId!);
-      final int equipamentoIdParsed = int.parse(_selectedEquipamentoId!);
-      final int? tecnicoAtribuidoIdParsed = _selectedTecnicoId != null ? int.parse(_selectedTecnicoId!) : null;
+      final Equipamento equipamentoAtualizado = Equipamento(
+        id: _originalEquipamentoId,
+        tipo: _tipoEquipamentoController.text,
+        marcaModelo: _marcaModeloEquipamentoController.text,
+        numeroSerieChassi: _numeroSerieChassiEquipamentoController.text,
+        horimetro: horimetroValue,
+        clienteId: int.parse(_selectedClienteId!),
+      );
 
       final success = await ref.read(osEditProvider(widget.osId).notifier).updateOrdemServico(
-        // Passa os dados brutos para o notifier/repositório
-        osId: widget.osId, // Id da OS que está sendo editada
-        clienteId: clienteIdParsed,
-        equipamentoId: equipamentoIdParsed,
-        tecnicoAtribuidoId: tecnicoAtribuidoIdParsed,
+        osId: widget.osId,
+        clienteId: int.parse(_selectedClienteId!),
+        equipamento: equipamentoAtualizado,
+        tecnicoAtribuidoId: _selectedTecnicoId != null ? int.parse(_selectedTecnicoId!) : null,
         problemaRelatado: _problemaController.text,
         analiseFalha: _analiseController.text,
         solucaoAplicada: _solucaoController.text,
@@ -155,26 +173,54 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('OS #${originalOs.numeroOS} atualizada com sucesso!', style: GoogleFonts.poppins()),
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('OS #${originalOs.numeroOS} atualizada com sucesso!', style: GoogleFonts.poppins()),
+              ],
+            ),
             backgroundColor: AppColors.successGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
+
         ref.invalidate(osDetailProvider(widget.osId));
+        ref.invalidate(osEditProvider(widget.osId));
+        _initialDataLoaded = false;
+
         await Future.delayed(const Duration(milliseconds: 100));
+
         if (mounted) {
           Navigator.of(context).pop();
         }
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ref.read(osEditProvider(widget.osId)).submissionError ?? 'Erro ao salvar alterações.', style: GoogleFonts.poppins()),
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    ref.read(osEditProvider(widget.osId)).submissionError ?? 'Erro ao salvar alterações.',
+                    style: GoogleFonts.poppins(),
+                  ),
+                ),
+              ],
+            ),
             backgroundColor: AppColors.errorRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
-      return success; // Retorna o status de sucesso
+      return success;
     }
-    return false; // Retorna falso se a validação do formulário falhar
+    return false;
   }
 
   @override
@@ -199,158 +245,489 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white),
         ),
         backgroundColor: AppColors.primaryBlue,
-        elevation: 2,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.primaryBlue,
+                AppColors.secondaryBlue,
+              ],
+            ),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: TextButton(
+          Container(
+            margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+            child: ElevatedButton.icon(
               onPressed: state.isLoadingInitialData || state.isSubmitting ? null : _submitForm,
-              child: state.isSubmitting
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Text(
+              icon: state.isSubmitting
+                  ? SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  color: AppColors.primaryBlue,
+                  strokeWidth: 2,
+                ),
+              )
+                  : Icon(Icons.save, size: 18),
+              label: Text(
                 'Salvar',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 16),
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.primaryBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                elevation: 2,
               ),
             ),
           ),
         ],
       ),
       body: (state.isLoadingInitialData || !_initialDataLoaded) && state.initialDataError == null
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildLoadingState()
           : _buildBodyContent(state, notifier),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppColors.backgroundGray,
+            AppColors.backgroundGray.withOpacity(0.8),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
+              strokeWidth: 3,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Carregando dados da OS...',
+              style: GoogleFonts.poppins(
+                color: AppColors.textLight,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildBodyContent(OsEditState state, OsEditNotifier notifier) {
     if (state.initialDataError != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, color: AppColors.errorRed, size: 50),
-              const SizedBox(height: 16),
-              Text('Erro ao Carregar Dados', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
-              const SizedBox(height: 8),
-              Text(state.initialDataError!, style: GoogleFonts.poppins(color: Colors.grey.shade600), textAlign: TextAlign.center),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: () {
-                  setState(() { _initialDataLoaded = false; });
-                  notifier.loadInitialData();
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('Tentar Novamente'),
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
-              ),
-            ],
-          ),
-        ),
-      );
+      return _buildErrorState(state, notifier);
     } else if (state.originalOs == null && !state.isLoadingInitialData) {
-      return Center(child: Text('Ordem de Serviço não encontrada.', style: GoogleFonts.poppins(fontSize: 16, color: AppColors.textLight)));
+      return _buildNotFoundState();
     } else if (state.originalOs != null) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('Informações Principais'),
-              _buildDropdownFormField<String>(
-                label: 'Cliente*',
-                value: _selectedClienteId,
-                items: state.clientes.map((c) => DropdownMenuItem(value: c.id.toString(), child: Text(c.nomeCompleto, style: GoogleFonts.poppins()))).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedClienteId = value;
-                    _selectedEquipamentoId = null;
-                  });
-                },
-                validator: (value) => value == null ? 'Campo obrigatório' : null,
-              ),
-              const SizedBox(height: 16),
-              _buildDropdownFormField<String>(
-                label: 'Equipamento*',
-                value: _selectedEquipamentoId,
-                items: state.equipamentos
-                    .map((e) => DropdownMenuItem(value: e.id.toString(), child: Text('${e.marcaModelo} (${e.numeroSerieChassi})', style: GoogleFonts.poppins())))
-                    .toList(),
-                onChanged: _selectedClienteId == null ? null : (value) => setState(() => _selectedEquipamentoId = value),
-                validator: (value) => value == null ? 'Campo obrigatório' : null,
-                hint: _selectedClienteId == null ? 'Selecione um cliente primeiro' : 'Selecione o equipamento',
-              ),
-              const SizedBox(height: 16),
-              _buildDropdownFormField<String>(
-                label: 'Técnico Atribuído',
-                value: _selectedTecnicoId,
-                items: state.tecnicos.map((t) => DropdownMenuItem(value: t.id.toString(), child: Text(t.nome, style: GoogleFonts.poppins()))).toList(),
-                onChanged: (value) => setState(() => _selectedTecnicoId = value),
-              ),
-              const SizedBox(height: 16),
-              _buildTextFormField(
-                controller: _problemaController,
-                label: 'Problema Relatado*',
-                maxLines: 4,
-                validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
-              ),
-              const SizedBox(height: 24),
-
-              _buildSectionTitle('Status e Agendamento'),
-              // *** CORREÇÃO: Dropdown usa StatusOSModel (Enum da Entidade) ***
-              _buildDropdownFormField<StatusOSModel>(
-                label: 'Status*',
-                value: _selectedStatus,
-                items: StatusOSModel.values.map((s) => DropdownMenuItem(value: s, child: Text(_getStatusText(s), style: GoogleFonts.poppins()))).toList(),
-                onChanged: (value) => setState(() => _selectedStatus = value),
-                validator: (value) => value == null ? 'Campo obrigatório' : null,
-              ),
-              const SizedBox(height: 16),
-              // *** CORREÇÃO: Dropdown usa PrioridadeOSModel (Enum da Entidade) ***
-              _buildDropdownFormField<PrioridadeOSModel>(
-                label: 'Prioridade',
-                value: _selectedPrioridade,
-                items: PrioridadeOSModel.values.map((p) => DropdownMenuItem(value: p, child: Text(_getPrioridadeText(p), style: GoogleFonts.poppins()))).toList(),
-                onChanged: (value) => setState(() => _selectedPrioridade = value),
-              ),
-              const SizedBox(height: 16),
-              _buildDateField(label: 'Data de Agendamento'),
-              const SizedBox(height: 24),
-
-              _buildSectionTitle('Diagnóstico e Solução'),
-              _buildTextFormField(
-                controller: _analiseController,
-                label: 'Análise da Falha',
-                maxLines: 4,
-              ),
-              const SizedBox(height: 16),
-              _buildTextFormField(
-                controller: _solucaoController,
-                label: 'Solução Aplicada',
-                maxLines: 4,
-              ),
-              const SizedBox(height: 32),
-            ],
-          ),
-        ),
-      );
-    } else {
-      return const Center(child: Text("Erro inesperado ao carregar dados da OS."));
+      return _buildFormContent(state);
     }
+    return Container();
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Text(
-        title,
-        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.primaryBlue),
+  Widget _buildErrorState(OsEditState state, OsEditNotifier notifier) {
+    return Stack(
+      children: [
+        // Elementos decorativos de fundo
+        Positioned(
+          top: -50,
+          right: -50,
+          child: Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              color: AppColors.errorRed.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.errorRed.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.error_outline,
+                    color: AppColors.errorRed,
+                    size: 64,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Erro ao Carregar Dados',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  state.initialDataError!,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: AppColors.textLight,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _initialDataLoaded = false;
+                    });
+                    notifier.loadInitialData();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: Text(
+                    'Tentar Novamente',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    elevation: 2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotFoundState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: AppColors.textLight,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Ordem de Serviço não encontrada.',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormContent(OsEditState state) {
+    return Stack(
+      children: [
+        // Elementos decorativos de fundo - inspirados no dashboard
+        Positioned(
+          top: -50,
+          right: -50,
+          child: Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              color: AppColors.accentBlue.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: -80,
+          left: -80,
+          child: Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        Positioned(
+          top: MediaQuery.of(context).size.height * 0.3,
+          right: -30,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: AppColors.successGreen.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+
+        // Conteúdo principal
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          physics: const BouncingScrollPhysics(),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Card de Informações Principais
+                _buildSectionCard(
+                  title: 'Informações Principais',
+                  icon: Icons.info_outline,
+                  children: [
+                    _buildDropdownFormField<String>(
+                      label: 'Cliente',
+                      value: _selectedClienteId,
+                      items: state.clientes
+                          .map((c) => DropdownMenuItem(
+                        value: c.id.toString(),
+                        child: Text(c.nomeCompleto, style: GoogleFonts.poppins()),
+                      ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedClienteId = value;
+                        });
+                      },
+                      validator: (value) => value == null ? 'Campo obrigatório' : null,
+                      icon: Icons.person_outline,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildDropdownFormField<String>(
+                      label: 'Técnico Atribuído',
+                      value: _selectedTecnicoId,
+                      items: state.tecnicos
+                          .map((t) => DropdownMenuItem(
+                        value: t.id.toString(),
+                        child: Text(t.nome, style: GoogleFonts.poppins()),
+                      ))
+                          .toList(),
+                      onChanged: (value) => setState(() => _selectedTecnicoId = value),
+                      icon: Icons.engineering_outlined,
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDropdownFormField<StatusOSModel>(
+                            label: 'Status',
+                            value: _selectedStatus,
+                            items: StatusOSModel.values
+                                .map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(_getStatusText(s), style: GoogleFonts.poppins()),
+                            ))
+                                .toList(),
+                            onChanged: (value) => setState(() => _selectedStatus = value),
+                            validator: (value) => value == null ? 'Campo obrigatório' : null,
+                            icon: Icons.flag_outlined,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildDropdownFormField<PrioridadeOSModel>(
+                            label: 'Prioridade',
+                            value: _selectedPrioridade,
+                            items: PrioridadeOSModel.values
+                                .map((p) => DropdownMenuItem(
+                              value: p,
+                              child: Text(_getPrioridadeText(p), style: GoogleFonts.poppins()),
+                            ))
+                                .toList(),
+                            onChanged: (value) => setState(() => _selectedPrioridade = value),
+                            icon: Icons.priority_high_outlined,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Card de Detalhes do Equipamento
+                _buildSectionCard(
+                  title: 'Detalhes do Equipamento',
+                  icon: Icons.build_outlined,
+                  children: [
+                    _buildTextFormField(
+                      controller: _tipoEquipamentoController,
+                      label: 'Tipo de Equipamento',
+                      validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
+                      icon: Icons.category_outlined,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTextFormField(
+                      controller: _marcaModeloEquipamentoController,
+                      label: 'Marca/Modelo',
+                      validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
+                      icon: Icons.branding_watermark_outlined,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTextFormField(
+                      controller: _numeroSerieChassiEquipamentoController,
+                      label: 'Número de Série/Chassi',
+                      validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
+                      icon: Icons.confirmation_number_outlined,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTextFormField(
+                      controller: _horimetroEquipamentoController,
+                      label: 'Horímetro (opcional)',
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                      icon: Icons.timer_outlined,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Card de Descrições e Análises
+                _buildSectionCard(
+                  title: 'Descrições e Análises',
+                  icon: Icons.description_outlined,
+                  children: [
+                    _buildTextFormField(
+                      controller: _problemaController,
+                      label: 'Problema Relatado',
+                      maxLines: 3,
+                      icon: Icons.report_problem_outlined,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTextFormField(
+                      controller: _analiseController,
+                      label: 'Análise da Falha',
+                      maxLines: 3,
+                      icon: Icons.search_outlined,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTextFormField(
+                      controller: _solucaoController,
+                      label: 'Solução Aplicada',
+                      maxLines: 3,
+                      icon: Icons.check_circle_outline,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Card de Agendamento
+                _buildSectionCard(
+                  title: 'Agendamento',
+                  icon: Icons.calendar_today_outlined,
+                  children: [
+                    _buildDateField(),
+                  ],
+                ),
+
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(20.0),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryBlue.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 24,
+                    color: AppColors.primaryBlue,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              height: 1,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.dividerColor,
+                    AppColors.dividerColor.withOpacity(0.1),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ...children,
+          ],
+        ),
       ),
     );
   }
@@ -358,24 +735,76 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
   Widget _buildTextFormField({
     required TextEditingController controller,
     required String label,
-    int maxLines = 1,
     String? Function(String?)? validator,
-    TextInputType keyboardType = TextInputType.text,
+    TextInputType? keyboardType,
+    int maxLines = 1,
+    IconData? icon,
   }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: GoogleFonts.poppins(color: AppColors.textLight),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      style: GoogleFonts.poppins(color: AppColors.textDark),
-      maxLines: maxLines,
-      validator: validator,
-      keyboardType: keyboardType,
+      child: TextFormField(
+        controller: controller,
+        validator: validator,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          color: AppColors.textDark,
+        ),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: GoogleFonts.poppins(
+            color: AppColors.textLight,
+            fontSize: 14,
+          ),
+          prefixIcon: icon != null
+              ? Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: AppColors.primaryBlue,
+            ),
+          )
+              : null,
+          filled: true,
+          fillColor: AppColors.cardBackground,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.dividerColor),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.dividerColor),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.errorRed),
+          ),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: icon != null ? 16 : 16,
+            vertical: 16,
+          ),
+        ),
+      ),
     );
   }
 
@@ -383,81 +812,186 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
     required String label,
     required T? value,
     required List<DropdownMenuItem<T>> items,
-    required void Function(T?)? onChanged,
+    required void Function(T?) onChanged,
     String? Function(T?)? validator,
-    String hint = 'Selecione',
+    String? hint,
+    IconData? icon,
   }) {
-    return DropdownButtonFormField<T>(
-      value: value,
-      items: items,
-      onChanged: onChanged,
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: GoogleFonts.poppins(color: AppColors.textLight),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      hint: Text(hint, style: GoogleFonts.poppins(color: Colors.grey.shade400)),
-      isExpanded: true,
-      style: GoogleFonts.poppins(color: AppColors.textDark, fontSize: 14),
+      child: DropdownButtonFormField<T>(
+        value: value,
+        items: items,
+        onChanged: onChanged,
+        validator: validator,
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          color: AppColors.textDark,
+        ),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: GoogleFonts.poppins(
+            color: AppColors.textLight,
+            fontSize: 14,
+          ),
+          hintText: hint,
+          hintStyle: GoogleFonts.poppins(
+            color: AppColors.textLight,
+            fontSize: 14,
+          ),
+          prefixIcon: icon != null
+              ? Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: AppColors.primaryBlue,
+            ),
+          )
+              : null,
+          filled: true,
+          fillColor: AppColors.cardBackground,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.dividerColor),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.dividerColor),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.errorRed),
+          ),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: icon != null ? 16 : 16,
+            vertical: 16,
+          ),
+        ),
+        dropdownColor: AppColors.cardBackground,
+        icon: Icon(
+          Icons.keyboard_arrow_down,
+          color: AppColors.primaryBlue,
+        ),
+      ),
     );
   }
 
-  Widget _buildDateField({required String label}) {
-    return InkWell(
-      onTap: () => _selectDate(context),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: GoogleFonts.poppins(color: AppColors.textLight),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          suffixIcon: const Icon(Icons.calendar_today_outlined, color: AppColors.textLight),
-        ),
-        child: Text(
-          _selectedDataAgendamento == null
-              ? 'Selecione uma data'
-              : DateFormat('dd/MM/yyyy').format(_selectedDataAgendamento!),
-          style: GoogleFonts.poppins(
-            color: _selectedDataAgendamento == null ? Colors.grey.shade500 : AppColors.textDark,
-            fontSize: 14,
+  Widget _buildDateField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () => _selectDate(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.dividerColor),
+          ),
+          child: Row(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(right: 16),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.calendar_today_outlined,
+                  size: 20,
+                  color: AppColors.primaryBlue,
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Data de Agendamento',
+                      style: GoogleFonts.poppins(
+                        color: AppColors.textLight,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _selectedDataAgendamento != null
+                          ? DateFormat('dd/MM/yyyy').format(_selectedDataAgendamento!)
+                          : 'Selecionar data',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: _selectedDataAgendamento != null
+                            ? AppColors.textDark
+                            : AppColors.textLight,
+                        fontWeight: _selectedDataAgendamento != null
+                            ? FontWeight.w500
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.keyboard_arrow_right,
+                color: AppColors.primaryBlue,
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  // *** CORREÇÃO: Funções de texto usam os ENUMS da ENTIDADE e cobrem todos os casos ***
   String _getStatusText(StatusOSModel status) {
     switch (status) {
-      case StatusOSModel.CONCLUIDA:
-        return 'Concluída';
-      case StatusOSModel.EM_ANDAMENTO:
-        return 'Em Andamento';
       case StatusOSModel.EM_ABERTO:
         return 'Em Aberto';
+      case StatusOSModel.EM_ANDAMENTO:
+        return 'Em Andamento';
+      case StatusOSModel.PENDENTE_PECAS:
+        return 'Pendente Peças';
+      case StatusOSModel.CONCLUIDA:
+        return 'Concluída';
       case StatusOSModel.ENCERRADA:
         return 'Encerrada';
       case StatusOSModel.CANCELADA:
         return 'Cancelada';
-      case StatusOSModel.PENDENTE_PECAS:
-        return 'Pendente';
-      case StatusOSModel.ATRIBUIDA: // Adicionado
-        return 'Atribuída';
-      case StatusOSModel.AGUARDANDO_APROVACAO: // Adicionado
-        return 'Aguardando Aprovação';
-      default: // Adicionado um default para segurança
-        return 'Desconhecido';
+      default:
+        return status.name;
     }
   }
 
-  String _getPrioridadeText(PrioridadeOSModel? prioridade) {
-    if (prioridade == null) return 'Não definida';
+  String _getPrioridadeText(PrioridadeOSModel prioridade) {
     switch (prioridade) {
       case PrioridadeOSModel.BAIXA:
         return 'Baixa';
@@ -467,8 +1001,9 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
         return 'Alta';
       case PrioridadeOSModel.URGENTE:
         return 'Urgente';
-      default: // Adicionado um default para segurança
-        return 'Desconhecida';
+      default:
+        return prioridade.name;
     }
   }
 }
+

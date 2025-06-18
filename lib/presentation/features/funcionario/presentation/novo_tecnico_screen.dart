@@ -5,25 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart'; // Importando Google Fonts para fontes modernas
 
 // Importar o provider e o estado
+import '../../../shared/styles/app_colors.dart';
 import '../providers/novo_tecnico_provider.dart';
 
 import '../providers/novo_tecnico_state.dart'; // Ajuste o caminho se necessário
-
-// Definição de cores modernizadas (Mantida da versão anterior)
-class AppColors {
-  static const Color primaryBlue = Color(0xFF1A73E8);
-  static const Color secondaryBlue = Color(0xFF4285F4);
-  static const Color accentBlue = Color(0xFF8AB4F8);
-  static const Color darkBlue = Color(0xFF0D47A1);
-  static const Color successGreen = Color(0xFF34A853);
-  static const Color warningOrange = Color(0xFFFFA000);
-  static const Color errorRed = Color(0xFFEA4335);
-  static const Color backgroundGray = Color(0xFFF8F9FA);
-  static const Color cardBackground = Colors.white;
-  static const Color textDark = Color(0xFF202124);
-  static const Color textLight = Color(0xFF5F6368);
-  static const Color dividerColor = Color(0xFFEEEEEE);
-}
 
 class NovoTecnicoScreen extends ConsumerStatefulWidget {
   const NovoTecnicoScreen({super.key});
@@ -131,6 +116,9 @@ class _NovoTecnicoScreenState extends ConsumerState<NovoTecnicoScreen> with Sing
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
+        iconTheme: IconThemeData(
+          color: Colors.white
+        ),
         title: Text('Novo Técnico', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
         backgroundColor: AppColors.primaryBlue,
         elevation: 0,

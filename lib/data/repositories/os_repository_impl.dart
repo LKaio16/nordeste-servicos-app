@@ -279,4 +279,25 @@ class OsRepositoryImpl implements OsRepository {
       return null;
     }
   }
+
+  @override
+  Future<Uint8List> downloadOsPdf(int osId) async {
+    try {
+      final response = await apiClient.get(
+        '/ordens-servico/$osId/pdf',
+        // ESSENCIAL: Define o tipo de resposta esperado como bytes
+        options: Options(responseType: ResponseType.bytes),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data as Uint8List;
+      } else {
+        throw ApiException('Falha ao baixar o PDF: Status ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      throw ApiException('Erro de rede ao baixar o PDF: ${e.message}');
+    } catch (e) {
+      throw ApiException('Erro inesperado ao baixar o PDF: ${e.toString()}');
+    }
+  }
 }

@@ -1,50 +1,42 @@
 name: nordeste_servicos_app
 description: "Sistemas de OS Nordeste Serviços"
-# The following line prevents the package from being accidentally published to
-# pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-# The following defines the version and build number for your application.
-# A version number is three numbers separated by dots, like 1.2.43
-# followed by an optional build number separated by a +.
-# Both the version and the builder number may be overridden in flutter
-# build by specifying --build-name and --build-number, respectively.
-# In Android, build-name is used as versionName while build-number used as versionCode.
-# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
-# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
-# Read more about iOS versioning at
-# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-# In Windows, build-name is used as the major, minor, and patch parts
-# of the product and file versions while build-number is used as the build suffix.
+# Impede publicação acidental no pub.dev
+publish_to: 'none'
+
+# Versão da aplicação
 version: 1.0.0+2
 
 environment:
   sdk: ^3.6.1
 
-
 dependencies:
   flutter:
     sdk: flutter
 
+  # Ícones e fontes
   cupertino_icons: ^1.0.8
-
-  dio: ^5.0.0  # Para chamadas HTTP à API
-
-  flutter_riverpod: ^2.0.0 # Para gerenciamento de estado
-
-  # Dependências para serialização JSON
-  json_annotation: ^4.0.0
-
-  flutter_secure_storage: ^9.0.0
-
-  equatable: ^2.0.5
-
-  intl: ^0.19.0
-
   google_fonts: ^6.2.1
 
-  freezed: ^2.4.7
+  # HTTP e armazenamento seguro
+  dio: ^5.0.0
+  flutter_secure_storage: ^9.0.0
 
+  # Gerenciamento de estado
+  flutter_riverpod: ^2.0.0
+
+  # Serialização e modelos
+  json_annotation: ^4.0.0
+  freezed: ^2.4.7
+  equatable: ^2.0.5
+
+  # Internacionalização
+  intl: ^0.19.0
+
+  # Download, permissões e abertura de arquivos
+  file_saver: ^0.2.12
+  permission_handler: ^11.3.1
+  open_filex: ^4.4.0
 
 dev_dependencies:
   flutter_test:
@@ -52,14 +44,12 @@ dev_dependencies:
 
   flutter_lints: ^5.0.0
 
-  # Dependências para geração de código JSON
+  # Geração de código (Freezed / JSON Serializable)
   build_runner: ^2.0.0
   json_serializable: ^6.0.0
 
 flutter:
-
   uses-material-design: true
 
-  assets: # <-- Verifique a indentação aqui
-    - assets/images/logo.png # <-- E aqui
-
+  assets:
+    - assets/images/logo.png

@@ -1,5 +1,7 @@
 // lib/domain/repositories/os_repository.dart
 
+import 'dart:typed_data';
+
 import '../../data/models/prioridade_os_model.dart';
 import '../../domain/entities/ordem_servico.dart';
 import '../../data/models/status_os_model.dart';
@@ -36,6 +38,10 @@ abstract class OsRepository {
 
   /// Deleta uma ordem de serviço pelo seu ID.
   Future<void> deleteOrdemServico(int id);
+
+  /// Baixa o relatório em PDF de uma OS específica.
+  /// Retorna os bytes do arquivo.
+  Future<Uint8List> downloadOsPdf(int osId);
 
 // Métodos para gerenciar detalhes da OS (alternativa a repositórios separados para detalhes)
 // Future<List<RegistroTempo>> getRegistrosTempoByOsId(int osId);

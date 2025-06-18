@@ -1,9 +1,7 @@
-// lib/presentation/features/os/providers/nova_os_state.dart
-
 import 'package:equatable/equatable.dart';
 
 import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
-import '../../../../domain/entities/equipamento.dart';
+// REMOVED: import '../../../../domain/entities/equipamento.dart'; // No longer storing list
 import '../../../../domain/entities/usuario.dart';
 
 
@@ -12,7 +10,7 @@ class NovaOsState extends Equatable {
   final bool isLoading;
   final String? errorMessage;
   final List<Cliente> clientes;
-  final List<Equipamento> equipamentos; // Pode ser filtrado por cliente
+  // REMOVED: final List<Equipamento> equipamentos; // No longer needed
   final List<Usuario> tecnicos;
   final bool isSubmitting;
   final String? submissionError;
@@ -22,7 +20,7 @@ class NovaOsState extends Equatable {
     this.isLoading = false,
     this.errorMessage,
     this.clientes = const [],
-    this.equipamentos = const [],
+    // REMOVED: this.equipamentos = const [],
     this.tecnicos = const [],
     this.isSubmitting = false,
     this.submissionError,
@@ -33,7 +31,7 @@ class NovaOsState extends Equatable {
     bool? isLoading,
     String? errorMessage,
     List<Cliente>? clientes,
-    List<Equipamento>? equipamentos,
+    // REMOVED: List<Equipamento>? equipamentos,
     List<Usuario>? tecnicos,
     bool? isSubmitting,
     String? submissionError,
@@ -45,7 +43,7 @@ class NovaOsState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       clientes: clientes ?? this.clientes,
-      equipamentos: equipamentos ?? this.equipamentos,
+      // REMOVED: equipamentos: equipments ?? this.equipamentos,
       tecnicos: tecnicos ?? this.tecnicos,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submissionError: clearSubmissionError ? null : submissionError ?? this.submissionError,
@@ -58,11 +56,10 @@ class NovaOsState extends Equatable {
     isLoading,
     errorMessage,
     clientes,
-    equipamentos,
+    // REMOVED: equipamentos,
     tecnicos,
     isSubmitting,
     submissionError,
     nextOsNumber,
   ];
 }
-

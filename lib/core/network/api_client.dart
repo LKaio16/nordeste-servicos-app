@@ -60,11 +60,18 @@ class ApiClient {
   }
 
   // Métodos genéricos para requisição GET, POST, PUT, DELETE
-  // Eles permanecem praticamente os mesmos, apenas usam a instância _dio injetada
 
-  Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) async {
+  Future<Response> get(
+      String path, {
+        Map<String, dynamic>? queryParameters,
+        Options? options,
+      }) async {
     try {
-      final response = await _dio.get(path, queryParameters: queryParameters);
+      final response = await _dio.get(
+        path,
+        queryParameters: queryParameters,
+        options: options,
+      );
       return response;
     } on DioException catch (e) {
       throw _handleError(e);
