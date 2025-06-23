@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:nordeste_servicos_app/presentation/features/equipamentos/screens/equipamento_list_screen.dart';
+import 'package:nordeste_servicos_app/presentation/features/funcionario/screens/funcionario_list_screen.dart';
 import '../../clientes/screens/cliente_list_screen.dart';
 import '../../clientes/screens/novo_cliente_screen.dart';
+import '../../equipamentos/screens/novo_equipamento_screen.dart';
 
 
 // TELA PRINCIPAL DE GESTÃO
@@ -42,7 +45,7 @@ class GestaoScreen extends StatelessWidget {
             icon: Icons.build_outlined,
             title: 'Equipamentos',
             subtitle: 'Gerenciar cadastros de equipamentos',
-            onCardTap: () => navigateTo(const EquipamentosListScreen()),
+            onCardTap: () => navigateTo(const EquipamentoListScreen()),
             onAddButtonTap: () => navigateTo(const NovoEquipamentoScreen()),
           ),
           const SizedBox(height: 16),
@@ -50,7 +53,7 @@ class GestaoScreen extends StatelessWidget {
             icon: Icons.person_outline,
             title: 'Funcionários',
             subtitle: 'Gerenciar cadastros de técnicos',
-            onCardTap: () => navigateTo(const FuncionariosListScreen()),
+            onCardTap: () => navigateTo(const FuncionarioListScreen()),
             onAddButtonTap: () => navigateTo(const NovoFuncionarioScreen()),
           ),
           const SizedBox(height: 16),
@@ -153,27 +156,7 @@ class ManagementCard extends StatelessWidget {
 // Você pode substituí-las por suas telas reais quando as criar.
 
 // --- TELAS DE LISTAGEM ---
-class EquipamentosListScreen extends StatelessWidget {
-  const EquipamentosListScreen({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Lista de Equipamentos', style: GoogleFonts.poppins())),
-      body: Center(child: Text('Aqui ficará a sua lista de equipamentos.', style: GoogleFonts.poppins())),
-    );
-  }
-}
 
-class FuncionariosListScreen extends StatelessWidget {
-  const FuncionariosListScreen({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Lista de Funcionários', style: GoogleFonts.poppins())),
-      body: Center(child: Text('Aqui ficará a sua lista de funcionários.', style: GoogleFonts.poppins())),
-    );
-  }
-}
 
 class PecasListScreen extends StatelessWidget {
   const PecasListScreen({Key? key}) : super(key: key);
@@ -198,16 +181,7 @@ class ServicosListScreen extends StatelessWidget {
 }
 
 // --- TELAS DE CRIAÇÃO ---
-class NovoEquipamentoScreen extends StatelessWidget {
-  const NovoEquipamentoScreen({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Novo Equipamento', style: GoogleFonts.poppins())),
-      body: Center(child: Text('Formulário de criação de equipamento.', style: GoogleFonts.poppins())),
-    );
-  }
-}
+
 
 class NovoFuncionarioScreen extends StatelessWidget {
   const NovoFuncionarioScreen({Key? key}) : super(key: key);
