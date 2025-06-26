@@ -8,6 +8,7 @@ import '../../../shared/providers/repository_providers.dart';
 import '../../../shared/styles/app_colors.dart';
 import '../providers/funcionario_detail_provider.dart';
 import '../providers/funcionario_list_provider.dart';
+import 'funcionario_edit_screen.dart';
 
 class FuncionarioDetailScreen extends ConsumerWidget {
   final int funcionarioId;
@@ -38,7 +39,21 @@ class FuncionarioDetailScreen extends ConsumerWidget {
         foregroundColor: Colors.white,
         elevation: 2,
         actions: [
-          IconButton(icon: const Icon(Icons.edit), onPressed: () {}, tooltip: 'Editar Funcionário'),
+          IconButton(
+            icon: const Icon(Icons.edit, color: Colors.white),
+            onPressed: funcionarioAsyncValue.maybeWhen(
+              data: (funcionario) => () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => FuncionarioEditScreen(funcionarioId: funcionario.id!)),
+                );
+                // Invalida os providers para recarregar os dados
+                ref.invalidate(funcionarioDetailProvider(funcionario.id!));
+                ref.invalidate(funcionarioListProvider);
+              },
+              orElse: () => null,
+            ),
+            tooltip: 'Editar Funcionário',
+          ),
           IconButton(icon: const Icon(Icons.delete_forever), onPressed: () => _deleteFuncionario(context, ref), tooltip: 'Excluir Funcionário'),
         ],
       ),

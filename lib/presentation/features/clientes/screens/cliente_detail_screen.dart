@@ -96,7 +96,7 @@ class ClienteDetailScreen extends ConsumerWidget {
             onPressed: clienteAsyncValue.maybeWhen(
               data: (cliente) => () async {
                 await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => ClienteEditScreen(cliente: cliente)),
+                  MaterialPageRoute(builder: (context) => ClienteEditScreen(clienteId: cliente.id!)),
                 );
                 ref.invalidate(clienteDetailProvider(clienteId));
                 ref.invalidate(clienteListProvider);

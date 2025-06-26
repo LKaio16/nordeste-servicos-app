@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nordeste_servicos_app/presentation/features/equipamentos/screens/equipamento_list_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/funcionario/screens/funcionario_list_screen.dart';
+import 'package:nordeste_servicos_app/presentation/features/funcionario/screens/novo_tecnico_screen.dart';
 import '../../clientes/screens/cliente_list_screen.dart';
 import '../../clientes/screens/novo_cliente_screen.dart';
 import '../../equipamentos/screens/novo_equipamento_screen.dart';
+import '../../pecas/screens/nova_peca_material_screen.dart';
+import '../../pecas/screens/peca_material_list_screen.dart';
 
 
 // TELA PRINCIPAL DE GESTÃO
@@ -54,7 +57,7 @@ class GestaoScreen extends StatelessWidget {
             title: 'Funcionários',
             subtitle: 'Gerenciar cadastros de técnicos',
             onCardTap: () => navigateTo(const FuncionarioListScreen()),
-            onAddButtonTap: () => navigateTo(const NovoFuncionarioScreen()),
+            onAddButtonTap: () => navigateTo(const NovoTecnicoScreen()),
           ),
           const SizedBox(height: 16),
           ManagementCard(
@@ -158,16 +161,6 @@ class ManagementCard extends StatelessWidget {
 // --- TELAS DE LISTAGEM ---
 
 
-class PecasListScreen extends StatelessWidget {
-  const PecasListScreen({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Lista de Peças/Materiais', style: GoogleFonts.poppins())),
-      body: Center(child: Text('Aqui ficará a sua lista de peças.', style: GoogleFonts.poppins())),
-    );
-  }
-}
 
 class ServicosListScreen extends StatelessWidget {
   const ServicosListScreen({Key? key}) : super(key: key);
@@ -182,28 +175,6 @@ class ServicosListScreen extends StatelessWidget {
 
 // --- TELAS DE CRIAÇÃO ---
 
-
-class NovoFuncionarioScreen extends StatelessWidget {
-  const NovoFuncionarioScreen({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Novo Funcionário', style: GoogleFonts.poppins())),
-      body: Center(child: Text('Formulário de criação de funcionário.', style: GoogleFonts.poppins())),
-    );
-  }
-}
-
-class NovaPecaScreen extends StatelessWidget {
-  const NovaPecaScreen({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Nova Peça/Material', style: GoogleFonts.poppins())),
-      body: Center(child: Text('Formulário de criação de peça/material.', style: GoogleFonts.poppins())),
-    );
-  }
-}
 
 class NovoServicoScreen extends StatelessWidget {
   const NovoServicoScreen({Key? key}) : super(key: key);

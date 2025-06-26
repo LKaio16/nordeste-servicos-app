@@ -95,7 +95,7 @@ class EquipamentoDetailScreen extends ConsumerWidget {
             onPressed: equipamentoAsyncValue.maybeWhen(
               data: (equipamento) => () async {
                 await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => EquipamentoEditScreen(equipamento: equipamento)),
+                  MaterialPageRoute(builder: (context) => EquipamentoEditScreen(equipamentoId: equipamento.id!)),
                 );
                 ref.invalidate(equipamentoDetailProvider(equipamentoId));
                 ref.invalidate(equipamentoListProvider);
