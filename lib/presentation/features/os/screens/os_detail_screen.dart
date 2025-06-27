@@ -190,7 +190,7 @@ class OsDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           osAsyncValue.when(
-            data: (ordemServico) => 'OS #${ordemServico.numeroOS}',
+            data: (ordemServico) => ordemServico.numeroOS,
             loading: () => 'Carregando...',
             error: (err, stack) => 'Detalhes da OS',
           ),

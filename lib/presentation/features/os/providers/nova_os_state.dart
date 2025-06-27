@@ -1,53 +1,55 @@
 import 'package:equatable/equatable.dart';
 
 import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
-// REMOVED: import '../../../../domain/entities/equipamento.dart'; // No longer storing list
-import '../../../../domain/entities/usuario.dart';
-
-
+import 'package:nordeste_servicos_app/domain/entities/equipamento.dart';
+import 'package:nordeste_servicos_app/domain/entities/usuario.dart';
 
 class NovaOsState extends Equatable {
   final bool isLoading;
   final String? errorMessage;
   final List<Cliente> clientes;
-  // REMOVED: final List<Equipamento> equipamentos; // No longer needed
   final List<Usuario> tecnicos;
   final bool isSubmitting;
   final String? submissionError;
-  final String? nextOsNumber; // Para exibir o número da próxima OS
+  final String? nextOsNumber;
+  final bool isEquipamentoLoading;
+  final List<Equipamento> equipamentosDoCliente;
 
   const NovaOsState({
     this.isLoading = false,
     this.errorMessage,
     this.clientes = const [],
-    // REMOVED: this.equipamentos = const [],
     this.tecnicos = const [],
     this.isSubmitting = false,
     this.submissionError,
     this.nextOsNumber,
+    this.isEquipamentoLoading = false,
+    this.equipamentosDoCliente = const [],
   });
 
   NovaOsState copyWith({
     bool? isLoading,
     String? errorMessage,
     List<Cliente>? clientes,
-    // REMOVED: List<Equipamento>? equipamentos,
     List<Usuario>? tecnicos,
     bool? isSubmitting,
     String? submissionError,
     String? nextOsNumber,
-    bool clearError = false, // Flag para limpar erros específicos
+    bool? isEquipamentoLoading,
+    List<Equipamento>? equipamentosDoCliente,
+    bool clearError = false,
     bool clearSubmissionError = false,
   }) {
     return NovaOsState(
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       clientes: clientes ?? this.clientes,
-      // REMOVED: equipamentos: equipments ?? this.equipamentos,
       tecnicos: tecnicos ?? this.tecnicos,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submissionError: clearSubmissionError ? null : submissionError ?? this.submissionError,
       nextOsNumber: nextOsNumber ?? this.nextOsNumber,
+      isEquipamentoLoading: isEquipamentoLoading ?? this.isEquipamentoLoading,
+      equipamentosDoCliente: equipamentosDoCliente ?? this.equipamentosDoCliente,
     );
   }
 
@@ -56,10 +58,11 @@ class NovaOsState extends Equatable {
     isLoading,
     errorMessage,
     clientes,
-    // REMOVED: equipamentos,
     tecnicos,
     isSubmitting,
     submissionError,
     nextOsNumber,
+    isEquipamentoLoading,
+    equipamentosDoCliente,
   ];
 }

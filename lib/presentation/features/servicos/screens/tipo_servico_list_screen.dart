@@ -2,26 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../data/models/perfil_usuario_model.dart';
-import '../../../../domain/entities/usuario.dart';
+import '../../../../domain/entities/tipo_servico.dart';
 import '../../../shared/styles/app_colors.dart';
-import '../providers/funcionario_list_provider.dart';
-import 'funcionario_detail_screen.dart';
-import 'novo_tecnico_screen.dart';
+import '../providers/tipo_servico_list_provider.dart';
+import 'novo_tipo_servico_screen.dart';
+import 'tipo_servico_detail_screen.dart';
 
-class FuncionarioListScreen extends ConsumerWidget {
-  const FuncionarioListScreen({Key? key}) : super(key: key);
+class ServicosListScreen extends ConsumerWidget {
+  const ServicosListScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(funcionarioListProvider);
-    final notifier = ref.read(funcionarioListProvider.notifier);
+    final state = ref.watch(tipoServicoListProvider);
+    final notifier = ref.read(tipoServicoListProvider.notifier);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
         title: Text(
-          'Funcionários',
+          'Tipos de Serviço',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
             color: Colors.white,
@@ -84,14 +83,7 @@ class FuncionarioListScreen extends ConsumerWidget {
           ),
 
           // Conteúdo principal
-          Column(
-            children: [
-              _buildSearchSection(context, notifier),
-              Expanded(
-                child: _buildBodyContent(context, state, notifier),
-              ),
-            ],
-          ),
+          _buildBodyContent(context, state, notifier),
         ],
       ),
       floatingActionButton: Container(
@@ -112,10 +104,13 @@ class FuncionarioListScreen extends ConsumerWidget {
           ],
         ),
         child: FloatingActionButton(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const NovoTecnicoScreen()),
+          onPressed: () async {
+            final result = await Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const NovoTipoServicoScreen()),
             );
+            if (result == true) {
+              ref.invalidate(tipoServicoListProvider);
+            }
           },
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -125,151 +120,29 @@ class FuncionarioListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSearchSection(BuildContext context, FuncionarioListNotifier notifier) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryBlue.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // Título da seção
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryBlue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.search,
-                    size: 20,
-                    color: AppColors.primaryBlue,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Buscar Funcionários',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.dividerColor,
-                    AppColors.dividerColor.withOpacity(0.1),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Campo de Busca
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: TextField(
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: AppColors.textDark,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Buscar por nome, e-mail ou crachá...',
-                  hintStyle: GoogleFonts.poppins(
-                    color: AppColors.textLight.withOpacity(0.7),
-                    fontSize: 14,
-                  ),
-                  prefixIcon: Container(
-                    margin: const EdgeInsets.all(12),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.search,
-                      size: 20,
-                      color: AppColors.primaryBlue,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: AppColors.backgroundGray.withOpacity(0.5),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                ),
-                onSubmitted: (term) => notifier.loadFuncionarios(searchTerm: term, refresh: true),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBodyContent(BuildContext context, FuncionarioListState state, FuncionarioListNotifier notifier) {
-    if (state.isLoading && state.funcionarios.isEmpty) {
+  Widget _buildBodyContent(BuildContext context, TipoServicoListState state, TipoServicoListNotifier notifier) {
+    if (state.isLoading && state.servicos.isEmpty) {
       return _buildLoadingState();
     }
-    if (state.errorMessage != null && state.funcionarios.isEmpty) {
-      return _buildErrorState(context, state.errorMessage!, () => notifier.loadFuncionarios(refresh: true));
+
+    if (state.errorMessage != null && state.servicos.isEmpty) {
+      return _buildErrorState(context, state.errorMessage!, () => notifier.loadServicos(refresh: true));
     }
-    if (state.funcionarios.isEmpty) {
+
+    if (state.servicos.isEmpty) {
       return _buildEmptyState(context);
     }
 
     return RefreshIndicator(
-      onRefresh: () => notifier.loadFuncionarios(refresh: true),
+      onRefresh: () => notifier.loadServicos(refresh: true),
       color: AppColors.primaryBlue,
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.all(16.0),
         physics: const BouncingScrollPhysics(),
-        itemCount: state.funcionarios.length,
+        itemCount: state.servicos.length,
         itemBuilder: (context, index) {
-          final funcionario = state.funcionarios[index];
-          return _buildFuncionarioCard(context, funcionario);
+          final servico = state.servicos[index];
+          return _buildServicoCard(context, servico);
         },
       ),
     );
@@ -297,7 +170,7 @@ class FuncionarioListScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Carregando funcionários...',
+              'Carregando tipos de serviço...',
               style: GoogleFonts.poppins(
                 color: AppColors.textLight,
                 fontSize: 16,
@@ -310,10 +183,7 @@ class FuncionarioListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFuncionarioCard(BuildContext context, Usuario funcionario) {
-    final perfilText = funcionario.perfil.name == 'ADMIN' ? 'Administrador' : 'Técnico';
-    final perfilColor = funcionario.perfil == PerfilUsuarioModel.ADMIN ? AppColors.errorRed : AppColors.secondaryBlue;
-
+  Widget _buildServicoCard(BuildContext context, TipoServico servico) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16.0),
       decoration: BoxDecoration(
@@ -335,7 +205,7 @@ class FuncionarioListScreen extends ConsumerWidget {
       child: InkWell(
         onTap: () {
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => FuncionarioDetailScreen(funcionarioId: funcionario.id!)),
+            MaterialPageRoute(builder: (context) => TipoServicoDetailScreen(servicoId: servico.id!)),
           );
         },
         borderRadius: BorderRadius.circular(16.0),
@@ -346,15 +216,13 @@ class FuncionarioListScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: perfilColor.withOpacity(0.1),
+                  color: AppColors.primaryBlue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
-                  funcionario.perfil == PerfilUsuarioModel.ADMIN
-                      ? Icons.admin_panel_settings_outlined
-                      : Icons.engineering_outlined,
+                  Icons.miscellaneous_services_outlined,
                   size: 28,
-                  color: perfilColor,
+                  color: AppColors.primaryBlue,
                 ),
               ),
               const SizedBox(width: 16),
@@ -363,7 +231,7 @@ class FuncionarioListScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      funcionario.nome,
+                      servico.descricao,
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -371,54 +239,20 @@ class FuncionarioListScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      funcionario.email ?? 'E-mail não cadastrado',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: AppColors.textLight,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundGray,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: perfilColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: perfilColor.withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            perfilText,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: perfilColor,
-                            ),
-                          ),
+                      child: Text(
+                        'ID: ${servico.id}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: AppColors.textDark,
+                          fontWeight: FontWeight.w500,
                         ),
-                        if (funcionario.cracha != null) ...[
-                          const SizedBox(width: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.backgroundGray,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Crachá: ${funcionario.cracha}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: AppColors.textDark,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
                   ],
                 ),
@@ -529,14 +363,14 @@ class FuncionarioListScreen extends ConsumerWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.people_outline,
+                Icons.miscellaneous_services_outlined,
                 size: 64,
                 color: AppColors.textLight,
               ),
             ),
             const SizedBox(height: 24),
             Text(
-              'Nenhum funcionário encontrado',
+              'Nenhum serviço encontrado',
               style: GoogleFonts.poppins(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
@@ -545,7 +379,7 @@ class FuncionarioListScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Cadastre um novo funcionário ou ajuste os termos de busca.',
+              'Cadastre um novo tipo de serviço para começar.',
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 color: AppColors.textLight,
@@ -573,12 +407,12 @@ class FuncionarioListScreen extends ConsumerWidget {
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const NovoTecnicoScreen()),
+                    MaterialPageRoute(builder: (context) => const NovoTipoServicoScreen()),
                   );
                 },
                 icon: const Icon(Icons.add, color: Colors.white),
                 label: Text(
-                  'Adicionar Funcionário',
+                  'Adicionar Tipo de Serviço',
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.w600,
                     color: Colors.white,

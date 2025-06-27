@@ -152,7 +152,7 @@ class _EquipamentoEditScreenState extends ConsumerState<EquipamentoEditScreen> {
                 label: 'Horímetro',
                 icon: Icons.timer_outlined,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                isOptional: true, // <<< CORREÇÃO AQUI >>>
+                isOptional: true,
               ),
             ],
           ),
