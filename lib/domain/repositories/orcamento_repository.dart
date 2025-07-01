@@ -1,6 +1,8 @@
 // lib/domain/repositories/orcamento_repository.dart
 
 
+import 'dart:typed_data';
+
 import '../../data/models/status_orcamento_model.dart';
 import '../entities/orcamento.dart';
 import '/core/error/exceptions.dart';
@@ -24,6 +26,8 @@ abstract class OrcamentoRepository {
 
   /// Deleta um orçamento pelo seu ID.
   Future<void> deleteOrcamento(int id);
+
+  Future<Uint8List> downloadOrcamentoPdf(int orcamentoId);
 
   // Métodos para gerenciar itens do orçamento (alternativa a repositório separado para itens)
   // Future<List<ItemOrcamento>> getItemOrcamentosByOrcamentoId(int orcamentoId);

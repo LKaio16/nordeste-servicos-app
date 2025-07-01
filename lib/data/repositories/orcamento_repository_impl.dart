@@ -1,6 +1,8 @@
 // lib/data/repositories/orcamento_repository_impl.dart
 
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart'; // Import for kDebugMode
 import '../../core/network/api_client.dart';
 import '../../core/error/exceptions.dart';
 import '../models/orcamento_model.dart';
@@ -156,6 +158,26 @@ class OrcamentoRepositoryImpl implements OrcamentoRepository {
         throw ApiException('Erro de rede ao deletar orçamento ${id}: ${e.message}');
     } catch (e) {
        throw ApiException('Erro inesperado ao deletar orçamento ${id}: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<Uint8List> downloadOrcamentoPdf(int orcamentoId) async {
+    try {
+      final response = await apiClient.get(
+        '/orcamentos/$orcamentoId/pdf',
+        options: Options(responseType: ResponseType.bytes), // Essencial para receber bytes
+      );
+
+      if (response.statusCode == 200) {
+        return response.data as Uint8List;
+      } else {
+        throw ApiException('Falha ao baixar o PDF: Status ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      throw ApiException('Erro de rede ao baixar o PDF: ${e.message}');
+    } catch (e) {
+      throw ApiException('Erro inesperado ao baixar o PDF: ${e.toString()}');
     }
   }
 }

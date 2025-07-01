@@ -18,5 +18,5 @@ abstract class ItemOrcamentoRepository {
   Future<ItemOrcamento> updateItemOrcamento(ItemOrcamento item); // Pode precisar de DTO
 
   /// Deleta um item de orçamento pelo seu ID.
-  Future<void> deleteItemOrcamento(int id);
+  Future<void> deleteItemOrcamento(int orcamentoId, int itemId);
 }

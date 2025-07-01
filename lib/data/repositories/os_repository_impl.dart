@@ -8,10 +8,8 @@ import '../models/ordem_servico_model.dart'; // Importe o modelo de dados
 import '../../domain/entities/ordem_servico.dart'; // Importe a entidade de domínio
 import '../../domain/repositories/os_repository.dart'; // Importe a interface do repositório
 import '../../data/models/status_os_model.dart'; // Para usar o enum como parâmetro
-import '../models/cliente_model.dart'; // Certifique-se de importar o modelo de Cliente
-import '../models/equipamento_model.dart'; // Certifique-se de importar o modelo de Equipamento
 import '../models/prioridade_os_model.dart';
-import '../models/usuario_model.dart'; // Certifique-se de importar o modelo de Usuario
+
 
 
 class OsRepositoryImpl implements OsRepository {

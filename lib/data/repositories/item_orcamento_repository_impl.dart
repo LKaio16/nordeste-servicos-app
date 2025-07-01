@@ -14,134 +14,110 @@ class ItemOrcamentoRepositoryImpl implements ItemOrcamentoRepository {
 
   @override
   Future<List<ItemOrcamento>> getItemOrcamentosByOrcamentoId(int orcamentoId) async {
-     try {
-      final response = await apiClient.get('/orcamentos/$orcamentoId/itens'); // Endpoint da sua API
+    try {
+      final response = await apiClient.get('/orcamentos/$orcamentoId/itens');
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = response.data;
-        final List<ItemOrcamentoModel> itemOrcamentoModels = jsonList.map((json) => ItemOrcamentoModel.fromJson(json)).toList();
-        final List<ItemOrcamento> itensOrcamento = itemOrcamentoModels.map((model) => model.toEntity()).toList();
-        return itensOrcamento;
+        return jsonList.map((json) => ItemOrcamentoModel.fromJson(json).toEntity()).toList();
       } else {
-         throw ApiException('Falha ao carregar itens do orçamento ${orcamentoId}: Status ${response.statusCode}');
+        throw ApiException('Falha ao carregar itens do orçamento $orcamentoId: Status ${response.statusCode}');
       }
-    } on ApiException {
-       rethrow;
     } on DioException catch (e) {
-        throw ApiException('Erro de rede ao carregar itens do orçamento ${orcamentoId}: ${e.message}');
+      throw ApiException('Erro de rede ao carregar itens do orçamento $orcamentoId: ${e.message}');
     } catch (e) {
-       throw ApiException('Erro inesperado ao carregar itens do orçamento ${orcamentoId}: ${e.toString()}');
+      throw ApiException('Erro inesperado ao carregar itens do orçamento $orcamentoId: ${e.toString()}');
     }
   }
 
   @override
   Future<ItemOrcamento> getItemOrcamentoById(int id) async {
-      try {
-      // Assumindo que sua API tem um endpoint para buscar item por ID direto: /itens-orcamento/{id}
-      // Ou se for aninhado: /orcamentos/{orcamentoId}/itens/{id} - ajuste conforme sua API
+    try {
+      // Este endpoint pode não existir na sua API, mas mantemos por consistência.
       final response = await apiClient.get('/itens-orcamento/$id');
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> json = response.data;
-        final ItemOrcamentoModel itemOrcamentoModel = ItemOrcamentoModel.fromJson(json);
-        return itemOrcamentoModel.toEntity();
+        return ItemOrcamentoModel.fromJson(response.data).toEntity();
       } else {
-         throw ApiException('Falha ao carregar item do orçamento ${id}: Status ${response.statusCode}');
+        throw ApiException('Falha ao carregar item do orçamento $id: Status ${response.statusCode}');
       }
-    } on ApiException {
-       rethrow;
     } on DioException catch (e) {
-        throw ApiException('Erro de rede ao carregar item do orçamento ${id}: ${e.message}');
+      throw ApiException('Erro de rede ao carregar item do orçamento $id: ${e.message}');
     } catch (e) {
-       throw ApiException('Erro inesperado ao carregar item do orçamento ${id}: ${e.toString()}');
+      throw ApiException('Erro inesperado ao carregar item do orçamento $id: ${e.toString()}');
     }
   }
 
   @override
   Future<ItemOrcamento> createItemOrcamento(ItemOrcamento item) async {
-       try {
-        // Pode ser necessário criar um DTO/Model específico para criação
-         final ItemOrcamentoModel itemOrcamentoModel = ItemOrcamentoModel(
-            // ID não enviado
-            orcamentoId: item.orcamentoId,
-            pecaMaterialId: item.pecaMaterialId,
-            tipoServicoId: item.tipoServicoId,
-            descricao: item.descricao,
-            quantidade: item.quantidade,
-            valorUnitario: item.valorUnitario,
-            // Subtotal não é enviado na criação, é calculado na API
-         );
+    try {
+      final itemOrcamentoModel = ItemOrcamentoModel(
+        orcamentoId: item.orcamentoId,
+        pecaMaterialId: item.pecaMaterialId,
+        tipoServicoId: item.tipoServicoId,
+        descricao: item.descricao,
+        quantidade: item.quantidade,
+        valorUnitario: item.valorUnitario,
+      );
 
-      final response = await apiClient.post('/orcamentos/${item.orcamentoId}/itens', data: itemOrcamentoModel.toJson()); // Endpoint da sua API
+      final response = await apiClient.post('/orcamentos/${item.orcamentoId}/itens', data: itemOrcamentoModel.toJson());
 
       if (response.statusCode == 201) {
-        final Map<String, dynamic> json = response.data;
-        final ItemOrcamentoModel createdItemOrcamentoModel = ItemOrcamentoModel.fromJson(json);
-        return createdItemOrcamentoModel.toEntity();
+        return ItemOrcamentoModel.fromJson(response.data).toEntity();
       } else {
-         throw ApiException('Falha ao adicionar item ao orçamento ${item.orcamentoId}: Status ${response.statusCode}');
+        throw ApiException('Falha ao adicionar item ao orçamento ${item.orcamentoId}: Status ${response.statusCode}');
       }
-    } on ApiException {
-       rethrow;
     } on DioException catch (e) {
-        throw ApiException('Erro de rede ao adicionar item ao orçamento ${item.orcamentoId}: ${e.message}');
+      throw ApiException('Erro de rede ao adicionar item ao orçamento ${item.orcamentoId}: ${e.message}');
     } catch (e) {
-       throw ApiException('Erro inesperado ao adicionar item ao orçamento ${item.orcamentoId}: ${e.toString()}');
+      throw ApiException('Erro inesperado ao adicionar item ao orçamento ${item.orcamentoId}: ${e.toString()}');
     }
   }
 
   @override
   Future<ItemOrcamento> updateItemOrcamento(ItemOrcamento item) async {
-       try {
-         final ItemOrcamentoModel itemOrcamentoModel = ItemOrcamentoModel(
-            id: item.id, // Incluir ID
-            orcamentoId: item.orcamentoId,
-            pecaMaterialId: item.pecaMaterialId,
-            tipoServicoId: item.tipoServicoId,
-            descricao: item.descricao,
-            quantidade: item.quantidade,
-            valorUnitario: item.valorUnitario,
-            // Subtotal não é enviado na atualização, é calculado na API
-         );
+    try {
+      final itemOrcamentoModel = ItemOrcamentoModel(
+        id: item.id,
+        orcamentoId: item.orcamentoId,
+        pecaMaterialId: item.pecaMaterialId,
+        tipoServicoId: item.tipoServicoId,
+        descricao: item.descricao,
+        quantidade: item.quantidade,
+        valorUnitario: item.valorUnitario,
+      );
 
-      // Assumindo que sua API tem um endpoint para atualizar item por ID direto: /itens-orcamento/{id}
-      // Ou se for aninhado: /orcamentos/{orcamentoId}/itens/{id} - ajuste conforme sua API
-      final response = await apiClient.put('/itens-orcamento/${item.id}', data: itemOrcamentoModel.toJson());
+      // <<< CORREÇÃO DA URL DE ATUALIZAÇÃO >>>
+      final response = await apiClient.put('/orcamentos/${item.orcamentoId}/itens/${item.id}', data: itemOrcamentoModel.toJson());
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> json = response.data;
-        final ItemOrcamentoModel updatedItemOrcamentoModel = ItemOrcamentoModel.fromJson(json);
-        return updatedItemOrcamentoModel.toEntity();
+        return ItemOrcamentoModel.fromJson(response.data).toEntity();
       } else {
-         throw ApiException('Falha ao atualizar item do orçamento ${item.orcamentoId} (ID ${item.id}): Status ${response.statusCode}');
+        throw ApiException('Falha ao atualizar item do orçamento ${item.id}: Status ${response.statusCode}');
       }
-    } on ApiException {
-       rethrow;
     } on DioException catch (e) {
-        throw ApiException('Erro de rede ao atualizar item do orçamento ${item.orcamentoId} (ID ${item.id}): ${e.message}');
+      throw ApiException('Erro de rede ao atualizar item do orçamento ${item.id}: ${e.message}');
     } catch (e) {
-       throw ApiException('Erro inesperado ao atualizar item do orçamento ${item.orcamentoId} (ID ${item.id}): ${e.toString()}');
+      throw ApiException('Erro inesperado ao atualizar item do orçamento ${item.id}: ${e.toString()}');
     }
   }
 
+  // <<< CORREÇÃO DO MÉTODO DE DELEÇÃO >>>
   @override
-  Future<void> deleteItemOrcamento(int id) async {
-       try {
-      // Assumindo que sua API tem um endpoint para deletar item por ID direto: /itens-orcamento/{id}
-      // Ou se for aninhado: /orcamentos/{orcamentoId}/itens/{id} - ajuste conforme sua API
-      final response = await apiClient.delete('/itens-orcamento/$id');
+  Future<void> deleteItemOrcamento(int orcamentoId, int itemId) async {
+    try {
+      // Usando a URL aninhada correta, conforme definido no seu ItemOrcamentoController
+      final response = await apiClient.delete('/orcamentos/$orcamentoId/itens/$itemId');
 
-      if (response.statusCode == 204) {
+      if (response.statusCode == 204) { // 204 No Content
         return;
       } else {
-         throw ApiException('Falha ao deletar item do orçamento ${id}: Status ${response.statusCode}');
+        throw ApiException('Falha ao deletar item do orçamento $itemId: Status ${response.statusCode}');
       }
-    } on ApiException {
-       rethrow;
     } on DioException catch (e) {
-        throw ApiException('Erro de rede ao deletar item do orçamento ${id}: ${e.message}');
+      throw ApiException('Erro de rede ao deletar item do orçamento $itemId: ${e.message}');
     } catch (e) {
-       throw ApiException('Erro inesperado ao deletar item do orçamento ${id}: ${e.toString()}');
+      throw ApiException('Erro inesperado ao deletar item do orçamento $itemId: ${e.toString()}');
     }
   }
 }
