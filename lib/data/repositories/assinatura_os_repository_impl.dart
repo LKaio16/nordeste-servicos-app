@@ -66,33 +66,30 @@ class AssinaturaOsRepositoryImpl implements AssinaturaOsRepository {
 
 
   @override
-  Future<AssinaturaOS> uploadAssinatura(int osId, File signatureFile) async {
+  Future<AssinaturaOS> uploadAssinatura(int osId, AssinaturaOS assinatura) async {
     try {
-      String fileName = signatureFile.path.split('/').last;
-      FormData formData = FormData.fromMap({
-        "file": await MultipartFile.fromFile(signatureFile.path, filename: fileName),
-        // Se sua API esperar outros campos no corpo, adicione aqui
-      });
+      final requestData = {
+        'assinaturaClienteBase64': assinatura.assinaturaClienteBase64,
+        'nomeClienteResponsavel': assinatura.nomeClienteResponsavel,
+        'documentoClienteResponsavel': assinatura.documentoClienteResponsavel,
+        'assinaturaTecnicoBase64': assinatura.assinaturaTecnicoBase64,
+        'nomeTecnicoResponsavel': assinatura.nomeTecnicoResponsavel,
+      };
 
-      // Endpoint da sua API para fazer upload/atualizar assinatura (usamos PUT na API)
-      final response = await apiClient.put('/ordens-servico/$osId/assinatura', data: formData);
+      final response = await apiClient.put('/ordens-servico/$osId/assinatura', data: requestData);
 
-      if (response.statusCode == 200) { // Status 200 OK para sucesso
-        final Map<String, dynamic> json = response.data;
-        final AssinaturaOSModel createdAssinaturaOsModel = AssinaturaOSModel.fromJson(json);
-        return createdAssinaturaOsModel.toEntity();
+      if (response.statusCode == 200) {
+        return AssinaturaOSModel.fromJson(response.data).toEntity();
       } else {
-        throw ApiException('Falha ao fazer upload/atualizar assinatura para OS ${osId}: Status ${response.statusCode}');
+        throw ApiException('Falha ao fazer upload da assinatura: Status ${response.statusCode}');
       }
-    } on ApiException {
-      rethrow;
     } on DioException catch (e) {
-      throw ApiException('Erro de rede ao fazer upload/atualizar assinatura para OS ${osId}: ${e.message}');
+      throw ApiException('Erro de rede ao fazer upload da assinatura: ${e.message}');
     } catch (e) {
-      throw ApiException('Erro inesperado ao fazer upload/atualizar assinatura para OS ${osId}: ${e.toString()}');
+      throw ApiException('Erro inesperado ao fazer upload da assinatura: ${e.toString()}');
     }
   }
-
+  
   @override
   Future<void> deleteAssinatura(int id) async {
     try {

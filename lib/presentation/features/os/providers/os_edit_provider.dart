@@ -81,11 +81,11 @@ class OsEditNotifier extends StateNotifier<OsEditState> {
     }
   }
 
-  // --- ALTERAÇÃO AQUI: O método updateOrdemServico agora aceita um objeto Equipamento ---
+
   Future<bool> updateOrdemServico({
     required int osId,
     required int clienteId,
-    required Equipamento equipamento, // <-- MUDOU AQUI! Recebe o objeto Equipamento completo
+    required Equipamento equipamento,
     int? tecnicoAtribuidoId,
     required String problemaRelatado,
     String? analiseFalha,
@@ -156,4 +156,5 @@ class OsEditNotifier extends StateNotifier<OsEditState> {
       return false;
     }
   }
+
 }

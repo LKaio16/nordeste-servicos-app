@@ -13,8 +13,14 @@ abstract class FotoOsRepository {
 
   /// Faz upload de uma nova foto para uma OS.
   /// Recebe o ID da OS e os dados da foto.
-  Future<FotoOS> uploadFoto(int osId, File photoFile); // Ou String path, ou List<int> bytes
+  Future<FotoOS> uploadFoto(int osId, {
+    required String base64,
+    required String? description,
+    required String? fileName,
+    required String? mimeType,
+    required int? fileSize,
+  });
 
   /// Deleta uma foto pelo seu ID.
-  Future<void> deleteFoto(int id);
+  Future<void> deleteFoto(int osId, int fotoId);
 }

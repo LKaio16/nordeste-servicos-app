@@ -1,44 +1,31 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// Importe seus providers, entidades, cores, etc.
 import '../../../../domain/entities/usuario.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../orcamentos/providers/orcamento_dashboard_provider.dart';
 import '../models/dashboard_data.dart';
 import '../providers/os_dashboard_data_provider.dart';
+import '../../../shared/styles/app_colors.dart';
 
-// Definição de AppColors (Copie do seu arquivo original ou importe)
-class AppColors {
-  static const Color primaryBlue = Color(0xFF1A73E8);
-  static const Color secondaryBlue = Color(0xFF4285F4);
-  static const Color accentBlue = Color(0xFF8AB4F8);
-  static const Color darkBlue = Color(0xFF0D47A1);
-  static const Color successGreen = Color(0xFF34A853);
-  static const Color warningOrange = Color(0xFFFFA000);
-  static const Color errorRed = Color(0xFFEA4335);
-  static const Color backgroundGray = Color(0xFFF8F9FA);
-  static const Color cardBackground = Colors.white;
-  static const Color textDark = Color(0xFF202124);
-  static const Color textLight = Color(0xFF5F6368);
-  static const Color dividerColor = Color(0xFFEEEEEE);
-}
 
-// Modelos de Dados (Copie do seu arquivo original ou importe)
-class StatusItem { /* ... Definição ... */
+class StatusItem {
   final String label;
   final int value;
   final Color color;
   StatusItem({required this.label, required this.value, required this.color});
 }
-class QuickAction { /* ... Definição ... */
+class QuickAction {
   final String titulo;
   final IconData icon;
   final String rota;
   QuickAction({required this.titulo, required this.icon, required this.rota});
 }
-class Technician { /* ... Definição ... */
+class Technician {
   final String id;
   final String nome;
   final String avatarUrl;
@@ -46,7 +33,7 @@ class Technician { /* ... Definição ... */
   final double desempenho;
   Technician({required this.id, required this.nome, required this.avatarUrl, required this.totalOS, required this.desempenho});
 }
-class Activity { /* ... Definição ... */
+class Activity {
   final String tipo;
   final String descricao;
   final String tempoDecorrido;
@@ -54,21 +41,21 @@ class Activity { /* ... Definição ... */
 }
 
 // Dados Mocados (Copie do seu arquivo original ou importe)
-final List<QuickAction> mockQuickActions = [ /* ... Definição ... */
+final List<QuickAction> mockQuickActions = [
   QuickAction(titulo: 'Nova OS', icon: Icons.add_chart, rota: '/nova-os'),
   QuickAction(titulo: 'Add Cliente', icon: Icons.person_add_outlined, rota: '/novo-cliente'),
   QuickAction(titulo: 'Add Técnico', icon: Icons.engineering, rota: '/novo-tec'),
 ];
-final List<Technician> mockTechnicians = [ /* ... Definição ... */
+final List<Technician> mockTechnicians = [
   Technician(id: '1', nome: 'Carlos Silva', avatarUrl: 'https://i.pravatar.cc/150?img=12', totalOS: 32, desempenho: 0.8),
   Technician(id: '2', nome: 'Pedro Santos', avatarUrl: 'https://i.pravatar.cc/150?img=11', totalOS: 28, desempenho: 0.7),
 ];
-final List<Activity> mockRecentActivities = [ /* ... Definição ... */
+final List<Activity> mockRecentActivities = [
   Activity(tipo: 'os_concluida', descricao: 'OS #2547 concluída', tempoDecorrido: 'Há 2 horas'),
   Activity(tipo: 'cliente_cadastrado', descricao: 'Novo cliente cadastrado', tempoDecorrido: 'Há 4 horas'),
 ];
 
-// Página do Dashboard - AGORA COM O CONTEÚDO REAL
+// Página do Dashboard
 class DashboardPageAdm extends ConsumerWidget {
   const DashboardPageAdm({Key? key}) : super(key: key);
 
@@ -78,7 +65,7 @@ class DashboardPageAdm extends ConsumerWidget {
     final osDashboardState = ref.watch(osDashboardProvider);
     final orcamentoDashboardState = ref.watch(orcamentoDashboardProvider);
 
-    // Lógica de Loading e Error (mantida da AdminHomeScreen original)
+    // Lógica de Loading e Error
     if (osDashboardState.isLoading || orcamentoDashboardState.isLoading) {
       return const Center(
         child: Column(
@@ -174,22 +161,17 @@ class DashboardPageAdm extends ConsumerWidget {
       );
     }
 
-    // Se chegou aqui, os dados foram carregados com sucesso
     final DashboardData displayOsData = osDashboardState.data!;
     final DashboardData displayOrcamentoData = orcamentoDashboardState.data!;
 
-    // Conteúdo principal do dashboard (movido da AdminHomeScreen original)
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       physics: const BouncingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cabeçalho de boas-vindas
           _buildWelcomeHeader(ref),
           const SizedBox(height: 24),
-
-          // Cards de estatísticas
           Row(
             children: [
               Expanded(
@@ -234,30 +216,32 @@ class DashboardPageAdm extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 24),
-
-          // Ações rápidas
           QuickActionsWidget(actions: mockQuickActions),
           const SizedBox(height: 24),
-
-          // Desempenho de técnicos
           TechnicianPerformanceWidget(technicians: mockTechnicians),
           const SizedBox(height: 24),
-
-          // Atividades recentes
           RecentActivitiesWidget(activities: mockRecentActivities),
-
-          // Espaço extra no final
           const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  // Método auxiliar para o cabeçalho (movido da AdminHomeScreen original)
   Widget _buildWelcomeHeader(WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final Usuario? adminUser = authState.authenticatedUser;
-    final String nome = adminUser?.nome?.split(' ').first ?? 'Admin'; // Usar 'Admin' como fallback
+    final String nome = adminUser?.nome.split(' ').first ?? 'Admin';
+
+    // Lógica para decodificar a imagem Base64
+    Uint8List? imageBytes;
+    if (adminUser?.fotoPerfil != null && adminUser!.fotoPerfil!.isNotEmpty) {
+      try {
+        imageBytes = base64Decode(adminUser.fotoPerfil!);
+      } catch (e) {
+        print("Erro ao decodificar imagem no Header do Dashboard: $e");
+        imageBytes = null;
+      }
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -283,12 +267,10 @@ class DashboardPageAdm extends ConsumerWidget {
             backgroundColor: Colors.white,
             child: CircleAvatar(
               radius: 26,
-              backgroundImage: NetworkImage(
-                adminUser?.cracha != null
-                    ? 'https://i.pravatar.cc/150?img=${adminUser!.cracha.hashCode % 20}' // Exemplo
-                    : 'https://i.pravatar.cc/150?u=admin', // Fallback
-              ),
-              onBackgroundImageError: (_, __) {}, // Tratamento de erro básico
+              backgroundImage: imageBytes != null ? MemoryImage(imageBytes) : null,
+              child: imageBytes == null
+                  ? Icon(Icons.person, size: 30, color: AppColors.primaryBlue)
+                  : null,
             ),
           ),
           const SizedBox(width: 16),
@@ -321,9 +303,7 @@ class DashboardPageAdm extends ConsumerWidget {
   }
 }
 
-// ----- Widgets Internos (Copie as definições do seu arquivo original ou importe) -----
-// É ALTAMENTE RECOMENDADO MOVER ESTES WIDGETS PARA ARQUIVOS SEPARADOS
-
+// ... (Resto dos widgets: DashboardCardWidget, QuickActionsWidget, etc. permanecem os mesmos)
 class DashboardCardWidget extends StatelessWidget {
   final String title;
   final int count;
@@ -442,7 +422,7 @@ class QuickActionsWidget extends StatelessWidget {
             crossAxisCount: 3,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.1, // Ajuste para melhor visualização
+            childAspectRatio: 1.1,
           ),
           itemCount: actions.length,
           itemBuilder: (context, index) {
@@ -512,12 +492,12 @@ class TechnicianPerformanceWidget extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppColors.primaryBlue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.people_alt_outlined,
                     color: AppColors.primaryBlue,
                     size: 20,
@@ -541,7 +521,6 @@ class TechnicianItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determinar a cor com base no desempenho
     Color performanceColor;
     if (technician.desempenho >= 0.8) {
       performanceColor = AppColors.successGreen;
@@ -552,8 +531,8 @@ class TechnicianItemWidget extends StatelessWidget {
     }
 
     return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -561,7 +540,7 @@ class TechnicianItemWidget extends StatelessWidget {
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 5,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -571,7 +550,7 @@ class TechnicianItemWidget extends StatelessWidget {
             radius: 24,
             backgroundImage: NetworkImage(technician.avatarUrl),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -584,7 +563,7 @@ class TechnicianItemWidget extends StatelessWidget {
                     color: AppColors.textDark,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   '${technician.totalOS} OS atribuídas',
                   style: GoogleFonts.poppins(
@@ -599,7 +578,7 @@ class TechnicianItemWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: performanceColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -613,7 +592,7 @@ class TechnicianItemWidget extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
                 'Desempenho',
                 style: GoogleFonts.poppins(
@@ -659,12 +638,12 @@ class RecentActivitiesWidget extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppColors.primaryBlue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.history,
                     color: AppColors.primaryBlue,
                     size: 20,
@@ -677,9 +656,7 @@ class RecentActivitiesWidget extends StatelessWidget {
             const SizedBox(height: 8),
             Center(
               child: TextButton(
-                onPressed: () {
-                  // Navegar para a página de todas as atividades
-                },
+                onPressed: () {},
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primaryBlue,
                 ),
@@ -709,7 +686,6 @@ class ActivityItemWidget extends StatelessWidget {
     IconData activityIcon;
     Color activityColor;
 
-    // Definir ícone e cor com base no tipo de atividade
     switch (activity.tipo) {
       case 'os_concluida':
         activityIcon = Icons.check_circle_outline;
@@ -725,8 +701,8 @@ class ActivityItemWidget extends StatelessWidget {
     }
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: activityColor.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
@@ -734,7 +710,7 @@ class ActivityItemWidget extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(8),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: activityColor.withOpacity(0.1),
               shape: BoxShape.circle,
@@ -745,7 +721,7 @@ class ActivityItemWidget extends StatelessWidget {
               size: 20,
             ),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -758,7 +734,7 @@ class ActivityItemWidget extends StatelessWidget {
                     color: AppColors.textDark,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   activity.tempoDecorrido,
                   style: GoogleFonts.poppins(
@@ -774,4 +750,3 @@ class ActivityItemWidget extends StatelessWidget {
     );
   }
 }
-

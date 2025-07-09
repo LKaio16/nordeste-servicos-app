@@ -14,9 +14,16 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Imagens
+  image_picker: ^1.0.4
+
+  # Assinatura
+  signature: ^5.4.1
+
   # Ícones e fontes
   cupertino_icons: ^1.0.8
   google_fonts: ^6.2.1
+  flutter_launcher_icons: ^0.13.1
 
   # HTTP e armazenamento seguro
   dio: ^5.0.0
@@ -53,3 +60,20 @@ flutter:
 
   assets:
     - assets/images/logo.png
+
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.jpg"
+  min_sdk_android: 21 # opcional
+  # Você pode adicionar mais configurações se precisar
+  # web:
+  #   generate: true
+  #   image_path: "path/to/image.png"
+  #   background_color: "#hexcode"
+  #   theme_color: "#hexcode"
+  # windows:
+  #   generate: true
+  #   image_path: "path/to/image.png"
+  #   icon_size: 48 # min:48, max:256, default: 48

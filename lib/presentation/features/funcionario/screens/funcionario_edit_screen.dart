@@ -1,6 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../data/models/perfil_usuario_model.dart';
 import '../../../../domain/entities/usuario.dart';
@@ -24,6 +30,9 @@ class _FuncionarioEditScreenState extends ConsumerState<FuncionarioEditScreen> {
   late TextEditingController _crachaController;
   PerfilUsuarioModel? _selectedPerfil;
   bool _initialDataLoaded = false;
+
+  String? _base64Image;
+  Uint8List? _imageBytes;
 
   @override
   void initState() {
@@ -50,10 +59,32 @@ class _FuncionarioEditScreenState extends ConsumerState<FuncionarioEditScreen> {
       _nomeController.text = funcionario.nome;
       _emailController.text = funcionario.email ?? '';
       _crachaController.text = funcionario.cracha ?? '';
-      _selectedPerfil = funcionario.perfil;
+
+      setState(() {
+        _selectedPerfil = funcionario.perfil;
+        if (funcionario.fotoPerfil != null && funcionario.fotoPerfil!.isNotEmpty) {
+          _imageBytes = base64Decode(funcionario.fotoPerfil!);
+          _base64Image = funcionario.fotoPerfil!;
+        }
+      });
+
       _initialDataLoaded = true;
     }
   }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70, maxWidth: 800);
+
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      setState(() {
+        _imageBytes = bytes;
+        _base64Image = base64Encode(bytes);
+      });
+    }
+  }
+
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
@@ -63,6 +94,7 @@ class _FuncionarioEditScreenState extends ConsumerState<FuncionarioEditScreen> {
         email: _emailController.text,
         cracha: _crachaController.text,
         perfil: _selectedPerfil!,
+        fotoPerfil: _base64Image,
       );
 
       if (success && mounted) {
@@ -80,7 +112,9 @@ class _FuncionarioEditScreenState extends ConsumerState<FuncionarioEditScreen> {
 
     ref.listen<FuncionarioEditState>(funcionarioEditProvider(widget.funcionarioId), (previous, next) {
       if (next.originalFuncionario != null && !_initialDataLoaded) {
-        _initializeFormFields(next.originalFuncionario!);
+        setState(() {
+          _initializeFormFields(next.originalFuncionario!);
+        });
       }
       if (next.submissionError != null && next.submissionError != previous?.submissionError) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next.submissionError!), backgroundColor: AppColors.errorRed));
@@ -100,7 +134,7 @@ class _FuncionarioEditScreenState extends ConsumerState<FuncionarioEditScreen> {
             margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             child: ElevatedButton.icon(
               onPressed: state.isLoading || state.isSubmitting ? null : _submitForm,
-              icon: state.isSubmitting ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.save, size: 18),
+              icon: state.isSubmitting ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryBlue)) : const Icon(Icons.save, size: 18),
               label: Text('Salvar', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white, foregroundColor: AppColors.primaryBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
@@ -108,8 +142,8 @@ class _FuncionarioEditScreenState extends ConsumerState<FuncionarioEditScreen> {
           ),
         ],
       ),
-      body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+      body: state.isLoading && !_initialDataLoaded
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue,))
           : state.errorMessage != null
           ? Center(child: Text(state.errorMessage!))
           : _buildFormContent(),
@@ -122,6 +156,8 @@ class _FuncionarioEditScreenState extends ConsumerState<FuncionarioEditScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          _buildProfileImage(),
+          const SizedBox(height: 32),
           _buildSectionCard(
             title: 'Informações Pessoais',
             icon: Icons.person_outline,
@@ -152,6 +188,46 @@ class _FuncionarioEditScreenState extends ConsumerState<FuncionarioEditScreen> {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileImage() {
+    ImageProvider? backgroundImage;
+    if (_imageBytes != null) {
+      backgroundImage = MemoryImage(_imageBytes!);
+    }
+
+    return Center(
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: 60,
+            backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
+            backgroundImage: backgroundImage,
+            child: backgroundImage == null
+                ? Icon(Icons.person, size: 60, color: AppColors.primaryBlue.withOpacity(0.5))
+                : null,
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Material(
+              color: AppColors.primaryBlue,
+              shape: const CircleBorder(),
+              elevation: 4,
+              shadowColor: Colors.black.withOpacity(0.3),
+              child: InkWell(
+                onTap: _pickImage,
+                borderRadius: BorderRadius.circular(20),
+                child: const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Icon(Icons.edit, color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+          )
         ],
       ),
     );
@@ -250,7 +326,12 @@ class _FuncionarioEditScreenState extends ConsumerState<FuncionarioEditScreen> {
       ),
       child: TextFormField(
         controller: controller,
-        validator: validator,
+        validator: validator ?? (value) {
+          if (value == null || value.isEmpty) {
+            return 'Campo obrigatório';
+          }
+          return null;
+        },
         keyboardType: keyboardType,
         maxLines: maxLines,
         style: GoogleFonts.poppins(
@@ -329,7 +410,7 @@ class _FuncionarioEditScreenState extends ConsumerState<FuncionarioEditScreen> {
         value: value,
         items: items,
         onChanged: onChanged,
-        validator: validator,
+        validator: validator ?? (val) => val == null ? 'Selecione uma opção' : null,
         style: GoogleFonts.poppins(
           fontSize: 16,
           color: AppColors.textDark,

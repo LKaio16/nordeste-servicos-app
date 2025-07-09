@@ -65,6 +65,7 @@ class FuncionarioEditNotifier extends StateNotifier<FuncionarioEditState> {
     required String cracha,
     required String email,
     required PerfilUsuarioModel perfil,
+    String? fotoPerfil,
   }) async {
     state = state.copyWith(isSubmitting: true, clearErrors: true);
     try {
@@ -74,8 +75,8 @@ class FuncionarioEditNotifier extends StateNotifier<FuncionarioEditState> {
         cracha: cracha,
         email: email,
         perfil: perfil,
+        fotoPerfil: fotoPerfil,
       );
-      // Usando o método updateUser que você já tem
       await _repository.updateUser(funcionarioAtualizado);
       state = state.copyWith(isSubmitting: false);
       return true;

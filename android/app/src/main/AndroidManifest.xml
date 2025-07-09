@@ -6,7 +6,7 @@
 
     <application
         android:usesCleartextTraffic="true"
-        android:label="nordeste_servicos_app"
+        android:label="Nordeste Serviços"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

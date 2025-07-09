@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart'; // Para kDebugMode
 
-// Importações REAIS do seu projeto (ajuste os caminhos se necessário)
 import 'package:nordeste_servicos_app/domain/repositories/os_repository.dart';
 import 'package:nordeste_servicos_app/presentation/shared/providers/repository_providers.dart';
 

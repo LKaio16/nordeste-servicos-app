@@ -12,17 +12,19 @@ part 'foto_os_model.g.dart';
 class FotoOSModel {
   final int? id;
   final int ordemServicoId;
-  final String urlAcesso;
-  final String nomeArquivoOriginal;
-  final String tipoConteudo;
+  final String fotoBase64; // Alterado de urlAcesso
+  final String? descricao; // Adicionado
+  final String? nomeArquivoOriginal;
+  final String? tipoConteudo;
   final int? tamanhoArquivo;
   final DateTime dataUpload;
 
   FotoOSModel({
     this.id,
     required this.ordemServicoId,
-    required this.urlAcesso,
+    required this.descricao,
     required this.nomeArquivoOriginal,
+    required this.fotoBase64,
     required this.tipoConteudo,
     this.tamanhoArquivo,
     required this.dataUpload,
@@ -36,7 +38,8 @@ class FotoOSModel {
     return FotoOS(
       id: id,
       ordemServicoId: ordemServicoId,
-      urlAcesso: urlAcesso,
+      fotoBase64: fotoBase64,
+      descricao: descricao,
       nomeArquivoOriginal: nomeArquivoOriginal,
       tipoConteudo: tipoConteudo,
       tamanhoArquivo: tamanhoArquivo,

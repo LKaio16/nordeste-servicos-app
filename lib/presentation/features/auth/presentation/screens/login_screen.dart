@@ -245,7 +245,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
 
                             // Rodapé com informações da empresa
                             Text(
-                              '© 2025 CODAGIS - Todos os direitos reservados',
+                              '© 2025 Codagis - Todos os direitos reservados',
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 color: AppColors.textLight,

@@ -1,9 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../data/models/perfil_usuario_model.dart';
-import '../../../../domain/entities/usuario.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../../shared/styles/app_colors.dart';
 import '../providers/funcionario_detail_provider.dart';
@@ -17,7 +18,40 @@ class FuncionarioDetailScreen extends ConsumerWidget {
 
   // Adaptação da sua lógica de exclusão
   Future<void> _deleteFuncionario(BuildContext context, WidgetRef ref) async {
-    // Implemente a lógica de confirmação e exclusão aqui, similar à tela de detalhes de OS/Cliente
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Confirmar Exclusão', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        content: Text('Tem certeza que deseja excluir este funcionário? Esta ação não pode ser desfeita.', style: GoogleFonts.poppins()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancelar', style: GoogleFonts.poppins(color: AppColors.textLight)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.errorRed, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: Text('Excluir', style: GoogleFonts.poppins(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref.read(usuarioRepositoryProvider).deleteUser(funcionarioId);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Funcionário excluído com sucesso!'), backgroundColor: AppColors.successGreen));
+          ref.invalidate(funcionarioListProvider);
+          Navigator.of(context).pop();
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao excluir funcionário: ${e.toString()}'), backgroundColor: AppColors.errorRed));
+        }
+      }
+    }
   }
 
   @override
@@ -60,6 +94,19 @@ class FuncionarioDetailScreen extends ConsumerWidget {
       body: funcionarioAsyncValue.when(
         data: (funcionario) {
           final perfilText = funcionario.perfil.name == 'ADMIN' ? 'Administrador' : 'Técnico';
+
+          // Lógica para decodificar a imagem Base64
+          Uint8List? imageBytes;
+          if(funcionario.fotoPerfil != null && funcionario.fotoPerfil!.isNotEmpty){
+            try {
+              imageBytes = base64Decode(funcionario.fotoPerfil!);
+            } catch(e) {
+              // Log do erro caso a string Base64 seja inválida
+              print("Erro ao decodificar imagem Base64 do funcionário ${funcionario.id}: $e");
+              imageBytes = null;
+            }
+          }
+
           return ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
@@ -71,9 +118,12 @@ class FuncionarioDetailScreen extends ConsumerWidget {
                   child: Column(
                     children: [
                       CircleAvatar(
-                        radius: 40,
+                        radius: 50, // Aumentado para melhor visualização
                         backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
-                        child: const Icon(Icons.person, size: 40, color: AppColors.primaryBlue),
+                        backgroundImage: imageBytes != null ? MemoryImage(imageBytes) : null,
+                        child: imageBytes == null
+                            ? const Icon(Icons.person, size: 50, color: AppColors.primaryBlue)
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       Text(funcionario.nome, style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold)),

@@ -14,6 +14,7 @@ LoginResponseModel _$LoginResponseModelFromJson(Map<String, dynamic> json) =>
       email: json['email'] as String,
       perfil: $enumDecode(_$PerfilUsuarioModelEnumMap, json['perfil']),
       token: json['token'] as String,
+      fotoPerfil: json['fotoPerfil'] as String?,
     );
 
 Map<String, dynamic> _$LoginResponseModelToJson(LoginResponseModel instance) =>
@@ -24,6 +25,7 @@ Map<String, dynamic> _$LoginResponseModelToJson(LoginResponseModel instance) =>
       'email': instance.email,
       'perfil': _$PerfilUsuarioModelEnumMap[instance.perfil]!,
       'token': instance.token,
+      'fotoPerfil': instance.fotoPerfil,
     };
 
 const _$PerfilUsuarioModelEnumMap = {

@@ -1,29 +1,25 @@
-// lib/data/models/usuario_model.dart
-
 import 'package:json_annotation/json_annotation.dart';
 import 'package:nordeste_servicos_app/data/models/perfil_usuario_model.dart';
+import '../../domain/entities/usuario.dart';
 
-import '../../domain/entities/usuario.dart'; // Importe a entidade (se usar camada domain)
-
-// Esta linha é necessária para o gerador de código JSON
-part 'usuario_model.g.dart'; // O gerador criará este arquivo
+part 'usuario_model.g.dart';
 
 @JsonSerializable()
 class UsuarioModel {
   final int? id;
   final String nome;
-  final String? cracha; // <<< TORNADO OPCIONAL
-  final String? email;  // <<< TORNADO OPCIONAL
-
+  final String? cracha;
+  final String? email;
   final PerfilUsuarioModel perfil;
+  final String? fotoPerfil;
 
-  // Construtor
   UsuarioModel({
     this.id,
     required this.nome,
-    this.cracha, // <<< REMOVIDO 'required'
-    this.email,  // <<< REMOVIDO 'required'
+    this.cracha,
+    this.email,
     required this.perfil,
+    this.fotoPerfil,
   });
 
   factory UsuarioModel.fromJson(Map<String, dynamic> json) =>
@@ -31,14 +27,14 @@ class UsuarioModel {
 
   Map<String, dynamic> toJson() => _$UsuarioModelToJson(this);
 
-  // Método para converter Model para Entity - CORRIGIDO
   Usuario toEntity() {
     return Usuario(
       id: id,
       nome: nome,
-      cracha: cracha, // Continua passando o valor, que agora pode ser null
-      email: email,   // Continua passando o valor, que agora pode ser null
+      cracha: cracha,
+      email: email,
       perfil: perfil,
+      fotoPerfil: fotoPerfil,
     );
   }
 
@@ -46,10 +42,10 @@ class UsuarioModel {
     return UsuarioModel(
       id: entity.id,
       nome: entity.nome,
-      cracha: entity.cracha, // Passa o valor que pode ser null
-      email: entity.email,   // Passa o valor que pode ser null
-      perfil: entity.perfil, // Atribuição direta
+      cracha: entity.cracha,
+      email: entity.email,
+      perfil: entity.perfil,
+      fotoPerfil: entity.fotoPerfil,
     );
   }
 }
-

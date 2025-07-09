@@ -1,7 +1,6 @@
-// lib/data/models/login_response_model.dart
 import 'package:json_annotation/json_annotation.dart';
-import 'package:nordeste_servicos_app/data/models/perfil_usuario_model.dart'; // Importe o enum de perfil
-import 'package:nordeste_servicos_app/domain/entities/usuario.dart'; // Importe a entidade Usuario
+import 'package:nordeste_servicos_app/data/models/perfil_usuario_model.dart';
+import 'package:nordeste_servicos_app/domain/entities/usuario.dart';
 
 part 'login_response_model.g.dart';
 
@@ -12,7 +11,8 @@ class LoginResponseModel {
   final String cracha;
   final String email;
   final PerfilUsuarioModel perfil;
-  final String token; // O token JWT
+  final String token;
+  final String? fotoPerfil;
 
   LoginResponseModel({
     this.id,
@@ -21,6 +21,7 @@ class LoginResponseModel {
     required this.email,
     required this.perfil,
     required this.token,
+    this.fotoPerfil,
   });
 
   factory LoginResponseModel.fromJson(Map<String, dynamic> json) =>
@@ -28,7 +29,7 @@ class LoginResponseModel {
 
   Map<String, dynamic> toJson() => _$LoginResponseModelToJson(this);
 
-  // Método para converter o modelo para a entidade Usuario
+  // Converte o modelo para a entidade Usuario
   Usuario toUsuarioEntity() {
     return Usuario(
       id: id,
@@ -36,6 +37,7 @@ class LoginResponseModel {
       cracha: cracha,
       email: email,
       perfil: perfil,
+      fotoPerfil: fotoPerfil,
     );
   }
 }

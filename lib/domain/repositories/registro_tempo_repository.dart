@@ -1,6 +1,5 @@
 // lib/domain/repositories/registro_tempo_repository.dart
 
-
 import '../entities/registro_tempo.dart';
 import '/core/error/exceptions.dart';
 
@@ -14,8 +13,9 @@ abstract class RegistroTempoRepository {
   /// Cria um novo registro de tempo (inicia timer).
   Future<RegistroTempo> createRegistroTempo(RegistroTempo registro); // Pode precisar de DTO
 
-  /// Finaliza um registro de tempo (para timer).
-  Future<RegistroTempo> finalizarRegistroTempo(int id); // Ou talvez passar o registro completo
+  /// **MÉTODO ATUALIZADO**
+  /// Finaliza um registro de tempo (para timer). Agora requer o osId.
+  Future<RegistroTempo> finalizarRegistroTempo(int osId, int registroId);
 
   /// Deleta um registro de tempo pelo seu ID.
   Future<void> deleteRegistroTempo(int id);

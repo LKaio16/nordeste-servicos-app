@@ -59,51 +59,53 @@ class FotoOsRepositoryImpl implements FotoOsRepository {
 
 
   @override
-  Future<FotoOS> uploadFoto(int osId, File photoFile) async {
+  Future<FotoOS> uploadFoto(int osId, {
+    required String base64,
+    required String? description,
+    required String? fileName,
+    required String? mimeType,
+    required int? fileSize,
+  }) async {
     try {
-      // Para upload de arquivo, usamos FormData
-      String fileName = photoFile.path.split('/').last;
-      FormData formData = FormData.fromMap({
-        "file": await MultipartFile.fromFile(photoFile.path, filename: fileName),
-        // Se sua API esperar outros campos no corpo (ex: descrição), adicione aqui:
-        // "descricao": "Descrição da foto",
-      });
+      final requestData = {
+        'fotoBase64': base64,
+        'descricao': description,
+        'nomeArquivoOriginal': fileName,
+        'tipoConteudo': mimeType,
+        'tamanhoArquivo': fileSize,
+      };
 
-      final response = await apiClient.post('/ordens-servico/$osId/fotos', data: formData); // Endpoint de upload da API
+      final response = await apiClient.post('/ordens-servico/$osId/fotos', data: requestData);
 
       if (response.statusCode == 201) {
-        final Map<String, dynamic> json = response.data;
-        final FotoOSModel createdFotoOsModel = FotoOSModel.fromJson(json);
-        return createdFotoOsModel.toEntity();
+        return FotoOSModel.fromJson(response.data).toEntity();
       } else {
-         throw ApiException('Falha ao fazer upload da foto para OS ${osId}: Status ${response.statusCode}');
+        throw ApiException('Falha ao fazer upload da foto: Status ${response.statusCode}');
       }
-    } on ApiException {
-       rethrow;
     } on DioException catch (e) {
-        throw ApiException('Erro de rede ao fazer upload da foto para OS ${osId}: ${e.message}');
+      throw ApiException('Erro de rede ao fazer upload da foto: ${e.message}');
     } catch (e) {
-       throw ApiException('Erro inesperado ao fazer upload da foto para OS ${osId}: ${e.toString()}');
+      throw ApiException('Erro inesperado ao fazer upload da foto: ${e.toString()}');
     }
   }
 
   @override
-  Future<void> deleteFoto(int id) async {
-       try {
-      // Assumindo endpoint direto: /fotos/{id} ou aninhado /ordens-servico/{osId}/fotos/{id}
-      final response = await apiClient.delete('/fotos/$id');
+  @override
+  Future<void> deleteFoto(int osId, int fotoId) async {
+    try {
+      // **CORREÇÃO APLICADA AQUI**
+      // Monta a URL correta conforme definido no seu Controller da API.
+      final response = await apiClient.delete('/ordens-servico/$osId/fotos/$fotoId');
 
       if (response.statusCode == 204) {
         return;
       } else {
-         throw ApiException('Falha ao deletar foto ${id}: Status ${response.statusCode}');
+        throw ApiException('Falha ao deletar foto $fotoId: Status ${response.statusCode}');
       }
-    } on ApiException {
-       rethrow;
     } on DioException catch (e) {
-        throw ApiException('Erro de rede ao deletar foto ${id}: ${e.message}');
+      throw ApiException('Erro de rede ao deletar foto $fotoId: ${e.message}');
     } catch (e) {
-       throw ApiException('Erro inesperado ao deletar foto ${id}: ${e.toString()}');
+      throw ApiException('Erro inesperado ao deletar foto $fotoId: ${e.toString()}');
     }
   }
 }

@@ -1,9 +1,7 @@
-// lib/core/storage/secure_storage_service.dart
-
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Importe para usar Provider
-import 'package:nordeste_servicos_app/domain/entities/usuario.dart'; // Importe seu Usuario
-import 'package:nordeste_servicos_app/data/models/perfil_usuario_model.dart'; // Para converter a string do perfil
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nordeste_servicos_app/domain/entities/usuario.dart';
+import 'package:nordeste_servicos_app/data/models/perfil_usuario_model.dart';
 
 class SecureStorageService {
   final _storage = const FlutterSecureStorage();
@@ -14,10 +12,11 @@ class SecureStorageService {
   static const _userEmailKey = 'user_email';
   static const _userCrachaKey = 'user_cracha';
   static const _userPerfilKey = 'user_perfil';
+  static const _userFotoKey = 'user_foto'; // <-- CHAVE ADICIONADA
 
-  // Salva o token e os dados básicos do usuário
+  // Salva o token e os dados do usuário
   Future<void> saveLoginData({
-    required String token, // Token agora é obrigatório
+    required String token,
     required Usuario user,
   }) async {
     await _storage.write(key: _tokenKey, value: token);
@@ -25,10 +24,11 @@ class SecureStorageService {
     await _storage.write(key: _userNameKey, value: user.nome);
     await _storage.write(key: _userEmailKey, value: user.email);
     await _storage.write(key: _userCrachaKey, value: user.cracha);
-    await _storage.write(key: _userPerfilKey, value: user.perfil.name); // Salva APENAS o nome do enum
+    await _storage.write(key: _userPerfilKey, value: user.perfil.name);
+    await _storage.write(key: _userFotoKey, value: user.fotoPerfil); // <-- LINHA ADICIONADA
   }
 
-  // Lê os dados básicos do usuário e o token
+  // Lê os dados do usuário e o token
   Future<Map<String, String?>> getLoginData() async {
     final token = await _storage.read(key: _tokenKey);
     final id = await _storage.read(key: _userIdKey);
@@ -36,6 +36,7 @@ class SecureStorageService {
     final email = await _storage.read(key: _userEmailKey);
     final cracha = await _storage.read(key: _userCrachaKey);
     final perfil = await _storage.read(key: _userPerfilKey);
+    final foto = await _storage.read(key: _userFotoKey);
 
     return {
       'token': token,
@@ -44,6 +45,7 @@ class SecureStorageService {
       'email': email,
       'cracha': cracha,
       'perfil': perfil,
+      'foto': foto,
     };
   }
 
@@ -55,8 +57,8 @@ class SecureStorageService {
     await _storage.delete(key: _userEmailKey);
     await _storage.delete(key: _userCrachaKey);
     await _storage.delete(key: _userPerfilKey);
+    await _storage.delete(key: _userFotoKey);
   }
 }
 
-// Provider para o serviço de armazenamento
 final secureStorageServiceProvider = Provider((ref) => SecureStorageService());

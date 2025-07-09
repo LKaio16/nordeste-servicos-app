@@ -10,18 +10,25 @@ AssinaturaOSModel _$AssinaturaOSModelFromJson(Map<String, dynamic> json) =>
     AssinaturaOSModel(
       id: (json['id'] as num?)?.toInt(),
       ordemServicoId: (json['ordemServicoId'] as num).toInt(),
-      urlAcesso: json['urlAcesso'] as String,
-      tipoConteudo: json['tipoConteudo'] as String,
-      tamanhoArquivo: (json['tamanhoArquivo'] as num?)?.toInt(),
-      dataHoraColeta: DateTime.parse(json['dataHoraColeta'] as String),
+      assinaturaClienteBase64: json['assinaturaClienteBase64'] as String?,
+      nomeClienteResponsavel: json['nomeClienteResponsavel'] as String?,
+      documentoClienteResponsavel:
+          json['documentoClienteResponsavel'] as String?,
+      assinaturaTecnicoBase64: json['assinaturaTecnicoBase64'] as String?,
+      nomeTecnicoResponsavel: json['nomeTecnicoResponsavel'] as String?,
+      dataHoraColeta: json['dataHoraColeta'] == null
+          ? null
+          : DateTime.parse(json['dataHoraColeta'] as String),
     );
 
 Map<String, dynamic> _$AssinaturaOSModelToJson(AssinaturaOSModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'ordemServicoId': instance.ordemServicoId,
-      'urlAcesso': instance.urlAcesso,
-      'tipoConteudo': instance.tipoConteudo,
-      'tamanhoArquivo': instance.tamanhoArquivo,
-      'dataHoraColeta': instance.dataHoraColeta.toIso8601String(),
+      'assinaturaClienteBase64': instance.assinaturaClienteBase64,
+      'nomeClienteResponsavel': instance.nomeClienteResponsavel,
+      'documentoClienteResponsavel': instance.documentoClienteResponsavel,
+      'assinaturaTecnicoBase64': instance.assinaturaTecnicoBase64,
+      'nomeTecnicoResponsavel': instance.nomeTecnicoResponsavel,
+      'dataHoraColeta': instance.dataHoraColeta?.toIso8601String(),
     };

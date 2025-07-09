@@ -1,8 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 
 // Importações locais
 import '../../../../data/models/prioridade_os_model.dart';
@@ -11,12 +14,14 @@ import '../../../../domain/entities/ordem_servico.dart';
 import '../../../../domain/entities/cliente.dart';
 import '../../../../domain/entities/equipamento.dart';
 import '../../../../domain/entities/usuario.dart';
+import '../../../../domain/entities/foto_os.dart'; // Importar FotoOS
 
 // Importar os providers
 import '../../../shared/styles/app_colors.dart';
 import '../providers/os_detail_provider.dart';
 import '../providers/os_edit_provider.dart';
 import '../providers/os_edit_state.dart';
+import '../providers/foto_os_provider.dart'; // Importar foto_os_provider
 
 // Tela de Edição de OS com Design Melhorado
 class OsEditScreen extends ConsumerStatefulWidget {
@@ -30,6 +35,8 @@ class OsEditScreen extends ConsumerStatefulWidget {
 
 class _OsEditScreenState extends ConsumerState<OsEditScreen> {
   final _formKey = GlobalKey<FormState>();
+  final PageController _imagePageController = PageController();
+  int _currentImageIndex = 0;
 
   // Controllers para campos de texto da OS
   final _problemaController = TextEditingController();
@@ -57,6 +64,7 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(osEditProvider(widget.osId).notifier).loadInitialData();
+      ref.read(fotoOsProvider(widget.osId).notifier); // Carregar fotos
     });
   }
 
@@ -69,6 +77,7 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
     _marcaModeloEquipamentoController.dispose();
     _numeroSerieChassiEquipamentoController.dispose();
     _horimetroEquipamentoController.dispose();
+    _imagePageController.dispose();
     super.dispose();
   }
 
@@ -262,39 +271,56 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
-            child: ElevatedButton.icon(
-              onPressed: state.isLoadingInitialData || state.isSubmitting ? null : _submitForm,
-              icon: state.isSubmitting
-                  ? SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  color: AppColors.primaryBlue,
-                  strokeWidth: 2,
-                ),
-              )
-                  : Icon(Icons.save, size: 18),
-              label: Text(
-                'Salvar',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: AppColors.primaryBlue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                elevation: 2,
-              ),
-            ),
-          ),
-        ],
       ),
       body: (state.isLoadingInitialData || !_initialDataLoaded) && state.initialDataError == null
           ? _buildLoadingState()
           : _buildBodyContent(state, notifier),
+      bottomNavigationBar: (state.isLoadingInitialData || !_initialDataLoaded) && state.initialDataError == null
+          ? null
+          : Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: ElevatedButton.icon(
+            onPressed: state.isLoadingInitialData || state.isSubmitting ? null : _submitForm,
+            icon: state.isSubmitting
+                ? SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            )
+                : Icon(Icons.save, size: 20, color: Colors.white),
+            label: Text(
+              state.isSubmitting ? 'Salvando...' : 'Salvar Alterações',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: Colors.white,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 56),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 3,
+              shadowColor: AppColors.primaryBlue.withOpacity(0.3),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -545,7 +571,7 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
                             items: StatusOSModel.values
                                 .map((s) => DropdownMenuItem(
                               value: s,
-                              child: Text(_getStatusText(s), style: GoogleFonts.poppins()),
+                              child: Text(_getStatusText(s), style: GoogleFonts.poppins(fontSize: 13)),
                             ))
                                 .toList(),
                             onChanged: (value) => setState(() => _selectedStatus = value),
@@ -561,7 +587,7 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
                             items: PrioridadeOSModel.values
                                 .map((p) => DropdownMenuItem(
                               value: p,
-                              child: Text(_getPrioridadeText(p), style: GoogleFonts.poppins()),
+                              child: Text(_getPrioridadeText(p), style: GoogleFonts.poppins(fontSize: 13)),
                             ))
                                 .toList(),
                             onChanged: (value) => setState(() => _selectedPrioridade = value),
@@ -650,6 +676,11 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
                     _buildDateField(),
                   ],
                 ),
+
+                const SizedBox(height: 24),
+
+                // Card de Fotos da OS
+                _buildFotosCard(context, ref, widget.osId),
 
                 const SizedBox(height: 32),
               ],
@@ -834,7 +865,7 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
         onChanged: onChanged,
         validator: validator,
         style: GoogleFonts.poppins(
-          fontSize: 16,
+          fontSize: 14,
           color: AppColors.textDark,
         ),
         decoration: InputDecoration(
@@ -891,6 +922,7 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
           Icons.keyboard_arrow_down,
           color: AppColors.primaryBlue,
         ),
+        isExpanded: true,
       ),
     );
   }
@@ -1005,5 +1037,473 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
         return prioridade.name;
     }
   }
+
+  Widget _buildFotosCard(BuildContext context, WidgetRef ref, int osId) {
+    final fotosState = ref.watch(fotoOsProvider(osId));
+    final fotosNotifier = ref.read(fotoOsProvider(osId).notifier);
+
+    Future<void> _pickAndUploadImage() async {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+        maxWidth: 1024,
+      );
+
+      if (image == null || !context.mounted) return;
+
+      final description = await showDialog<String>(
+        context: context,
+        builder: (context) {
+          final controller = TextEditingController();
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(
+              'Descrição da Foto',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            content: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: 'Digite uma descrição...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              autofocus: true,
+            ),
+            actions: [
+              TextButton(
+                child: Text(
+                  'Cancelar',
+                  style: GoogleFonts.poppins(color: AppColors.textLight),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text(
+                  'Salvar',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed: () => Navigator.of(context).pop(controller.text),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (description != null) {
+        await fotosNotifier.uploadFoto(image, description);
+      }
+    }
+
+    void _showImageFullScreen(List<FotoOS> fotos, int initialIndex) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => _ImageFullScreenViewer(
+            fotos: fotos,
+            initialIndex: initialIndex,
+            onDelete: (fotoId) async {
+              await fotosNotifier.deleteFoto(fotoId);
+            },
+          ),
+        ),
+      );
+    }
+
+    return _buildSectionCard(
+      title: 'Fotos da OS',
+      icon: Icons.photo_library_outlined,
+      children: [
+        if (fotosState.isLoading)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+        if (!fotosState.isLoading && fotosState.errorMessage != null)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                fotosState.errorMessage!,
+                style: GoogleFonts.poppins(color: AppColors.errorRed),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        if (!fotosState.isLoading && fotosState.fotos.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.photo_outlined,
+                    size: 48,
+                    color: AppColors.textLight,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Nenhuma foto adicionada",
+                    style: GoogleFonts.poppins(
+                      color: AppColors.textLight,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        if (fotosState.fotos.isNotEmpty) ...[
+          SizedBox(
+            height: 220,
+            child: PageView.builder(
+              controller: _imagePageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentImageIndex = index;
+                });
+              },
+              itemCount: fotosState.fotos.length,
+              itemBuilder: (context, index) {
+                final foto = fotosState.fotos[index];
+                final imageBytes = base64Decode(foto.fotoBase64);
+
+                return GestureDetector(
+                  onTap: () => _showImageFullScreen(fotosState.fotos, index),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.memory(
+                            imageBytes,
+                            fit: BoxFit.cover,
+                          ),
+                          if (foto.descricao != null && foto.descricao!.isNotEmpty)
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withOpacity(0.7),
+                                    ],
+                                  ),
+                                ),
+                                child: Text(
+                                  foto.descricao!,
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.zoom_in,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                          // Botão de exclusão
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: GestureDetector(
+                              onTap: () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    title: Text(
+                                      'Excluir Foto',
+                                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                    ),
+                                    content: Text(
+                                      'Tem certeza que deseja excluir esta foto?',
+                                      style: GoogleFonts.poppins(),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                        child: Text(
+                                          'Cancelar',
+                                          style: GoogleFonts.poppins(color: AppColors.textLight),
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.errorRed,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        ),
+                                        child: Text(
+                                          'Excluir',
+                                          style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirmed == true) {
+                                  await fotosNotifier.deleteFoto(foto.id!); // Chamar deleteFoto do notifier
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.errorRed.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (fotosState.fotos.length > 1)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                fotosState.fotos.length,
+                    (index) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _currentImageIndex == index
+                        ? AppColors.primaryBlue
+                        : AppColors.textLight.withOpacity(0.3),
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: 16),
+        ],
+        ElevatedButton.icon(
+          onPressed: fotosState.isUploading ? null : _pickAndUploadImage,
+          icon: fotosState.isUploading
+              ? const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          )
+              : const Icon(Icons.add_a_photo_outlined, size: 18, color: Colors.white,),
+          label: Text(
+            fotosState.isUploading ? 'Enviando...' : 'Adicionar Foto',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryBlue,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 48),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 2,
+          ),
+        ),
+      ],
+    );
+  }
 }
+
+class _ImageFullScreenViewer extends StatefulWidget {
+  final List<FotoOS> fotos;
+  final int initialIndex;
+  final Function(int) onDelete;
+
+  const _ImageFullScreenViewer({
+    required this.fotos,
+    required this.initialIndex,
+    required this.onDelete,
+  });
+
+  @override
+  State<_ImageFullScreenViewer> createState() => _ImageFullScreenViewerState();
+}
+
+class _ImageFullScreenViewerState extends State<_ImageFullScreenViewer> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          '${_currentIndex + 1} de ${widget.fotos.length}',
+          style: GoogleFonts.poppins(color: Colors.white),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.white),
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  title: Text(
+                    'Excluir Foto',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  ),
+                  content: Text(
+                    'Tem certeza que deseja excluir esta foto?',
+                    style: GoogleFonts.poppins(),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text(
+                        'Cancelar',
+                        style: GoogleFonts.poppins(color: AppColors.textLight),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.errorRed,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        'Excluir',
+                        style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed == true) {
+                await widget.onDelete(widget.fotos[_currentIndex].id!); // Chamar onDelete do widget
+                if (mounted) {
+                  Navigator.of(context).pop();
+                }
+              }
+            },
+          ),
+        ],
+      ),
+      body: PageView.builder(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        itemCount: widget.fotos.length,
+        itemBuilder: (context, index) {
+          final foto = widget.fotos[index];
+          final imageBytes = base64Decode(foto.fotoBase64);
+
+          return InteractiveViewer(
+            panEnabled: true,
+            boundaryMargin: const EdgeInsets.all(20),
+            minScale: 0.5,
+            maxScale: 4.0,
+            child: Center(
+              child: Image.memory(
+                imageBytes,
+                fit: BoxFit.contain,
+              ),
+            ),
+          );
+        },
+      ),
+      bottomNavigationBar: widget.fotos[_currentIndex].descricao != null &&
+          widget.fotos[_currentIndex].descricao!.isNotEmpty
+          ? Container(
+        color: Colors.black.withOpacity(0.8),
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          widget.fotos[_currentIndex].descricao!,
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontSize: 14,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      )
+          : null,
+    );
+  }
+}
+
 
