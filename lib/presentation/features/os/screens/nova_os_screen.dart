@@ -22,7 +22,8 @@ class NovaOsScreen extends ConsumerStatefulWidget {
   ConsumerState<NovaOsScreen> createState() => _NovaOsScreenState();
 }
 
-class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerProviderStateMixin {
+class _NovaOsScreenState extends ConsumerState<NovaOsScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
@@ -85,7 +86,9 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
         _numeroSerieChassiEquipamentoController.clear();
         _horimetroEquipamentoController.clear();
       });
-      ref.read(novaOsProvider.notifier).loadEquipamentosDoCliente(int.parse(clienteId));
+      ref
+          .read(novaOsProvider.notifier)
+          .loadEquipamentosDoCliente(int.parse(clienteId));
     }
   }
 
@@ -123,21 +126,26 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
           'marcaModelo': _marcaModeloEquipamentoController.text,
           'numeroSerieChassi': _numeroSerieChassiEquipamentoController.text,
           'horimetro': _horimetroEquipamentoController.text.isNotEmpty
-              ? double.tryParse(_horimetroEquipamentoController.text.replaceAll(',', '.'))
+              ? double.tryParse(
+                  _horimetroEquipamentoController.text.replaceAll(',', '.'))
               : null,
         };
       }
 
-      final success = await ref.read(novaOsProvider.notifier).createOrdemServico(
-        clienteId: _selectedClienteId!,
-        equipamentoExistenteId: _equipamentoMode == EquipamentoMode.selecionar ? _selectedEquipamentoId : null,
-        novoEquipamentoData: novoEquipamentoData,
-        descricaoProblema: _descricaoController.text,
-        tecnicoId: _selectedTecnicoId!,
-        prioridade: _selectedPrioridade,
-        dataAbertura: _selectedDataAbertura,
-        dataAgendamento: _selectedDataAgendamento,
-      );
+      final success =
+          await ref.read(novaOsProvider.notifier).createOrdemServico(
+                clienteId: _selectedClienteId!,
+                equipamentoExistenteId:
+                    _equipamentoMode == EquipamentoMode.selecionar
+                        ? _selectedEquipamentoId
+                        : null,
+                novoEquipamentoData: novoEquipamentoData,
+                descricaoProblema: _descricaoController.text,
+                tecnicoId: _selectedTecnicoId!,
+                prioridade: _selectedPrioridade,
+                dataAbertura: _selectedDataAbertura,
+                dataAgendamento: _selectedDataAgendamento,
+              );
 
       if (success && mounted) {
         Navigator.of(context).pop();
@@ -152,7 +160,8 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
             ),
             backgroundColor: AppColors.successGreen,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -165,7 +174,8 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
     final state = ref.watch(novaOsProvider);
 
     ref.listen<NovaOsState>(novaOsProvider, (previous, next) {
-      if (next.submissionError != null && previous?.submissionError != next.submissionError) {
+      if (next.submissionError != null &&
+          previous?.submissionError != next.submissionError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -177,7 +187,8 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
             ),
             backgroundColor: AppColors.errorRed,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -219,23 +230,26 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
               onPressed: state.isSubmitting ? null : _submitForm,
               icon: state.isSubmitting
                   ? SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  color: AppColors.primaryBlue,
-                  strokeWidth: 2,
-                ),
-              )
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        color: AppColors.primaryBlue,
+                        strokeWidth: 2,
+                      ),
+                    )
                   : Icon(Icons.add, size: 18),
               label: Text(
-                'Criar OS',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
+                'Criar',
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600, fontSize: 14),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.primaryBlue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 elevation: 2,
               ),
             ),
@@ -245,8 +259,8 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
       body: state.isLoading
           ? _buildLoadingState()
           : state.errorMessage != null
-          ? _buildErrorState(state.errorMessage!)
-          : _buildFormContent(state),
+              ? _buildErrorState(state.errorMessage!)
+              : _buildFormContent(state),
     );
   }
 
@@ -350,8 +364,10 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryBlue,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                     elevation: 2,
                   ),
                 ),
@@ -423,9 +439,9 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
                       value: _selectedClienteId,
                       items: state.clientes
                           .map((Cliente c) => DropdownMenuItem(
-                        value: c.id.toString(),
-                        child: Text(c.nomeCompleto),
-                      ))
+                                value: c.id.toString(),
+                                child: Text(c.nomeCompleto),
+                              ))
                           .toList(),
                       onChanged: _onClienteChanged,
                       icon: Icons.person_search_outlined,
@@ -460,11 +476,12 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
                       value: _selectedTecnicoId,
                       items: state.tecnicos
                           .map((Usuario t) => DropdownMenuItem(
-                        value: t.id.toString(),
-                        child: Text(t.nome),
-                      ))
+                                value: t.id.toString(),
+                                child: Text(t.nome),
+                              ))
                           .toList(),
-                      onChanged: (value) => setState(() => _selectedTecnicoId = value),
+                      onChanged: (value) =>
+                          setState(() => _selectedTecnicoId = value),
                       icon: Icons.engineering_outlined,
                     ),
                     const SizedBox(height: 24),
@@ -601,18 +618,18 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
           ),
           prefixIcon: icon != null
               ? Container(
-            margin: const EdgeInsets.all(12),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.primaryBlue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              size: 20,
-              color: AppColors.primaryBlue,
-            ),
-          )
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 20,
+                    color: AppColors.primaryBlue,
+                  ),
+                )
               : null,
           filled: true,
           fillColor: AppColors.cardBackground,
@@ -688,18 +705,18 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
           ),
           prefixIcon: icon != null
               ? Container(
-            margin: const EdgeInsets.all(12),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.primaryBlue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              size: 20,
-              color: AppColors.primaryBlue,
-            ),
-          )
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 20,
+                    color: AppColors.primaryBlue,
+                  ),
+                )
               : null,
           filled: true,
           fillColor: AppColors.cardBackground,
@@ -778,7 +795,8 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
           child: Column(
             children: [
               CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
               ),
               const SizedBox(height: 16),
               Text(
@@ -834,12 +852,12 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
         value: _selectedEquipamentoId,
         items: state.equipamentosDoCliente
             .map((Equipamento e) => DropdownMenuItem(
-          value: e.id.toString(),
-          child: Text(
-            '${e.marcaModelo} (${e.numeroSerieChassi})',
-            overflow: TextOverflow.ellipsis,
-          ),
-        ))
+                  value: e.id.toString(),
+                  child: Text(
+                    '${e.marcaModelo} (${e.numeroSerieChassi})',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ))
             .toList(),
         onChanged: (value) => setState(() => _selectedEquipamentoId = value),
         icon: Icons.build_circle_outlined,
@@ -935,7 +953,8 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: ['Baixa', 'Média', 'Alta'].map((prioridade) {
             bool isSelected = _selectedPrioridade == prioridade;
-            Color selectedColor = prioridadeColors[prioridade] ?? AppColors.primaryBlue;
+            Color selectedColor =
+                prioridadeColors[prioridade] ?? AppColors.primaryBlue;
 
             // Ícones para cada prioridade
             IconData priorityIcon;
@@ -962,31 +981,31 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
                     decoration: BoxDecoration(
                       gradient: isSelected
                           ? LinearGradient(
-                        colors: [
-                          selectedColor,
-                          selectedColor.withOpacity(0.8),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
+                              colors: [
+                                selectedColor,
+                                selectedColor.withOpacity(0.8),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
                           : null,
                       color: isSelected ? null : AppColors.backgroundGray,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: isSelected
                           ? [
-                        BoxShadow(
-                          color: selectedColor.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ]
+                              BoxShadow(
+                                color: selectedColor.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ]
                           : null,
                       border: isSelected
                           ? null
                           : Border.all(
-                        color: Colors.grey.shade300,
-                        width: 1.5,
-                      ),
+                              color: Colors.grey.shade300,
+                              width: 1.5,
+                            ),
                     ),
                     child: Column(
                       children: [
@@ -1000,8 +1019,10 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
                           prioridade,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.poppins(
-                            color: isSelected ? Colors.white : AppColors.textDark,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            color:
+                                isSelected ? Colors.white : AppColors.textDark,
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.w500,
                             fontSize: 14,
                           ),
                         ),
@@ -1107,7 +1128,8 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textLight,
               side: BorderSide(color: AppColors.dividerColor, width: 2),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
             child: Text(
@@ -1143,14 +1165,18 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
               onPressed: isSubmitting ? null : _submitForm,
               icon: isSubmitting
                   ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-                  : Icon(Icons.add_task, size: 20),
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Icon(
+                      Icons.add_task,
+                      size: 20,
+                      color: Colors.white,
+                    ),
               label: Text(
                 isSubmitting ? 'Criando...' : 'Criar Ordem de Serviço',
                 style: GoogleFonts.poppins(
@@ -1162,7 +1188,8 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
                 backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white,
                 shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
             ),
@@ -1172,4 +1199,3 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen> with SingleTickerPr
     );
   }
 }
-

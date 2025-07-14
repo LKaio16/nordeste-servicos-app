@@ -19,31 +19,26 @@ class OsRepositoryImpl implements OsRepository {
 
   @override
   Future<List<OrdemServico>> getOrdensServico({
+    String? searchTerm,
     int? clienteId,
     int? tecnicoId,
     StatusOSModel? status,
+    DateTime? dataAgendamento, // Adicionado
   }) async {
     try {
-      // Prepara os parâmetros de query (opcionais)
       final Map<String, dynamic> queryParameters = {};
-      if (clienteId != null) {
-        queryParameters['clienteId'] = clienteId;
-      }
-      if (tecnicoId != null) {
-        queryParameters['tecnicoId'] = tecnicoId;
-      }
-      if (status != null) {
-        queryParameters['status'] = status.name; // Envia o nome do enum como String
-      }
+      if (searchTerm != null && searchTerm.isNotEmpty) queryParameters['searchTerm'] = searchTerm;
+      if (clienteId != null) queryParameters['clienteId'] = clienteId;
+      if (tecnicoId != null) queryParameters['tecnicoId'] = tecnicoId;
+      if (status != null) queryParameters['status'] = status.name;
+      if (dataAgendamento != null) queryParameters['dataAgendamento'] = dataAgendamento.toIso8601String(); // Adicionado
 
-      // Assume que apiClient.get lida com a decodificação JSON por padrão
-      final response = await apiClient.get('/ordens-servico', queryParameters: queryParameters); // Endpoint da sua API
+      final response = await apiClient.get('/ordens-servico', queryParameters: queryParameters);
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = response.data;
         final List<OrdemServicoModel> osModels = jsonList.map((json) => OrdemServicoModel.fromJson(json)).toList();
-        final List<OrdemServico> ordensServico = osModels.map((model) => model.toEntity()).toList();
-        return ordensServico;
+        return osModels.map((model) => model.toEntity()).toList();
       } else {
         throw ApiException('Falha ao carregar ordens de serviço: Status ${response.statusCode}');
       }

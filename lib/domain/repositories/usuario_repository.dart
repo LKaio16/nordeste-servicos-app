@@ -1,6 +1,7 @@
 // lib/domain/repositories/usuario_repository.dart
 
 import '../entities/auth_result.dart';
+import '../entities/desempenho_tecnico.dart';
 import '../entities/usuario.dart';
 import '../../core/error/exceptions.dart';
 
@@ -20,9 +21,9 @@ abstract class UsuarioRepository {
   /// Deleta um usuário pelo seu ID.
   Future<void> deleteUser(int id);
 
-  /// Realiza a autenticação do usuário.
-  /// Recebe email/usuário e senha.
   /// Retorna o usuário autenticado em caso de sucesso.
   /// Lança [ApiException], [UnauthorizedException] (se tratar 401), ou outras exceções em caso de falha.
   Future<AuthResult> login(String email, String password); // Altere o tipo de retorno
+
+  Future<List<DesempenhoTecnico>> getDesempenhoTecnicos();
 }

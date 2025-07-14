@@ -1,8 +1,13 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nordeste_servicos_app/presentation/features/auth/providers/auth_provider.dart';
 import 'package:nordeste_servicos_app/presentation/shared/styles/app_colors.dart';
+
+import '../../../../domain/entities/usuario.dart';
 
 class PerfilScreen extends ConsumerWidget {
   const PerfilScreen({Key? key}) : super(key: key);
@@ -22,38 +27,54 @@ class PerfilScreen extends ConsumerWidget {
       // A AppBar é controlada pela TecnicoHomeScreen, então não adicionamos uma aqui.
       body: ListView(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(vertical: 24.0),
+        padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
         children: [
           // 1. Cabeçalho do Perfil
           _buildProfileHeader(user),
           const SizedBox(height: 24),
 
-          // 2. Cards de Estatísticas
-          _buildStatsRow(),
+          // 2. Card de Informações Detalhadas
+          _buildInfoCard(user),
           const SizedBox(height: 24),
 
-          // 3. Lista de Opções
-          _buildOptionsList(context, ref),
+          // 3. Botão de Logout
+          _buildLogoutButton(context, ref),
         ],
       ),
     );
   }
 
-  Widget _buildProfileHeader(dynamic user) {
+  Widget _buildProfileHeader(Usuario user) {
+    Uint8List? imageBytes;
+    if (user.fotoPerfil != null && user.fotoPerfil!.isNotEmpty) {
+      try {
+        imageBytes = base64Decode(user.fotoPerfil!);
+      } catch (e) {
+        imageBytes = null;
+      }
+    }
+
     return Column(
       children: [
         CircleAvatar(
-          radius: 50,
+          radius: 60,
           backgroundColor: AppColors.primaryBlue.withOpacity(0.2),
-          child: CircleAvatar(
-            radius: 46,
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=${user.id}'),
-          ),
+          backgroundImage: imageBytes != null ? MemoryImage(imageBytes) : null,
+          child: imageBytes == null
+              ? const Icon(
+            Icons.person,
+            size: 60,
+            color: AppColors.primaryBlue,
+          )
+              : null,
         ),
         const SizedBox(height: 16),
         Text(
           user.nome,
-          style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark),
+          style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textDark),
         ),
         const SizedBox(height: 4),
         Text(
@@ -64,106 +85,92 @@ class PerfilScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsRow() {
-    // Dados mocados para as estatísticas. No futuro, podem vir de um provider.
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Row(
-        children: [
-          Expanded(child: _buildStatCard('OS Concluídas', '128', Icons.check_circle, AppColors.successGreen)),
-          const SizedBox(width: 16),
-          Expanded(child: _buildStatCard('Média Mensal', '15', Icons.calendar_today, AppColors.warningOrange)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+  Widget _buildInfoCard(Usuario user) {
+    return Card(
+      elevation: 4,
+      shadowColor: AppColors.primaryBlue.withOpacity(0.15),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: color),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: GoogleFonts.poppins(fontSize: 12, color: color, fontWeight: FontWeight.w500),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Informações do Usuário',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
+              ),
+            ),
+            const Divider(height: 24),
+            _buildInfoRow(Icons.badge_outlined, 'Nome Completo', user.nome),
+            _buildInfoRow(Icons.email_outlined, 'Email', user.email ?? 'Não informado'),
+            _buildInfoRow(Icons.credit_card_outlined, 'Crachá', user.cracha ?? 'Não informado'),
+            _buildInfoRow(
+                Icons.security_outlined,
+                'Perfil',
+                user.perfil.name == 'ADMIN'
+                    ? 'Administrador'
+                    : 'Técnico'),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildOptionsList(BuildContext context, WidgetRef ref) {
+  Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
         children: [
-          _buildOptionItem(
-            icon: Icons.edit_outlined,
-            title: 'Editar Perfil',
-            onTap: () {
-              // TODO: Navegar para a tela de edição de perfil
-            },
-          ),
-          _buildOptionItem(
-            icon: Icons.lock_outline,
-            title: 'Alterar Senha',
-            onTap: () {
-              // TODO: Navegar para a tela de alteração de senha
-            },
-          ),
-          _buildOptionItem(
-            icon: Icons.notifications_outlined,
-            title: 'Notificações',
-            onTap: () {
-              // TODO: Navegar para a tela de configurações de notificação
-            },
-          ),
-          _buildOptionItem(
-            icon: Icons.settings_outlined,
-            title: 'Configurações',
-            onTap: () {
-              // TODO: Navegar para a tela de configurações gerais
-            },
-          ),
-          const Divider(height: 32),
-          _buildOptionItem(
-            icon: Icons.logout,
-            title: 'Sair',
-            color: AppColors.errorRed,
-            onTap: () {
-              // Lógica de logout que você já tem
-              ref.read(authProvider.notifier).logout();
-            },
-          ),
+          Icon(icon, color: AppColors.primaryBlue, size: 20),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: AppColors.textLight,
+                ),
+              ),
+              Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textDark,
+                ),
+              ),
+            ],
+          )
         ],
       ),
     );
   }
 
-  Widget _buildOptionItem({required IconData icon, required String title, required VoidCallback onTap, Color? color}) {
-    final itemColor = color ?? AppColors.textDark;
-    return Card(
-      elevation: 0,
-      color: AppColors.cardBackground,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(icon, color: itemColor),
-        title: Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: itemColor)),
-        trailing: Icon(Icons.arrow_forward_ios, size: 16, color: itemColor.withOpacity(0.7)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
+    return ElevatedButton.icon(
+      onPressed: () {
+        ref.read(authProvider.notifier).logout();
+      },
+      icon: const Icon(Icons.logout, color: Colors.white),
+      label: Text(
+        'Sair',
+        style:
+        GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.errorRed,
+        minimumSize: const Size(double.infinity, 50),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 2,
       ),
     );
   }

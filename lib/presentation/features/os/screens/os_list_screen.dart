@@ -12,8 +12,31 @@ import '../../../shared/styles/app_colors.dart';
 import '../providers/os_list_provider.dart';
 import 'os_detail_screen.dart';
 
-class OsListScreen extends ConsumerWidget {
+class OsListScreen extends ConsumerStatefulWidget {
   const OsListScreen({Key? key}) : super(key: key);
+
+  @override
+  ConsumerState<OsListScreen> createState() => _OsListScreenState();
+}
+
+class _OsListScreenState extends ConsumerState<OsListScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicializa o controlador com o termo de pesquisa atual do estado
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentSearchTerm = ref.read(osListProvider).searchTerm;
+      _searchController.text = currentSearchTerm;
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   // --- Funções Auxiliares de Estilo (Helpers) ---
 
@@ -69,7 +92,7 @@ class OsListScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(osListProvider);
     final notifier = ref.read(osListProvider.notifier);
 
@@ -126,24 +149,69 @@ class OsListScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // Campo de Busca
-          TextField(
-            style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textDark),
-            decoration: InputDecoration(
-              hintText: 'Buscar OS, cliente ou técnico...',
-              hintStyle: GoogleFonts.poppins(color: AppColors.textLight),
-              prefixIcon: const Icon(Icons.search, color: AppColors.textLight),
-              filled: true,
-              fillColor: AppColors.backgroundGray,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+          // Campo de Busca MODIFICADO
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textDark),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar OS, cliente ou técnico...',
+                    hintStyle: GoogleFonts.poppins(color: AppColors.textLight),
+                    prefixIcon: const Icon(Icons.search, color: AppColors.textLight),
+                    filled: true,
+                    fillColor: AppColors.backgroundGray,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
+                  ),
+                  onChanged: (value) {
+                    // Atualiza o termo de pesquisa no estado sem fazer a busca
+                    notifier.updateSearchTerm(value);
+                  },
+                  onSubmitted: (searchTerm) {
+                    // Executa a pesquisa quando o usuário pressiona Enter
+                    notifier.searchOrdensServico(searchTerm);
+                  },
+                ),
               ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
-            ),
-            onSubmitted: (searchTerm) {
-              notifier.loadOrdensServico(searchTerm: searchTerm, refresh: true);
-            },
+              const SizedBox(width: 8),
+              // Botão de pesquisa
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  onPressed: () {
+                    // Executa a pesquisa quando o botão é pressionado
+                    notifier.searchOrdensServico(_searchController.text);
+                  },
+                  icon: const Icon(Icons.search, color: Colors.white),
+                  tooltip: 'Pesquisar',
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Botão de limpar pesquisa
+              if (_searchController.text.isNotEmpty)
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.textLight,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      notifier.clearSearch();
+                    },
+                    icon: const Icon(Icons.clear, color: Colors.white),
+                    tooltip: 'Limpar pesquisa',
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 12),
           // Seção de Filtros com novo design
@@ -184,7 +252,7 @@ class OsListScreen extends ConsumerWidget {
     }
 
     if (state.ordensServico.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState(state.searchTerm.isNotEmpty);
     }
 
     // Lista com RefreshIndicator
@@ -259,7 +327,7 @@ class OsListScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '#${os.numeroOS}',
+                          '#OS-${os.id}',
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
@@ -383,26 +451,49 @@ class OsListScreen extends ConsumerWidget {
     );
   }
 
-  // Widget para o estado de lista vazia
-  Widget _buildEmptyState() {
+  // Widget para o estado de lista vazia MODIFICADO
+  Widget _buildEmptyState(bool isSearching) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.list_alt_outlined, size: 60, color: Colors.grey.shade400),
+          Icon(
+              isSearching ? Icons.search_off : Icons.list_alt_outlined,
+              size: 60,
+              color: Colors.grey.shade400
+          ),
           const SizedBox(height: 16),
           Text(
-            'Nenhuma OS encontrada',
+            isSearching ? 'Nenhum resultado encontrado' : 'Nenhuma OS encontrada',
             style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
           ),
           const SizedBox(height: 8),
           Text(
-            'Crie uma nova Ordem de Serviço ou ajuste os filtros.',
+            isSearching
+                ? 'Tente ajustar os termos de pesquisa ou limpar os filtros.'
+                : 'Crie uma nova Ordem de Serviço ou ajuste os filtros.',
             style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
             textAlign: TextAlign.center,
           ),
+          if (isSearching) ...[
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                _searchController.clear();
+                ref.read(osListProvider.notifier).clearSearch();
+              },
+              icon: const Icon(Icons.clear, color: Colors.white),
+              label: Text('Limpar Pesquisa', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
+

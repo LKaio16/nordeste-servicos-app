@@ -10,9 +10,11 @@ import '../../data/models/status_os_model.dart';
 abstract class OsRepository {
   /// Obtém a lista de ordens de serviço, com opções de filtro.
   Future<List<OrdemServico>> getOrdensServico({
+    String? searchTerm,
     int? clienteId,
     int? tecnicoId,
     StatusOSModel? status,
+    DateTime? dataAgendamento,
   });
 
   /// Obtém uma ordem de serviço pelo seu ID.

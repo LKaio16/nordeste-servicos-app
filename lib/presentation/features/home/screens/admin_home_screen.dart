@@ -4,8 +4,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:nordeste_servicos_app/presentation/features/dashboard/providers/desempenho_tecnico_provider.dart';
 import 'package:nordeste_servicos_app/presentation/features/dashboard/screens/dashboard_page_adm.dart';
 import 'package:nordeste_servicos_app/presentation/features/gestao/screens/gestao_screen.dart';
+import 'package:nordeste_servicos_app/presentation/features/orcamentos/providers/orcamento_dashboard_provider.dart';
 import 'package:nordeste_servicos_app/presentation/features/orcamentos/screens/orcamento_list_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/os/screens/os_list_screen.dart';
 
@@ -13,6 +15,7 @@ import '../../../../domain/entities/usuario.dart';
 import '../../../shared/providers/navigation_providers.dart';
 import '../../../shared/styles/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../dashboard/providers/os_dashboard_data_provider.dart';
 import '../../os/providers/os_list_provider.dart';
 
 class AdminHomeScreen extends ConsumerWidget {
@@ -25,7 +28,6 @@ class AdminHomeScreen extends ConsumerWidget {
     GestaoScreen(),
   ];
 
-  // **NOVO** - Método para exibir o diálogo de confirmação
   Future<void> _showLogoutConfirmationDialog(BuildContext context, WidgetRef ref) async {
     return showDialog<void>(
       context: context,
@@ -152,7 +154,6 @@ class AdminHomeScreen extends ConsumerWidget {
           icon: const Icon(Icons.logout, color: Colors.white),
           tooltip: 'Sair',
           onPressed: () {
-            // **MODIFICADO** - Chama o diálogo
             _showLogoutConfirmationDialog(context, ref);
           },
         ),
@@ -209,10 +210,12 @@ class AdminHomeScreen extends ConsumerWidget {
       selectedLabelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
       unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
       onTap: (index) {
-        ref.read(mainNavigationIndexProvider.notifier).state = index;
-        if (index == 1) {
-          ref.read(osListProvider.notifier).loadOrdensServico(refresh: true);
+        if (index == 0) {
+          ref.invalidate(osDashboardProvider);
+          ref.invalidate(orcamentoDashboardProvider);
+          ref.invalidate(desempenhoTecnicoProvider);
         }
+        ref.read(mainNavigationIndexProvider.notifier).state = index;
       },
     );
   }

@@ -1010,8 +1010,12 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
         return 'Em Aberto';
       case StatusOSModel.EM_ANDAMENTO:
         return 'Em Andamento';
+      case StatusOSModel.ATRIBUIDA:
+        return 'Atribuida';
       case StatusOSModel.PENDENTE_PECAS:
         return 'Pendente Peças';
+      case StatusOSModel.AGUARDANDO_APROVACAO:
+        return 'Aguardando Aprovação';
       case StatusOSModel.CONCLUIDA:
         return 'Concluída';
       case StatusOSModel.ENCERRADA:

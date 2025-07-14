@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../domain/entities/desempenho_tecnico.dart';
 import '../../../../domain/entities/usuario.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../orcamentos/providers/orcamento_dashboard_provider.dart';
 import '../models/dashboard_data.dart';
+import '../providers/desempenho_tecnico_provider.dart';
 import '../providers/os_dashboard_data_provider.dart';
 import '../../../shared/styles/app_colors.dart';
 
@@ -25,14 +27,7 @@ class QuickAction {
   final String rota;
   QuickAction({required this.titulo, required this.icon, required this.rota});
 }
-class Technician {
-  final String id;
-  final String nome;
-  final String avatarUrl;
-  final int totalOS;
-  final double desempenho;
-  Technician({required this.id, required this.nome, required this.avatarUrl, required this.totalOS, required this.desempenho});
-}
+
 class Activity {
   final String tipo;
   final String descricao;
@@ -46,10 +41,7 @@ final List<QuickAction> mockQuickActions = [
   QuickAction(titulo: 'Add Cliente', icon: Icons.person_add_outlined, rota: '/novo-cliente'),
   QuickAction(titulo: 'Add Técnico', icon: Icons.engineering, rota: '/novo-tec'),
 ];
-final List<Technician> mockTechnicians = [
-  Technician(id: '1', nome: 'Carlos Silva', avatarUrl: 'https://i.pravatar.cc/150?img=12', totalOS: 32, desempenho: 0.8),
-  Technician(id: '2', nome: 'Pedro Santos', avatarUrl: 'https://i.pravatar.cc/150?img=11', totalOS: 28, desempenho: 0.7),
-];
+
 final List<Activity> mockRecentActivities = [
   Activity(tipo: 'os_concluida', descricao: 'OS #2547 concluída', tempoDecorrido: 'Há 2 horas'),
   Activity(tipo: 'cliente_cadastrado', descricao: 'Novo cliente cadastrado', tempoDecorrido: 'Há 4 horas'),
@@ -164,65 +156,78 @@ class DashboardPageAdm extends ConsumerWidget {
     final DashboardData displayOsData = osDashboardState.data!;
     final DashboardData displayOrcamentoData = orcamentoDashboardState.data!;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildWelcomeHeader(ref),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: DashboardCardWidget(
-                  title: 'OS',
-                  count: displayOsData.totalOS,
-                  icon: Icons.description_outlined,
-                  statusItems: [
-                    StatusItem(
-                      label: 'Em andamento',
-                      value: displayOsData.osEmAndamento,
-                      color: AppColors.successGreen,
-                    ),
-                    StatusItem(
-                      label: 'Pendentes',
-                      value: displayOsData.osPendentes,
-                      color: AppColors.warningOrange,
-                    ),
-                  ],
+    // **NOVO**: Adicionado o RefreshIndicator para o "rolar para atualizar"
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Invalida os providers para forçar a busca de novos dados
+        ref.invalidate(osDashboardProvider);
+        ref.invalidate(orcamentoDashboardProvider);
+        ref.invalidate(desempenhoTecnicoProvider);
+        // Pequeno delay para garantir que a UI de loading do RefreshIndicator apareça
+        await Future.delayed(const Duration(milliseconds: 500));
+      },
+      color: AppColors.primaryBlue,
+      child: SingleChildScrollView(
+        // **NOVO**: Garante que o scroll sempre funcione para o RefreshIndicator
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildWelcomeHeader(ref),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: DashboardCardWidget(
+                    title: 'OS',
+                    count: displayOsData.totalOS,
+                    icon: Icons.description_outlined,
+                    statusItems: [
+                      StatusItem(
+                        label: 'Em andamento',
+                        value: displayOsData.osEmAndamento,
+                        color: AppColors.successGreen,
+                      ),
+                      StatusItem(
+                        label: 'Pendentes',
+                        value: displayOsData.osPendentes,
+                        color: AppColors.warningOrange,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: DashboardCardWidget(
-                  title: 'Orçamentos',
-                  count: displayOrcamentoData.totalOrcamentos,
-                  icon: Icons.request_quote_outlined,
-                  statusItems: [
-                    StatusItem(
-                      label: 'Aprovados',
-                      value: displayOrcamentoData.orcamentosAprovados,
-                      color: AppColors.successGreen,
-                    ),
-                    StatusItem(
-                      label: 'Rejeitados',
-                      value: displayOrcamentoData.orcamentosRejeitados,
-                      color: AppColors.errorRed,
-                    ),
-                  ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: DashboardCardWidget(
+                    title: 'Orçamentos',
+                    count: displayOrcamentoData.totalOrcamentos,
+                    icon: Icons.request_quote_outlined,
+                    statusItems: [
+                      StatusItem(
+                        label: 'Aprovados',
+                        value: displayOrcamentoData.orcamentosAprovados,
+                        color: AppColors.successGreen,
+                      ),
+                      StatusItem(
+                        label: 'Rejeitados',
+                        value: displayOrcamentoData.orcamentosRejeitados,
+                        color: AppColors.errorRed,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          QuickActionsWidget(actions: mockQuickActions),
-          const SizedBox(height: 24),
-          TechnicianPerformanceWidget(technicians: mockTechnicians),
-          const SizedBox(height: 24),
-          RecentActivitiesWidget(activities: mockRecentActivities),
-          const SizedBox(height: 16),
-        ],
+              ],
+            ),
+            const SizedBox(height: 24),
+            QuickActionsWidget(actions: mockQuickActions),
+            const SizedBox(height: 24),
+            _buildTechnicianPerformance(ref),
+            const SizedBox(height: 24),
+             // RecentActivitiesWidget(activities: mockRecentActivities),
+            // const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
@@ -232,7 +237,6 @@ class DashboardPageAdm extends ConsumerWidget {
     final Usuario? adminUser = authState.authenticatedUser;
     final String nome = adminUser?.nome.split(' ').first ?? 'Admin';
 
-    // Lógica para decodificar a imagem Base64
     Uint8List? imageBytes;
     if (adminUser?.fotoPerfil != null && adminUser!.fotoPerfil!.isNotEmpty) {
       try {
@@ -301,9 +305,61 @@ class DashboardPageAdm extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _buildTechnicianPerformance(WidgetRef ref) {
+    final desempenhoAsync = ref.watch(desempenhoTecnicoProvider);
+
+    return desempenhoAsync.when(
+      data: (tecnicos) {
+        if (tecnicos.isEmpty) {
+          return Card(
+            elevation: 4,
+            shadowColor: AppColors.primaryBlue.withOpacity(0.2),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Center(
+                child: Text(
+                  'Nenhum técnico encontrado para exibir o desempenho.',
+                  style: GoogleFonts.poppins(color: AppColors.textLight),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          );
+        }
+        return TechnicianPerformanceWidget(technicians: tecnicos);
+      },
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
+      error: (err, stack) => Card(
+        elevation: 4,
+        color: AppColors.errorRed.withOpacity(0.05),
+        shadowColor: AppColors.errorRed.withOpacity(0.1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              Icon(Icons.error_outline, color: AppColors.errorRed, size: 32),
+              const SizedBox(height: 12),
+              Text(
+                'Erro ao carregar desempenho',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppColors.errorRed),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                err.toString(),
+                style: GoogleFonts.poppins(color: AppColors.textLight),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-// ... (Resto dos widgets: DashboardCardWidget, QuickActionsWidget, etc. permanecem os mesmos)
 class DashboardCardWidget extends StatelessWidget {
   final String title;
   final int count;
@@ -463,7 +519,7 @@ class QuickActionsWidget extends StatelessWidget {
 }
 
 class TechnicianPerformanceWidget extends StatelessWidget {
-  final List<Technician> technicians;
+  final List<DesempenhoTecnico> technicians;
 
   const TechnicianPerformanceWidget({Key? key, required this.technicians}) : super(key: key);
 
@@ -515,7 +571,7 @@ class TechnicianPerformanceWidget extends StatelessWidget {
 }
 
 class TechnicianItemWidget extends StatelessWidget {
-  final Technician technician;
+  final DesempenhoTecnico technician;
 
   const TechnicianItemWidget({Key? key, required this.technician}) : super(key: key);
 
@@ -528,6 +584,16 @@ class TechnicianItemWidget extends StatelessWidget {
       performanceColor = AppColors.warningOrange;
     } else {
       performanceColor = AppColors.errorRed;
+    }
+
+    Uint8List? imageBytes;
+    if (technician.fotoPerfil != null && technician.fotoPerfil!.isNotEmpty) {
+      try {
+        imageBytes = base64Decode(technician.fotoPerfil!);
+      } catch (e) {
+        print("Erro ao decodificar imagem do técnico ${technician.id}: $e");
+        imageBytes = null;
+      }
     }
 
     return Container(
@@ -548,7 +614,11 @@ class TechnicianItemWidget extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundImage: NetworkImage(technician.avatarUrl),
+            backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
+            backgroundImage: imageBytes != null ? MemoryImage(imageBytes) : null,
+            child: imageBytes == null
+                ? const Icon(Icons.engineering, size: 24, color: AppColors.primaryBlue)
+                : null,
           ),
           const SizedBox(width: 16),
           Expanded(

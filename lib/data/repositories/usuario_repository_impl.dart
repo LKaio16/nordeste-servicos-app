@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 import '../../core/network/api_client.dart';
 import '../../core/error/exceptions.dart';
 import '../../domain/entities/auth_result.dart';
+import '../../domain/entities/desempenho_tecnico.dart';
+import '../models/desempenho_tecnico_model.dart';
 import '../models/login_response_model.dart';
 import '../models/usuario_model.dart';
 import '../../domain/entities/usuario.dart';
@@ -162,6 +164,26 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
       rethrow;
     } catch (e) {
       throw ApiException('Erro inesperado durante o login: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<List<DesempenhoTecnico>> getDesempenhoTecnicos() async {
+    try {
+      final response = await apiClient.get('/usuarios/desempenho');
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = response.data;
+        return jsonList
+            .map((json) => DesempenhoTecnicoModel.fromJson(json).toEntity())
+            .toList();
+      } else {
+        throw ApiException(
+            'Falha ao carregar desempenho dos técnicos: Status ${response.statusCode}');
+      }
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw ApiException('Erro inesperado ao carregar desempenho: ${e.toString()}');
     }
   }
 }
