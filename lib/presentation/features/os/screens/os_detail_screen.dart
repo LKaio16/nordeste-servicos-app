@@ -118,6 +118,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
         await osRepository.deleteOrdemServico(widget.osId);
 
         if (context.mounted) {
+          ref.invalidate(osListProvider);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('OS excluída com sucesso!'),
@@ -150,7 +151,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Baixando PDF da OS #${os.numeroOS}...'),
+          content: Text('Baixando PDF da OS #${os.id}...'),
           backgroundColor: AppColors.primaryBlue,
           duration: const Duration(seconds: 3),
           behavior: SnackBarBehavior.floating,
@@ -164,7 +165,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
       final osRepository = ref.read(osRepositoryProvider);
       final Uint8List pdfBytes = await osRepository.downloadOsPdf(os.id!);
 
-      final String fileName = 'relatorio_os_${os.numeroOS}.pdf';
+      final String fileName = 'relatorio_os_${os.id}.pdf';
       String? filePath;
 
       if (!kIsWeb) {
@@ -359,7 +360,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
       appBar: AppBar(
         title: Text(
           osAsyncValue.when(
-            data: (ordemServico) => ordemServico.numeroOS,
+            data: (ordemServico) => ordemServico.id.toString(),
             loading: () => 'Carregando...',
             error: (err, stack) => 'Detalhes da OS',
           ),
@@ -1016,7 +1017,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '#${os.numeroOS}',
+                        '#${os.id}',
                         style: GoogleFonts.poppins(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,

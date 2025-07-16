@@ -63,7 +63,8 @@ final equipamentoRepositoryProvider = Provider<EquipamentoRepository>((ref) {
 
 // Provider para OsRepository (implementação)
 final osRepositoryProvider = Provider<OsRepository>((ref) {
-  return OsRepositoryImpl(ref.read(apiClientProvider));
+  final apiClient = ref.watch(apiClientProvider);
+  return OsRepositoryImpl(apiClient);
 });
 
 // Provider para ItemOrcamentoRepository (implementação)

@@ -128,12 +128,15 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
     if (state.isLoading && state.orcamentos.isEmpty) {
       return const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue));
     }
+
     if (state.errorMessage != null && state.orcamentos.isEmpty) {
       return _buildErrorState(state.errorMessage!, () => notifier.loadOrcamentos(refresh: true));
     }
+
     if (state.orcamentos.isEmpty) {
       return _buildEmptyState();
     }
+
     return RefreshIndicator(
       onRefresh: () => notifier.loadOrcamentos(refresh: true),
       color: AppColors.primaryBlue,
@@ -255,15 +258,29 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.request_quote_outlined, size: 60, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          Text('Nenhum orçamento encontrado', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-          const SizedBox(height: 8),
-          Text('Crie um novo orçamento para começar.', style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight), textAlign: TextAlign.center),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.receipt_long_outlined, size: 60, color: AppColors.textLight),
+            const SizedBox(height: 20),
+            Text(
+              'Nenhum Orçamento Encontrado',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Crie um novo orçamento para que ele apareça aqui.',
+              style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

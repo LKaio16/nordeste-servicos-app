@@ -24,6 +24,10 @@ class OrcamentoDashboardNotifier extends StateNotifier<OrcamentoDashboardState> 
     fetchOrcamentoDashboardData();
   }
 
+  Future<void> refresh() async {
+    await fetchOrcamentoDashboardData();
+  }
+
   Future<void> fetchOrcamentoDashboardData() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {

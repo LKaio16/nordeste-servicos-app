@@ -248,20 +248,72 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
     }
 
     if (state.errorMessage != null && state.ordensServico.isEmpty) {
-      return _buildErrorState(state.errorMessage!, () => notifier.loadOrdensServico(refresh: true));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.errorRed, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              'Falha ao Carregar',
+              style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textDark),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              state.errorMessage!,
+              style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => notifier.refreshOrdensServico(),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Tentar Novamente'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     if (state.ordensServico.isEmpty) {
-      return _buildEmptyState(state.searchTerm.isNotEmpty);
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.inbox_outlined, size: 60, color: AppColors.textLight),
+            const SizedBox(height: 20),
+            Text(
+              'Nenhuma Ordem de Serviço',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Quando novas OS forem criadas, elas aparecerão aqui.',
+              style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
     }
 
-    // Lista com RefreshIndicator
     return RefreshIndicator(
-      onRefresh: () => notifier.loadOrdensServico(refresh: true),
+      onRefresh: () => notifier.refreshOrdensServico(),
       color: AppColors.primaryBlue,
       child: ListView.builder(
         padding: const EdgeInsets.all(16.0),
-        physics: const BouncingScrollPhysics(),
         itemCount: state.ordensServico.length,
         itemBuilder: (context, index) {
           final os = state.ordensServico[index];

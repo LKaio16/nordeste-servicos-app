@@ -100,6 +100,10 @@ class OsListNotifier extends StateNotifier<OsListState> {
     await loadOrdensServico(refresh: true, searchTerm: searchTerm);
   }
 
+  Future<void> refreshOrdensServico() async {
+    await loadOrdensServico(refresh: true, searchTerm: state.searchTerm);
+  }
+
 // Método para limpar a pesquisa
 
   Future<void> clearSearch() async {

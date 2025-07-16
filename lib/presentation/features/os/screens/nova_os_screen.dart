@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:nordeste_servicos_app/presentation/features/os/providers/nova_os_provider.dart';
+import 'package:nordeste_servicos_app/presentation/features/os/providers/os_list_provider.dart';
 import 'package:nordeste_servicos_app/presentation/features/os/providers/nova_os_state.dart';
 import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
 import 'package:nordeste_servicos_app/domain/entities/equipamento.dart';
@@ -148,6 +149,7 @@ class _NovaOsScreenState extends ConsumerState<NovaOsScreen>
               );
 
       if (success && mounted) {
+        ref.invalidate(osListProvider);
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -3,12 +3,13 @@
 import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
 
 import '../../data/models/cliente_request_dto.dart'; // Ajuste o caminho se necessário
+import '../../data/models/tipo_cliente.dart';
 import '/core/error/exceptions.dart';
 
 abstract class ClienteRepository {
   /// Obtém a lista de todos os clientes.
   /// Lança [ApiException] em caso de falha na comunicação.
-  Future<List<Cliente>> getClientes();
+  Future<List<Cliente>> getClientes({String? searchTerm, TipoCliente? tipoCliente});
 
   /// Obtém um cliente pelo seu ID.
   /// Lança [ApiException] ou [NotFoundException] se o cliente não for encontrado.

@@ -9,8 +9,28 @@ import '../providers/cliente_list_provider.dart';
 import 'cliente_detail_screen.dart';
 import 'novo_cliente_screen.dart';
 
-class ClienteListScreen extends ConsumerWidget {
+class ClienteListScreen extends ConsumerStatefulWidget {
   const ClienteListScreen({Key? key}) : super(key: key);
+
+  @override
+  ConsumerState<ClienteListScreen> createState() => _ClienteListScreenState();
+}
+
+class _ClienteListScreenState extends ConsumerState<ClienteListScreen> {
+  final _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final searchTerm = ref.read(clienteListProvider).searchTerm;
+    _searchController.text = searchTerm;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _exportToExcel(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -31,9 +51,16 @@ class ClienteListScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(clienteListProvider);
     final notifier = ref.read(clienteListProvider.notifier);
+    
+    // Listener para limpar o controller se os filtros forem limpos por outra ação
+    ref.listen<ClienteListState>(clienteListProvider, (previous, next) {
+      if (previous?.searchTerm != '' && next.searchTerm == '') {
+        _searchController.clear();
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
@@ -85,7 +112,7 @@ class ClienteListScreen extends ConsumerWidget {
       ),
       body: Stack(
         children: [
-          // Elementos decorativos de fundo - inspirados no dashboard
+          // Elementos decorativos de fundo
           Positioned(
             top: -50,
             right: -50,
@@ -126,7 +153,7 @@ class ClienteListScreen extends ConsumerWidget {
           // Conteúdo principal
           Column(
             children: [
-              _buildFilterAndSearchSection(context, notifier),
+              _buildFilterAndSearchSection(context, notifier, state),
               Expanded(
                 child: _buildBodyContent(context, state, notifier),
               ),
@@ -152,10 +179,14 @@ class ClienteListScreen extends ConsumerWidget {
           ],
         ),
         child: FloatingActionButton(
-          onPressed: () {
-            Navigator.of(context).push(
+          onPressed: () async {
+            final result = await Navigator.of(context).push(
               MaterialPageRoute(builder: (context) => const NovoClienteScreen()),
             );
+            // Invalida para recarregar a lista quando voltar
+            if(result == true) {
+              ref.invalidate(clienteListProvider);
+            }
           },
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -165,9 +196,11 @@ class ClienteListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterAndSearchSection(BuildContext context, ClienteListNotifier notifier) {
+  Widget _buildFilterAndSearchSection(BuildContext context, ClienteListNotifier notifier, ClienteListState state) {
+    bool hasActiveFilter = state.searchTerm.isNotEmpty || state.tipoClienteFiltro != null;
+
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
@@ -177,155 +210,99 @@ class ClienteListScreen extends ConsumerWidget {
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
         ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Título da seção
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryBlue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.search,
-                    size: 20,
-                    color: AppColors.primaryBlue,
-                  ),
+            // Campo de Busca
+            TextField(
+              controller: _searchController,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: AppColors.textDark,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Buscar por nome, CPF/CNPJ...',
+                hintStyle: GoogleFonts.poppins(
+                  color: AppColors.textLight.withOpacity(0.8),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  'Buscar e Filtrar',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark,
-                  ),
+                prefixIcon: Icon(Icons.search, color: AppColors.textLight.withOpacity(0.8)),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: AppColors.textLight),
+                        onPressed: () {
+                          _searchController.clear();
+                          notifier.search('');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: AppColors.backgroundGray.withOpacity(0.8),
+                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
-              ],
+              ),
+              onChanged: (value) => notifier.search(value),
             ),
             const SizedBox(height: 16),
-            Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.dividerColor,
-                    AppColors.dividerColor.withOpacity(0.1),
+
+            // Chips de Filtro
+            Column(
+              children: [
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: [
+                    _buildFilterChip(
+                      context: context,
+                      label: 'Pessoa Física',
+                      onPressed: () => notifier.filterByTipo(TipoCliente.PESSOA_FISICA),
+                      isSelected: state.tipoClienteFiltro == TipoCliente.PESSOA_FISICA,
+                    ),
+                    _buildFilterChip(
+                      context: context,
+                      label: 'Pessoa Jurídica',
+                      onPressed: () => notifier.filterByTipo(TipoCliente.PESSOA_JURIDICA),
+                      isSelected: state.tipoClienteFiltro == TipoCliente.PESSOA_JURIDICA,
+                    ),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Campo de Busca
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: TextField(
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: AppColors.textDark,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Buscar por nome, CPF/CNPJ ou e-mail...',
-                  hintStyle: GoogleFonts.poppins(
-                    color: AppColors.textLight.withOpacity(0.7),
-                    fontSize: 14,
-                  ),
-                  prefixIcon: Container(
-                    margin: const EdgeInsets.all(12),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.search,
-                      size: 20,
-                      color: AppColors.primaryBlue,
+                if (hasActiveFilter)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12.0),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: InkWell(
+                        onTap: () {
+                          _searchController.clear();
+                          notifier.clearFilters();
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.clear_all, color: AppColors.textLight, size: 20),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Limpar',
+                                style: GoogleFonts.poppins(
+                                  color: AppColors.textLight,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  filled: true,
-                  fillColor: AppColors.backgroundGray.withOpacity(0.5),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                ),
-                onSubmitted: (searchTerm) => notifier.loadClientes(searchTerm: searchTerm, refresh: true),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Seção de Filtros
-            SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  _buildFilterChip(
-                    'Filtros',
-                    icon: Icons.filter_list,
-                    isPrimary: true,
-                    onPressed: () {
-                      // TODO: Abrir modal de filtros avançados
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  _buildFilterChip(
-                    'Tipo',
-                    icon: Icons.category_outlined,
-                    onPressed: () {
-                      // TODO: Filtrar por tipo de cliente
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  _buildFilterChip(
-                    'Cidade',
-                    icon: Icons.location_city_outlined,
-                    onPressed: () {
-                      // TODO: Filtrar por cidade
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  _buildFilterChip(
-                    'Status',
-                    icon: Icons.flag_outlined,
-                    onPressed: () {
-                      // TODO: Filtrar por status
-                    },
-                  ),
-                ],
-              ),
+              ],
             ),
           ],
         ),
@@ -333,164 +310,92 @@ class ClienteListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterChip(String label, {required VoidCallback onPressed, IconData? icon, bool isPrimary = false}) {
-    return Container(
-      decoration: BoxDecoration(
+  Widget _buildFilterChip({
+    required BuildContext context,
+    required String label,
+    required VoidCallback onPressed,
+    required bool isSelected,
+  }) {
+    return ActionChip(
+      onPressed: onPressed,
+      label: Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          color: isSelected ? Colors.white : AppColors.primaryBlue,
+        ),
+      ),
+      backgroundColor: isSelected ? AppColors.primaryBlue : AppColors.primaryBlue.withOpacity(0.1),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        boxShadow: isPrimary
-            ? [
-          BoxShadow(
-            color: AppColors.primaryBlue.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ]
-            : [],
-      ),
-      child: ActionChip(
-        onPressed: onPressed,
-        backgroundColor: isPrimary ? AppColors.primaryBlue : AppColors.cardBackground,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.0),
-          side: BorderSide(
-            color: isPrimary ? Colors.transparent : AppColors.dividerColor,
-            width: 1.5,
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        label: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null)
-              Icon(
-                icon,
-                size: 18,
-                color: isPrimary ? Colors.white : AppColors.primaryBlue,
-              ),
-            if (icon != null) const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: isPrimary ? Colors.white : AppColors.textDark,
-              ),
-            ),
-          ],
+        side: BorderSide(
+          color: isSelected ? AppColors.primaryBlue : AppColors.primaryBlue.withOpacity(0.3),
+          width: 1.5,
         ),
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     );
   }
 
   Widget _buildBodyContent(BuildContext context, ClienteListState state, ClienteListNotifier notifier) {
     if (state.isLoading && state.clientes.isEmpty) {
-      return _buildLoadingState();
+      return const Center(child: CircularProgressIndicator(color: AppColors.primaryBlue));
     }
+
     if (state.errorMessage != null && state.clientes.isEmpty) {
-      return _buildErrorState(state.errorMessage!, () => notifier.loadClientes(refresh: true));
+      return _buildErrorState(state.errorMessage!, () => notifier.refresh());
     }
+
     if (state.clientes.isEmpty) {
-      return _buildEmptyState(context);
+      return _buildEmptyState(state.searchTerm.isNotEmpty || state.tipoClienteFiltro != null);
     }
 
     return RefreshIndicator(
-      onRefresh: () => notifier.loadClientes(refresh: true),
+      onRefresh: () => notifier.refresh(),
       color: AppColors.primaryBlue,
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80), // Padding para não cobrir com o FAB
         physics: const BouncingScrollPhysics(),
         itemCount: state.clientes.length,
         itemBuilder: (context, index) {
           final cliente = state.clientes[index];
-          return _buildClienteCard(context, cliente);
+          return _buildClienteCard(context, cliente, ref);
         },
       ),
     );
   }
 
-  Widget _buildLoadingState() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.backgroundGray,
-            AppColors.backgroundGray.withOpacity(0.8),
-          ],
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
-              strokeWidth: 3,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Carregando clientes...',
-              style: GoogleFonts.poppins(
-                color: AppColors.textLight,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildClienteCard(BuildContext context, Cliente cliente) {
-    final tipoClienteText = cliente.tipoCliente == TipoCliente.PESSOA_FISICA ? 'Pessoa Física' : 'Pessoa Jurídica';
-    final tipoClienteColor = cliente.tipoCliente == TipoCliente.PESSOA_FISICA ? AppColors.successGreen : AppColors.primaryBlue;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16.0),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16.0),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryBlue.withOpacity(0.06),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+  Widget _buildClienteCard(BuildContext context, Cliente cliente, WidgetRef ref) {
+    return Card(
+      elevation: 4,
+      shadowColor: AppColors.primaryBlue.withOpacity(0.1),
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
+        onTap: () async {
+          final result = await Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => ClienteDetailScreen(clienteId: cliente.id!)),
           );
+          // Atualiza a lista caso haja deleção na tela de detalhes
+          if (result == true) {
+            ref.read(clienteListProvider.notifier).refresh();
+          }
         },
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: tipoClienteColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
                     child: Icon(
-                      cliente.tipoCliente == TipoCliente.PESSOA_FISICA
-                          ? Icons.person_outline
-                          : Icons.business_outlined,
-                      size: 24,
-                      color: tipoClienteColor,
+                      cliente.tipoCliente == TipoCliente.PESSOA_JURIDICA ? Icons.business_center_outlined : Icons.person_outline,
+                      color: AppColors.primaryBlue,
+                      size: 28,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -501,19 +406,9 @@ class ClienteListScreen extends ConsumerWidget {
                         Text(
                           cliente.nomeCompleto,
                           style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
                             fontSize: 18,
-                            fontWeight: FontWeight.w600,
                             color: AppColors.textDark,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          cliente.email ?? 'E-mail não cadastrado',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: AppColors.textLight,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -521,62 +416,22 @@ class ClienteListScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: AppColors.textLight,
-                  ),
+                  const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
                 ],
               ),
-              const SizedBox(height: 20),
-              Container(
-                height: 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.dividerColor,
-                      AppColors.dividerColor.withOpacity(0.1),
-                    ],
-                  ),
-                ),
-              ),
+              const SizedBox(height: 16),
+              const Divider(color: AppColors.dividerColor, height: 1),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: tipoClienteColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: tipoClienteColor.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      tipoClienteText,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: tipoClienteColor,
-                      ),
-                    ),
+                  _buildInfoItem(
+                    icon: Icons.phone_outlined,
+                    text: cliente.telefonePrincipal.isNotEmpty ? cliente.telefonePrincipal : 'Não informado',
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.backgroundGray,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      cliente.cpfCnpj,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: AppColors.textDark,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                  _buildInfoItem(
+                    icon: Icons.location_on_outlined,
+                    text: cliente.cidade.isNotEmpty ? '${cliente.cidade} - ${cliente.estado}' : 'Não informado',
                   ),
                 ],
               ),
@@ -587,6 +442,23 @@ class ClienteListScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildInfoItem({required IconData icon, required String text}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: AppColors.textLight),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            text,
+            style: GoogleFonts.poppins(color: AppColors.textLight),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildErrorState(String message, VoidCallback onRetry) {
     return Center(
       child: Padding(
@@ -594,71 +466,20 @@ class ClienteListScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.errorRed.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.cloud_off_rounded,
-                color: AppColors.errorRed,
-                size: 64,
-              ),
-            ),
+            Icon(Icons.cloud_off_rounded, color: AppColors.errorRed.withOpacity(0.7), size: 60),
+            const SizedBox(height: 20),
+            Text('Erro ao Carregar', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark), textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            Text(message, style: GoogleFonts.poppins(color: AppColors.textLight, fontSize: 14), textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            Text(
-              'Erro ao Carregar',
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textDark,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              style: GoogleFonts.poppins(
-                color: AppColors.textLight,
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primaryBlue,
-                    AppColors.secondaryBlue,
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryBlue.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh, color: Colors.white),
-                label: Text(
-                  'Tentar Novamente',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              label: Text('Tentar Novamente', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
           ],
@@ -667,82 +488,30 @@ class ClienteListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(bool isSearching) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.textLight.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.people_outline,
-                size: 64,
-                color: AppColors.textLight,
-              ),
+            Icon(
+              isSearching ? Icons.search_off_rounded : Icons.people_outline_rounded,
+              size: 60,
+              color: AppColors.textLight.withOpacity(0.7),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             Text(
-              'Nenhum cliente encontrado',
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textDark,
-              ),
+              isSearching ? 'Nenhum Cliente Encontrado' : 'Nenhum Cliente Cadastrado',
+              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
-              'Crie um novo cliente ou ajuste os filtros de busca.',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: AppColors.textLight,
-              ),
+              isSearching
+                  ? 'Tente uma busca diferente ou limpe os filtros.'
+                  : 'Adicione um novo cliente para começar a gerenciar.',
+              style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primaryBlue,
-                    AppColors.secondaryBlue,
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryBlue.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const NovoClienteScreen()),
-                  );
-                },
-                icon: const Icon(Icons.add, color: Colors.white),
-                label: Text(
-                  'Adicionar Cliente',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-              ),
             ),
           ],
         ),

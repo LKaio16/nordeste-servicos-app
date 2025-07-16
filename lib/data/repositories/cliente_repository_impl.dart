@@ -7,6 +7,7 @@ import '../../core/error/exceptions.dart'; // Importe as exceções customizadas
 // *** CORREÇÃO: Importar DTO e Model corretos ***
 import '../models/cliente_model.dart'; // Modelo para receber dados da API (já atualizado)
 import '../models/cliente_request_dto.dart'; // DTO para enviar dados para a API
+import '../models/tipo_cliente.dart';
 
 import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
 import '../../domain/repositories/cliente_repository.dart'; // Importe a interface do repositório
@@ -19,9 +20,22 @@ class ClienteRepositoryImpl implements ClienteRepository {
   ClienteRepositoryImpl(this.apiClient);
 
   @override
-  Future<List<Cliente>> getClientes() async {
+  Future<List<Cliente>> getClientes({String? searchTerm, TipoCliente? tipoCliente}) async {
     try {
-      final response = await apiClient.get('/clientes');
+      final Map<String, dynamic> queryParameters = {};
+
+      if (searchTerm != null && searchTerm.trim().isNotEmpty) {
+        queryParameters['searchTerm'] = searchTerm.trim();
+      }
+
+      if (tipoCliente != null) {
+        queryParameters['tipoCliente'] = tipoCliente.name;
+      }
+
+      final response = await apiClient.get(
+        '/clientes',
+        queryParameters: queryParameters.isNotEmpty ? queryParameters : null,
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = response.data;
