@@ -9,8 +9,6 @@ class RegistroTempo {
   final int ordemServicoId; // Referência ao ID da OS pai
   final int tecnicoId; // Referência ao ID do técnico
   final String? nomeTecnico; // Mantido se o Model já o traz
-  final int tipoServicoId; // Referência ao ID do tipo de serviço
-  final String? descricaoTipoServico; // Mantido se o Model já o traz
 
   final DateTime horaInicio;
   final DateTime? horaTermino;
@@ -21,8 +19,6 @@ class RegistroTempo {
     required this.ordemServicoId,
     required this.tecnicoId,
     this.nomeTecnico,
-    required this.tipoServicoId,
-    this.descricaoTipoServico,
     required this.horaInicio,
     this.horaTermino,
     this.horasTrabalhadas,

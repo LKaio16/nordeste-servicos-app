@@ -12,8 +12,6 @@ RegistroTempoModel _$RegistroTempoModelFromJson(Map<String, dynamic> json) =>
       ordemServicoId: (json['ordemServicoId'] as num).toInt(),
       tecnicoId: (json['tecnicoId'] as num).toInt(),
       nomeTecnico: json['nomeTecnico'] as String?,
-      tipoServicoId: (json['tipoServicoId'] as num).toInt(),
-      descricaoTipoServico: json['descricaoTipoServico'] as String?,
       horaInicio: DateTime.parse(json['horaInicio'] as String),
       horaTermino: json['horaTermino'] == null
           ? null
@@ -27,8 +25,6 @@ Map<String, dynamic> _$RegistroTempoModelToJson(RegistroTempoModel instance) =>
       'ordemServicoId': instance.ordemServicoId,
       'tecnicoId': instance.tecnicoId,
       'nomeTecnico': instance.nomeTecnico,
-      'tipoServicoId': instance.tipoServicoId,
-      'descricaoTipoServico': instance.descricaoTipoServico,
       'horaInicio': instance.horaInicio.toIso8601String(),
       'horaTermino': instance.horaTermino?.toIso8601String(),
       'horasTrabalhadas': instance.horasTrabalhadas,

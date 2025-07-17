@@ -105,7 +105,7 @@ class RegistroTempoNotifier extends StateNotifier<RegistroTempoState> {
     });
   }
 
-  Future<void> iniciarRegistro(int tipoServicoId) async {
+  Future<void> iniciarRegistro() async {
     if (_tecnicoId == null) {
       state = state.copyWith(errorMessage: "Técnico não identificado.");
       return;
@@ -114,7 +114,6 @@ class RegistroTempoNotifier extends StateNotifier<RegistroTempoState> {
       final novoRegistro = RegistroTempo(
         ordemServicoId: _osId,
         tecnicoId: _tecnicoId!,
-        tipoServicoId: tipoServicoId,
         horaInicio: DateTime.now(),
       );
       await _repository.createRegistroTempo(novoRegistro);

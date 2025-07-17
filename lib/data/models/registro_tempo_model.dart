@@ -15,8 +15,6 @@ class RegistroTempoModel {
   final int ordemServicoId;
   final int tecnicoId;
   final String? nomeTecnico;
-  final int tipoServicoId;
-  final String? descricaoTipoServico;
 
   final DateTime horaInicio;
   final DateTime? horaTermino;
@@ -27,8 +25,6 @@ class RegistroTempoModel {
     required this.ordemServicoId,
     required this.tecnicoId,
     this.nomeTecnico,
-    required this.tipoServicoId,
-    this.descricaoTipoServico,
     required this.horaInicio,
     this.horaTermino,
     this.horasTrabalhadas,
@@ -39,15 +35,12 @@ class RegistroTempoModel {
 
   Map<String, dynamic> toJson() => _$RegistroTempoModelToJson(this);
 
-// Método para converter para Entity (se usar camada domain) - COMENTADO
   RegistroTempo toEntity() {
     return RegistroTempo(
       id: id,
       ordemServicoId: ordemServicoId,
       tecnicoId: tecnicoId,
       nomeTecnico: nomeTecnico,
-      tipoServicoId: tipoServicoId,
-      descricaoTipoServico: descricaoTipoServico,
       horaInicio: horaInicio,
       horaTermino: horaTermino,
       horasTrabalhadas: horasTrabalhadas,

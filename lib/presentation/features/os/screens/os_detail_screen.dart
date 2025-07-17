@@ -730,7 +730,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
       buttons.add(
         Expanded(
           child: _buildTimerButton(
-            onPressed: () => registroTempoNotifier.iniciarRegistro(1),
+            onPressed: () => registroTempoNotifier.iniciarRegistro(),
             icon: Icons.play_arrow_rounded,
             label: 'Iniciar',
             color: AppColors.successGreen,
@@ -753,7 +753,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
         buttons.add(
           Expanded(
             child: _buildTimerButton(
-              onPressed: () => registroTempoNotifier.iniciarRegistro(1),
+              onPressed: () => registroTempoNotifier.iniciarRegistro(),
               icon: Icons.play_arrow_rounded,
               label: 'Retomar',
               color: AppColors.primaryBlue,

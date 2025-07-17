@@ -61,7 +61,6 @@ class RegistroTempoRepositoryImpl implements RegistroTempoRepository {
       final RegistroTempoModel registroTempoModel = RegistroTempoModel(
         ordemServicoId: registro.ordemServicoId,
         tecnicoId: registro.tecnicoId,
-        tipoServicoId: registro.tipoServicoId,
         horaInicio: registro.horaInicio,
       );
       final response = await apiClient.post('/ordens-servico/${registro.ordemServicoId}/registros-tempo/iniciar', data: registroTempoModel.toJson());
