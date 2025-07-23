@@ -47,6 +47,8 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
         return AppColors.successGreen.withOpacity(0.1);
       case StatusOSModel.EM_ANDAMENTO:
         return AppColors.warningOrange.withOpacity(0.1);
+      case StatusOSModel.AGUARDANDO_APROVACAO:
+        return AppColors.infoBlue.withOpacity(0.1);
       case StatusOSModel.EM_ABERTO:
       case StatusOSModel.PENDENTE_PECAS:
         return AppColors.primaryBlue.withOpacity(0.1);
@@ -64,6 +66,8 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
         return AppColors.successGreen;
       case StatusOSModel.EM_ANDAMENTO:
         return AppColors.warningOrange;
+      case StatusOSModel.AGUARDANDO_APROVACAO:
+        return AppColors.infoBlue;
       case StatusOSModel.EM_ABERTO:
       case StatusOSModel.PENDENTE_PECAS:
         return AppColors.primaryBlue;
@@ -82,6 +86,7 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
       case StatusOSModel.ENCERRADA: return 'Encerrada';
       case StatusOSModel.CANCELADA: return 'Cancelada';
       case StatusOSModel.PENDENTE_PECAS: return 'Pendente';
+      case StatusOSModel.AGUARDANDO_APROVACAO: return 'Aguardando Aprovação';
       default: return 'Desconhecido';
     }
   }

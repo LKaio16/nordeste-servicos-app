@@ -44,3 +44,4 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /apiEx/
+lib/config/app_config.dart

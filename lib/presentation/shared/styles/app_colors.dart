@@ -16,6 +16,7 @@ class AppColors {
   static const Color successGreen = Color(0xFF34A853); // Verde mais moderno
   static const Color warningOrange = Color(0xFFFFA000); // Laranja mais vibrante
   static const Color errorRed = Color(0xFFEA4335); // Vermelho mais moderno
+  static const Color infoBlue = Color(0xFF039BE5); // Azul informativo
 
   // Cores de fundo e texto
   static const Color backgroundGray = Color(0xFFF8F9FA); // Fundo cinza claro
@@ -31,6 +32,8 @@ class AppColors {
         return successGreen.withOpacity(0.1);
       case StatusOSModel.EM_ANDAMENTO:
         return warningOrange.withOpacity(0.1);
+      case StatusOSModel.AGUARDANDO_APROVACAO:
+        return infoBlue.withOpacity(0.1);
       case StatusOSModel.EM_ABERTO:
       case StatusOSModel.PENDENTE_PECAS:
         return primaryBlue.withOpacity(0.1);
@@ -48,6 +51,8 @@ class AppColors {
         return successGreen;
       case StatusOSModel.EM_ANDAMENTO:
         return warningOrange;
+      case StatusOSModel.AGUARDANDO_APROVACAO:
+        return infoBlue;
       case StatusOSModel.EM_ABERTO:
       case StatusOSModel.PENDENTE_PECAS:
         return primaryBlue;

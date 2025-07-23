@@ -274,6 +274,28 @@ class OsRepositoryImpl implements OsRepository {
   }
 
   @override
+  Future<void> updateOrdemServicoStatus(int id, StatusOSModel status) async {
+    try {
+      // O backend espera um objeto com uma chave "status"
+      final response = await apiClient.patch(
+        '/ordens-servico/$id/status',
+        data: {'status': status.name},
+      );
+
+      if (response.statusCode != 200) {
+        throw ApiException(
+            'Falha ao atualizar o status da OS $id: Status ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      throw ApiException(
+          'Erro de rede ao atualizar o status da OS $id: ${e.message}');
+    } catch (e) {
+      throw ApiException(
+          'Erro inesperado ao atualizar o status da OS $id: ${e.toString()}');
+    }
+  }
+
+  @override
   Future<Uint8List> downloadOsPdf(int osId) async {
     try {
       final response = await apiClient.get(

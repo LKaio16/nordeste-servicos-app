@@ -45,6 +45,9 @@ abstract class OsRepository {
   /// Retorna os bytes do arquivo.
   Future<Uint8List> downloadOsPdf(int osId);
 
+  /// Atualiza o status de uma ordem de serviço.
+  Future<void> updateOrdemServicoStatus(int id, StatusOSModel status);
+
 // Métodos para gerenciar detalhes da OS (alternativa a repositórios separados para detalhes)
 // Future<List<RegistroTempo>> getRegistrosTempoByOsId(int osId);
 // Future<RegistroTempo> createRegistroTempo(RegistroTempo registro); // Pode precisar de DTO

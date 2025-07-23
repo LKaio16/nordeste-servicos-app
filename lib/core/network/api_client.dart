@@ -102,6 +102,17 @@ class ApiClient {
     }
   }
 
+  Future<Response> patch(String path, {dynamic data}) async {
+    try {
+      final response = await _dio.patch(path, data: data);
+      return response;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    } catch (e) {
+      throw ApiException("Ocorreu um erro inesperado: ${e.toString()}");
+    }
+  }
+
   Future<Response> delete(String path, {dynamic data}) async {
     try {
       final response = await _dio.delete(path, data: data);
