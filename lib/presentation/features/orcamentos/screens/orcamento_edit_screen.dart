@@ -56,7 +56,7 @@ class _OrcamentoEditScreenState extends ConsumerState<OrcamentoEditScreen> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _dataValidade,
-      firstDate: DateTime.now(),
+      firstDate: DateTime(2020),
       lastDate: DateTime(2101),
       builder: (context, child) {
         return Theme(

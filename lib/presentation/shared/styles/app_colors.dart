@@ -14,7 +14,7 @@ class AppColors {
 
   // Cores de status
   static const Color successGreen = Color(0xFF34A853); // Verde mais moderno
-  static const Color warningOrange = Color(0xFFFFA000); // Laranja mais vibrante
+  static const Color warningOrange = Color(0xFFCD8000); // Laranja mais vibrante
   static const Color errorRed = Color(0xFFEA4335); // Vermelho mais moderno
   static const Color infoBlue = Color(0xFF039BE5); // Azul informativo
 

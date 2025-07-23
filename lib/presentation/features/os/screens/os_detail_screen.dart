@@ -25,6 +25,8 @@ import '../providers/os_detail_provider.dart';
 import '../providers/os_list_provider.dart';
 import '../providers/registro_tempo_provider.dart';
 import 'os_edit_screen.dart';
+import '../../clientes/screens/cliente_detail_screen.dart';
+import '../../equipamentos/screens/equipamento_detail_screen.dart';
 
 class OsDetailScreen extends ConsumerStatefulWidget {
   final int osId;
@@ -43,6 +45,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
   final TextEditingController _analiseController = TextEditingController();
   bool _isEditingSolucao = false;
   bool _isEditingAnalise = false;
+  bool _isUpdatingStatus = false;
 
   @override
   void initState() {
@@ -475,12 +478,28 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                       label: 'Cliente',
                       value: ordemServico.cliente.nomeCompleto,
                       icon: Icons.person_outline,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => ClienteDetailScreen(
+                                clienteId: ordemServico.cliente.id!),
+                          ),
+                        );
+                      },
                     ),
                     _buildDetailRow(
                       label: 'Equipamento',
                       value:
                           "${ordemServico.equipamento.marcaModelo} - ${ordemServico.equipamento.numeroSerieChassi}",
                       icon: Icons.build_outlined,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => EquipamentoDetailScreen(
+                                equipamentoId: ordemServico.equipamento.id!),
+                          ),
+                        );
+                      },
                     ),
                     _buildDetailRow(
                       label: 'Técnico Atribuído',
@@ -652,35 +671,102 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
     );
   }
 
+  Future<bool> _showConfirmationDialog({
+    required BuildContext context,
+    required String title,
+    required String content,
+    required String confirmText,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(title,
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        content: Text(content, style: GoogleFonts.poppins()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancelar',
+                style: GoogleFonts.poppins(color: AppColors.textLight)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text(
+              confirmText,
+              style: GoogleFonts.poppins(
+                  color: Colors.white, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   Widget _buildAprovarConcluirButton(
       BuildContext context, WidgetRef ref, OrdemServico ordemServico) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: ElevatedButton.icon(
-        onPressed: () async {
-          try {
-            final osRepository = ref.read(osRepositoryProvider);
-            await osRepository.updateOrdemServicoStatus(
-                ordemServico.id!, StatusOSModel.CONCLUIDA);
-            ref.invalidate(osDetailProvider(widget.osId));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('OS Aprovada e Concluída!'),
-                backgroundColor: AppColors.successGreen,
-              ),
-            );
-          } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Erro ao aprovar a OS: $e'),
-                backgroundColor: AppColors.errorRed,
-              ),
-            );
-          }
-        },
-        icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+        onPressed: _isUpdatingStatus
+            ? null
+            : () async {
+                final confirmed = await _showConfirmationDialog(
+                  context: context,
+                  title: 'Confirmar Conclusão',
+                  content: 'Deseja realmente aprovar e concluir esta OS?',
+                  confirmText: 'Confirmar',
+                );
+                if (!confirmed) return;
+
+                setState(() {
+                  _isUpdatingStatus = true;
+                });
+                try {
+                  final osRepository = ref.read(osRepositoryProvider);
+                  await osRepository.updateOrdemServicoStatus(
+                      ordemServico.id!, StatusOSModel.CONCLUIDA);
+                  ref.invalidate(osDetailProvider(widget.osId));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('OS Aprovada e Concluída!'),
+                      backgroundColor: AppColors.successGreen,
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erro ao aprovar a OS: $e'),
+                      backgroundColor: AppColors.errorRed,
+                    ),
+                  );
+                } finally {
+                  if (mounted) {
+                    setState(() {
+                      _isUpdatingStatus = false;
+                    });
+                  }
+                }
+              },
+        icon: _isUpdatingStatus
+            ? Container(
+                width: 24,
+                height: 24,
+                padding: const EdgeInsets.all(2.0),
+                child: const CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 3,
+                ),
+              )
+            : const Icon(Icons.check_circle_outline, color: Colors.white),
         label: Text(
-          'Aprovar e Concluir',
+          _isUpdatingStatus ? 'Processando...' : 'Aprovar e Concluir',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
             fontSize: 16,
@@ -704,30 +790,59 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: ElevatedButton.icon(
-        onPressed: () async {
-          try {
-            final osRepository = ref.read(osRepositoryProvider);
-            await osRepository.updateOrdemServicoStatus(
-                ordemServico.id!, StatusOSModel.AGUARDANDO_APROVACAO);
-            ref.invalidate(osDetailProvider(widget.osId));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('OS enviada para aprovação!'),
-                backgroundColor: AppColors.successGreen,
-              ),
-            );
-          } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Erro ao enviar para aprovação: $e'),
-                backgroundColor: AppColors.errorRed,
-              ),
-            );
-          }
-        },
-        icon: const Icon(Icons.send_outlined, color: Colors.white),
+        onPressed: _isUpdatingStatus
+            ? null
+            : () async {
+                final confirmed = await _showConfirmationDialog(
+                  context: context,
+                  title: 'Confirmar Envio',
+                  content: 'Deseja realmente enviar esta OS para aprovação?',
+                  confirmText: 'Enviar',
+                );
+                if (!confirmed) return;
+
+                setState(() {
+                  _isUpdatingStatus = true;
+                });
+                try {
+                  final osRepository = ref.read(osRepositoryProvider);
+                  await osRepository.updateOrdemServicoStatus(
+                      ordemServico.id!, StatusOSModel.AGUARDANDO_APROVACAO);
+                  ref.invalidate(osDetailProvider(widget.osId));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('OS enviada para aprovação!'),
+                      backgroundColor: AppColors.successGreen,
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erro ao enviar para aprovação: $e'),
+                      backgroundColor: AppColors.errorRed,
+                    ),
+                  );
+                } finally {
+                  if (mounted) {
+                    setState(() {
+                      _isUpdatingStatus = false;
+                    });
+                  }
+                }
+              },
+        icon: _isUpdatingStatus
+            ? Container(
+                width: 24,
+                height: 24,
+                padding: const EdgeInsets.all(2.0),
+                child: const CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 3,
+                ),
+              )
+            : const Icon(Icons.send_outlined, color: Colors.white),
         label: Text(
-          'Enviar para Aprovação',
+          _isUpdatingStatus ? 'Enviando...' : 'Enviar para Aprovação',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
             fontSize: 16,
@@ -821,30 +936,51 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
       floatingActionButton: Padding(
         padding: const EdgeInsets.all(8.0),
         child: ElevatedButton.icon(
-          onPressed: () async {
-            try {
-              final osRepository = ref.read(osRepositoryProvider);
-              await osRepository.updateOrdemServicoStatus(
-                  ordemServico.id!, StatusOSModel.EM_ANDAMENTO);
-              ref.invalidate(osDetailProvider(widget.osId));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Atendimento iniciado!'),
-                  backgroundColor: AppColors.successGreen,
-                ),
-              );
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Erro ao iniciar atendimento: $e'),
-                  backgroundColor: AppColors.errorRed,
-                ),
-              );
-            }
-          },
-          icon: const Icon(Icons.play_circle_outline, color: Colors.white),
+          onPressed: _isUpdatingStatus
+              ? null
+              : () async {
+                  setState(() {
+                    _isUpdatingStatus = true;
+                  });
+                  try {
+                    final osRepository = ref.read(osRepositoryProvider);
+                    await osRepository.updateOrdemServicoStatus(
+                        ordemServico.id!, StatusOSModel.EM_ANDAMENTO);
+                    ref.invalidate(osDetailProvider(widget.osId));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Atendimento iniciado!'),
+                        backgroundColor: AppColors.successGreen,
+                      ),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Erro ao iniciar atendimento: $e'),
+                        backgroundColor: AppColors.errorRed,
+                      ),
+                    );
+                  } finally {
+                    if (mounted) {
+                      setState(() {
+                        _isUpdatingStatus = false;
+                      });
+                    }
+                  }
+                },
+          icon: _isUpdatingStatus
+              ? Container(
+                  width: 24,
+                  height: 24,
+                  padding: const EdgeInsets.all(2.0),
+                  child: const CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
+                )
+              : const Icon(Icons.play_circle_outline, color: Colors.white),
           label: Text(
-            'Iniciar Atendimento',
+            _isUpdatingStatus ? 'Iniciando...' : 'Iniciar Atendimento',
             style: GoogleFonts.poppins(
               fontWeight: FontWeight.w600,
               fontSize: 16,
@@ -1393,8 +1529,9 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
     required String label,
     String? value,
     IconData? icon,
+    VoidCallback? onTap,
   }) {
-    return Padding(
+    Widget content = Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1430,9 +1567,25 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
               ),
             ),
           ),
+          if (onTap != null)
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: AppColors.textLight,
+            ),
         ],
       ),
     );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8.0),
+        child: content,
+      );
+    }
+
+    return content;
   }
 
   Widget _buildDetailSection({

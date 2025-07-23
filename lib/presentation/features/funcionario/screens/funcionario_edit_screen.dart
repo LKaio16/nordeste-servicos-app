@@ -188,8 +188,146 @@ class _FuncionarioEditScreenState extends ConsumerState<FuncionarioEditScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          _buildSectionCard(
+            title: 'Segurança',
+            icon: Icons.lock_outline,
+            children: [
+              Center(
+                child: ElevatedButton.icon(
+                  onPressed: _showChangePasswordDialog,
+                  icon: const Icon(Icons.password_rounded),
+                  label: Text(
+                    'Alterar Senha',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.secondaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              )
+            ],
+          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showChangePasswordDialog() async {
+    final GlobalKey<FormState> dialogFormKey = GlobalKey<FormState>();
+    final TextEditingController passwordController = TextEditingController();
+    final TextEditingController confirmPasswordController = TextEditingController();
+
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.lock_reset, color: AppColors.primaryBlue),
+              const SizedBox(width: 10),
+              Text(
+                'Alterar Senha',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+            ],
+          ),
+          content: Form(
+            key: dialogFormKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  'Digite a nova senha para o usuário. A senha deve ter no mínimo 6 caracteres.',
+                  style: GoogleFonts.poppins(color: AppColors.textLight),
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Nova Senha',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.password),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, digite a nova senha';
+                    }
+                    if (value.length < 6) {
+                      return 'A senha deve ter no mínimo 6 caracteres';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: confirmPasswordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirmar Nova Senha',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.password),
+                  ),
+                  validator: (value) {
+                    if (value != passwordController.text) {
+                      return 'As senhas não coincidem';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancelar', style: GoogleFonts.poppins(color: AppColors.textLight)),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.save),
+              label: Text('Salvar Nova Senha', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                if (dialogFormKey.currentState!.validate()) {
+                  Navigator.of(dialogContext).pop(); // Fecha o diálogo primeiro
+                  final success = await ref
+                      .read(funcionarioEditProvider(widget.funcionarioId).notifier)
+                      .updatePassword(widget.funcionarioId, passwordController.text);
+
+                  if (mounted) {
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Senha alterada com sucesso!'),
+                          backgroundColor: AppColors.successGreen,
+                        ),
+                      );
+                    }
+                    // O erro já é tratado pelo listener do provider, então não precisa de um `else` aqui.
+                  }
+                }
+              },
+            ),
+          ],
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        );
+      },
     );
   }
 

@@ -88,6 +88,21 @@ class FuncionarioEditNotifier extends StateNotifier<FuncionarioEditState> {
       return false;
     }
   }
+
+  Future<bool> updatePassword(int funcionarioId, String newPassword) async {
+    state = state.copyWith(isSubmitting: true, clearErrors: true);
+    try {
+      await _repository.updatePassword(funcionarioId, newPassword);
+      state = state.copyWith(isSubmitting: false);
+      return true;
+    } on ApiException catch (e) {
+      state = state.copyWith(isSubmitting: false, submissionError: e.message);
+      return false;
+    } catch (e) {
+      state = state.copyWith(isSubmitting: false, submissionError: "Erro inesperado: ${e.toString()}");
+      return false;
+    }
+  }
 }
 
 // 3. O Provider de Família

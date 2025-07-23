@@ -12,6 +12,7 @@ import '../../orcamentos/providers/orcamento_dashboard_provider.dart';
 import '../models/dashboard_data.dart';
 import '../providers/desempenho_tecnico_provider.dart';
 import '../providers/os_dashboard_data_provider.dart';
+import '../../../shared/providers/navigation_providers.dart';
 import '../../../shared/styles/app_colors.dart';
 
 
@@ -183,6 +184,9 @@ class DashboardPageAdm extends ConsumerWidget {
                     title: 'OS',
                     count: displayOsData.totalOS,
                     icon: Icons.description_outlined,
+                    onTap: () {
+                      ref.read(mainNavigationIndexProvider.notifier).state = 1;
+                    },
                     statusItems: [
                       StatusItem(
                         label: 'Em andamento',
@@ -203,6 +207,9 @@ class DashboardPageAdm extends ConsumerWidget {
                     title: 'Orçamentos',
                     count: displayOrcamentoData.totalOrcamentos,
                     icon: Icons.request_quote_outlined,
+                    onTap: () {
+                      ref.read(mainNavigationIndexProvider.notifier).state = 2;
+                    },
                     statusItems: [
                       StatusItem(
                         label: 'Aprovados',
@@ -365,6 +372,7 @@ class DashboardCardWidget extends StatelessWidget {
   final int count;
   final IconData icon;
   final List<StatusItem> statusItems;
+  final VoidCallback? onTap;
 
   const DashboardCardWidget({
     Key? key,
@@ -372,6 +380,7 @@ class DashboardCardWidget extends StatelessWidget {
     required this.count,
     required this.icon,
     required this.statusItems,
+    this.onTap,
   }) : super(key: key);
 
   @override
@@ -380,72 +389,76 @@ class DashboardCardWidget extends StatelessWidget {
       elevation: 3,
       shadowColor: AppColors.primaryBlue.withOpacity(0.15),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark,
+                    ),
                   ),
-                ),
-                Icon(icon, color: AppColors.primaryBlue, size: 28),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              count.toString(),
-              style: GoogleFonts.poppins(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryBlue,
+                  Icon(icon, color: AppColors.primaryBlue, size: 28),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            const Divider(color: AppColors.dividerColor, height: 1),
-            const SizedBox(height: 12),
-            Column(
-              children: statusItems.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 6.0),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: item.color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${item.label}:',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: AppColors.textLight,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      item.value.toString(),
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 8),
+              Text(
+                count.toString(),
+                style: GoogleFonts.poppins(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryBlue,
                 ),
-              )).toList(),
-            ),
-          ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(color: AppColors.dividerColor, height: 1),
+              const SizedBox(height: 12),
+              Column(
+                children: statusItems.map((item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: item.color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${item.label}:',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: AppColors.textLight,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        item.value.toString(),
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                )).toList(),
+              ),
+            ],
+          ),
         ),
       ),
     );

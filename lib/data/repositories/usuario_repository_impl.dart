@@ -133,6 +133,27 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
   }
 
   @override
+  Future<void> updatePassword(int userId, String newPassword) async {
+    try {
+      final response = await apiClient.patch(
+        '/usuarios/$userId/senha',
+        data: {'novaSenha': newPassword},
+      );
+
+      if (response.statusCode != 200) {
+        throw ApiException('Falha ao atualizar a senha: Status ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.data != null && e.response!.data['message'] != null) {
+        throw ApiException(e.response!.data['message']);
+      }
+      throw ApiException('Erro de rede ao atualizar a senha: ${e.message}');
+    } catch (e) {
+      throw ApiException('Erro inesperado ao atualizar a senha: ${e.toString()}');
+    }
+  }
+
+  @override
   Future<AuthResult> login(String email, String password) async {
     try {
       final Map<String, dynamic> loginData = {

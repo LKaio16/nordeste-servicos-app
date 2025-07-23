@@ -21,6 +21,8 @@ abstract class UsuarioRepository {
   /// Deleta um usuário pelo seu ID.
   Future<void> deleteUser(int id);
 
+  Future<void> updatePassword(int userId, String newPassword);
+
   /// Retorna o usuário autenticado em caso de sucesso.
   /// Lança [ApiException], [UnauthorizedException] (se tratar 401), ou outras exceções em caso de falha.
   Future<AuthResult> login(String email, String password); // Altere o tipo de retorno

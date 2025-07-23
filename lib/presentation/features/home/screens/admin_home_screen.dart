@@ -18,8 +18,15 @@ import '../../auth/providers/auth_provider.dart';
 import '../../dashboard/providers/os_dashboard_data_provider.dart';
 import '../../os/providers/os_list_provider.dart';
 
-class AdminHomeScreen extends ConsumerWidget {
+class AdminHomeScreen extends ConsumerStatefulWidget {
   const AdminHomeScreen({Key? key}) : super(key: key);
+
+  @override
+  ConsumerState<AdminHomeScreen> createState() => _AdminHomeScreenState();
+}
+
+class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
+  late final PageController _pageController;
 
   final List<Widget> _pages = const [
     DashboardPageAdm(),
@@ -27,6 +34,19 @@ class AdminHomeScreen extends ConsumerWidget {
     OrcamentosListScreen(),
     GestaoScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicializa o PageController com a página inicial do provider
+    _pageController = PageController(initialPage: ref.read(mainNavigationIndexProvider));
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   Future<void> _showLogoutConfirmationDialog(BuildContext context, WidgetRef ref) async {
     return showDialog<void>(
@@ -72,7 +92,10 @@ class AdminHomeScreen extends ConsumerWidget {
               ),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
-                ref.read(mainNavigationIndexProvider.notifier).state = 0;
+                // Opcional: Redefinir para a primeira aba ao sair
+                if (_pageController.hasClients) {
+                  _pageController.jumpToPage(0);
+                }
                 ref.read(authProvider.notifier).logout();
               },
             ),
@@ -83,8 +106,19 @@ class AdminHomeScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final selectedIndex = ref.watch(mainNavigationIndexProvider);
+
+    // Escuta as mudanças no provider para animar o PageView
+    ref.listen<int>(mainNavigationIndexProvider, (previous, next) {
+      if (next != previous && _pageController.hasClients && _pageController.page?.round() != next) {
+        _pageController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
@@ -116,14 +150,19 @@ class AdminHomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            IndexedStack(
-              index: selectedIndex,
+            PageView(
+              controller: _pageController,
               children: _pages,
+              onPageChanged: (index) {
+                // Ao deslizar, atualiza o provider.
+                // Isso fará o BottomNavigationBar atualizar seu estado.
+                ref.read(mainNavigationIndexProvider.notifier).state = index;
+              },
             ),
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(context, ref),
+      bottomNavigationBar: _buildBottomNavigationBar(context, ref, selectedIndex),
     );
   }
 
@@ -175,9 +214,7 @@ class AdminHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBottomNavigationBar(BuildContext context, WidgetRef ref) {
-    final selectedIndex = ref.watch(mainNavigationIndexProvider);
-
+  Widget _buildBottomNavigationBar(BuildContext context, WidgetRef ref, int selectedIndex) {
     return BottomNavigationBar(
       items: const <BottomNavigationBarItem>[
         BottomNavigationBarItem(
@@ -215,6 +252,7 @@ class AdminHomeScreen extends ConsumerWidget {
           ref.invalidate(orcamentoDashboardProvider);
           ref.invalidate(desempenhoTecnicoProvider);
         }
+        // Apenas atualiza o estado. O listener cuidará da animação.
         ref.read(mainNavigationIndexProvider.notifier).state = index;
       },
     );
