@@ -1,7 +1,14 @@
+import 'package:dio/dio.dart';
+import 'package:file_saver/file_saver.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nordeste_servicos_app/data/models/tipo_cliente.dart';
+import 'package:nordeste_servicos_app/core/network/api_client.dart';
+import 'package:nordeste_servicos_app/presentation/shared/providers/repository_providers.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../domain/entities/cliente.dart';
 import '../../../shared/styles/app_colors.dart';
@@ -32,22 +39,64 @@ class _ClienteListScreenState extends ConsumerState<ClienteListScreen> {
     super.dispose();
   }
 
-  void _exportToExcel(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
+  Future<void> _exportToExcel(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.info_outline, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Exportação para Excel em desenvolvimento.'),
-          ],
-        ),
+        content: Text('Iniciando download do arquivo Excel...'),
         backgroundColor: AppColors.primaryBlue,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
       ),
     );
+
+    try {
+      final ApiClient apiClient = ref.read(apiClientProvider);
+      final response = await apiClient.get(
+        '/clientes/download',
+        options: Options(
+          responseType: ResponseType.bytes, // Receber como bytes
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final Uint8List bytes = Uint8List.fromList(response.data);
+        final String formattedDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+        final String fileName = 'clientes_$formattedDate.xlsx';
+        
+        final path = await FileSaver.instance.saveFile(
+          name: fileName,
+          bytes: bytes,
+          ext: 'xlsx',
+          mimeType: MimeType.microsoftExcel,
+        );
+
+        scaffoldMessenger.removeCurrentSnackBar();
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Download concluído! Salvo em: $path'),
+            backgroundColor: AppColors.successGreen,
+            action: SnackBarAction(
+              label: 'ABRIR',
+              textColor: Colors.white,
+              onPressed: () {
+                if (path != null) {
+                  OpenFilex.open(path);
+                }
+              },
+            ),
+          ),
+        );
+      } else {
+        throw 'Erro no servidor: ${response.statusCode}';
+      }
+    } catch (e) {
+      scaffoldMessenger.removeCurrentSnackBar();
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Erro ao exportar para Excel: $e'),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
+    }
   }
 
   @override

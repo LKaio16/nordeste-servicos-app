@@ -220,27 +220,29 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
           ),
           const SizedBox(height: 12),
           // Seção de Filtros com novo design
-          SizedBox(
+          /*SizedBox(
             height: 38,
             child: ListView(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               children: [
-                _buildFilterChip(
+                  _buildFilterChip(
                   'Filtros',
                   icon: Icons.filter_list,
                   isPrimary: true,
                   onPressed: () { /* TODO: Abrir filtros avançados */ },
                 ),
+             
                 const SizedBox(width: 8),
                 _buildFilterChip('Status', onPressed: () {}),
                 const SizedBox(width: 8),
                 _buildFilterChip('Data', onPressed: () {}),
                 const SizedBox(width: 8),
                 _buildFilterChip('Técnico', onPressed: () {}),
+
               ],
             ),
-          ),
+          ),  */
         ],
       ),
     );

@@ -430,14 +430,15 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
             ),
             tooltip: 'Baixar Relatório PDF',
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.white),
-            onPressed: osAsyncValue.maybeWhen(
-              data: (ordemServico) => () => _deleteOs(context, ref),
-              orElse: () => null,
+          if (authState.authenticatedUser?.perfil == PerfilUsuarioModel.ADMIN)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.white),
+              onPressed: osAsyncValue.maybeWhen(
+                data: (ordemServico) => () => _deleteOs(context, ref),
+                orElse: () => null,
+              ),
+              tooltip: 'Excluir OS',
             ),
-            tooltip: 'Excluir OS',
-          ),
         ],
       ),
       body: osAsyncValue.when(
