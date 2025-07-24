@@ -12,28 +12,32 @@ class MinhasOsListState extends Equatable {
   final List<OrdemServico> ordensServico;
   final bool isLoading;
   final String? errorMessage;
+  final String searchTerm; // Adicionado
 
   const MinhasOsListState({
     this.ordensServico = const [],
     this.isLoading = false,
     this.errorMessage,
+    this.searchTerm = '', // Adicionado
   });
 
   MinhasOsListState copyWith({
     List<OrdemServico>? ordensServico,
     bool? isLoading,
     String? errorMessage,
+    String? searchTerm, // Adicionado
     bool clearError = false,
   }) {
     return MinhasOsListState(
       ordensServico: ordensServico ?? this.ordensServico,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      searchTerm: searchTerm ?? this.searchTerm, // Adicionado
     );
   }
 
   @override
-  List<Object?> get props => [ordensServico, isLoading, errorMessage];
+  List<Object?> get props => [ordensServico, isLoading, errorMessage, searchTerm];
 }
 
 // 2. O Notifier que gerencia o estado
@@ -51,31 +55,43 @@ class MinhasOsListNotifier extends StateNotifier<MinhasOsListState> {
     }
   }
 
-  Future<void> loadMinhasOrdensServico({String? searchTerm, bool refresh = false}) async {
+  Future<void> loadMinhasOrdensServico({bool refresh = false}) async {
     if (state.isLoading && !refresh) return;
     if (_tecnicoId == null) return; // Não faz nada se não houver ID
 
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      // Chama o repositório passando o ID do técnico para filtrar no backend
-      final ordens = await _osRepository.getOrdensServico(tecnicoId: _tecnicoId!);
-
-      List<OrdemServico> ordensFiltradas = ordens;
-      if (searchTerm != null && searchTerm.isNotEmpty) {
-        ordensFiltradas = ordens.where((os) =>
-        os.numeroOS.toLowerCase().contains(searchTerm.toLowerCase()) ||
-            os.cliente.nomeCompleto.toLowerCase().contains(searchTerm.toLowerCase())
-        ).toList();
-      }
-
-      state = state.copyWith(ordensServico: ordensFiltradas, isLoading: false);
+      // Passa o ID do técnico e o termo de busca para o repositório
+      final ordens = await _osRepository.getOrdensServico(
+        tecnicoId: _tecnicoId!,
+        searchTerm: state.searchTerm,
+      );
+      state = state.copyWith(ordensServico: ordens, isLoading: false);
 
     } on ApiException catch (e) {
       state = state.copyWith(errorMessage: e.message, isLoading: false);
     } catch (e) {
       state = state.copyWith(errorMessage: 'Erro inesperado: ${e.toString()}', isLoading: false);
     }
+  }
+
+  void updateSearchTerm(String searchTerm) {
+    state = state.copyWith(searchTerm: searchTerm);
+  }
+
+  Future<void> searchOrdensServico(String searchTerm) async {
+    state = state.copyWith(searchTerm: searchTerm);
+    await loadMinhasOrdensServico();
+  }
+
+  Future<void> clearSearch() async {
+    state = state.copyWith(searchTerm: '');
+    await loadMinhasOrdensServico();
+  }
+
+  Future<void> refreshOrdensServico() async {
+    await loadMinhasOrdensServico(refresh: true);
   }
 }
 

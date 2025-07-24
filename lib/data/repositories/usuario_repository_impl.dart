@@ -177,10 +177,20 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
       }
 
     } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        throw ApiException('Credenciais inválidas.');
+      // Tenta extrair a mensagem de erro do corpo da resposta JSON
+      if (e.response?.data is Map<String, dynamic> && e.response!.data['message'] != null) {
+        throw ApiException(e.response!.data['message']);
       }
-      throw ApiException('Erro de rede durante o login: ${e.message}');
+      if (e.response?.statusCode == 401) {
+        throw ApiException('Usuário ou senha incorreto.');
+      }
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        throw ApiException('Não foi possível conectar ao servidor. Verifique sua conexão com a internet.');
+      }
+      throw ApiException('Erro de rede durante o login. Tente novamente.');
     } on ApiException {
       rethrow;
     } catch (e) {

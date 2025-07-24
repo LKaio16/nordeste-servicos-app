@@ -9,8 +9,30 @@ import '../../../shared/styles/app_colors.dart';
 import '../../os/screens/os_detail_screen.dart';
 import '../providers/minhas_os_list_provider.dart';
 
-class MinhasOsListScreen extends ConsumerWidget {
+class MinhasOsListScreen extends ConsumerStatefulWidget {
   const MinhasOsListScreen({Key? key}) : super(key: key);
+
+  @override
+  ConsumerState<MinhasOsListScreen> createState() => _MinhasOsListScreenState();
+}
+
+class _MinhasOsListScreenState extends ConsumerState<MinhasOsListScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentSearchTerm = ref.read(minhasOsListProvider).searchTerm;
+      _searchController.text = currentSearchTerm;
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Color _getStatusBackgroundColor(StatusOSModel status) {
     switch (status) {
@@ -47,7 +69,7 @@ class MinhasOsListScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(minhasOsListProvider);
     final notifier = ref.read(minhasOsListProvider.notifier);
 
@@ -55,51 +77,97 @@ class MinhasOsListScreen extends ConsumerWidget {
       backgroundColor: AppColors.backgroundGray,
       body: Column(
         children: [
-          _buildPageHeader(context, notifier),
+          _buildPageHeader(context, notifier, state.searchTerm),
           Expanded(
-            // **CORREÇÃO AQUI: Passando o 'ref' para o método filho**
-            child: _buildBodyContent(context, ref, state, notifier),
+            child: _buildBodyContent(context, state, notifier),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPageHeader(BuildContext context, MinhasOsListNotifier notifier) {
+  Widget _buildPageHeader(BuildContext context, MinhasOsListNotifier notifier, String currentSearchTerm) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      color: AppColors.cardBackground,
-      child: TextField(
-        style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textDark),
-        decoration: InputDecoration(
-          hintText: 'Buscar por nº da OS ou cliente...',
-          prefixIcon: const Icon(Icons.search, color: AppColors.textLight),
-          filled: true,
-          fillColor: AppColors.backgroundGray,
-          border: OutlineInputBorder(
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textDark),
+              decoration: InputDecoration(
+                hintText: 'Buscar por nº da OS ou cliente...',
+                hintStyle: GoogleFonts.poppins(color: AppColors.textLight),
+                prefixIcon: const Icon(Icons.search, color: AppColors.textLight),
+                filled: true,
+                fillColor: AppColors.backgroundGray,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
+              ),
+              onChanged: notifier.updateSearchTerm,
+              onSubmitted: notifier.searchOrdensServico,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue,
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none),
-        ),
-        onSubmitted: (searchTerm) =>
-            notifier.loadMinhasOrdensServico(searchTerm: searchTerm, refresh: true),
+            ),
+            child: IconButton(
+              onPressed: () => notifier.searchOrdensServico(_searchController.text),
+              icon: const Icon(Icons.search, color: Colors.white),
+              tooltip: 'Pesquisar',
+            ),
+          ),
+          if (currentSearchTerm.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.textLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                onPressed: () {
+                  _searchController.clear();
+                  notifier.clearSearch();
+                },
+                icon: const Icon(Icons.clear, color: Colors.white),
+                tooltip: 'Limpar pesquisa',
+              ),
+            ),
+          ]
+        ],
       ),
     );
   }
 
-  // **CORREÇÃO AQUI: Recebendo o 'WidgetRef ref' como parâmetro**
-  Widget _buildBodyContent(BuildContext context, WidgetRef ref, MinhasOsListState state, MinhasOsListNotifier notifier) {
+  Widget _buildBodyContent(BuildContext context, MinhasOsListState state, MinhasOsListNotifier notifier) {
     if (state.isLoading && state.ordensServico.isEmpty) {
       return const Center(
           child: CircularProgressIndicator(color: AppColors.primaryBlue));
     }
     if (state.errorMessage != null) {
-      return Center(child: Text(state.errorMessage!));
+      return Center(child: Text(state.errorMessage!)); // TODO: Melhorar tela de erro
     }
     if (state.ordensServico.isEmpty) {
-      return const Center(
-          child: Text('Nenhuma Ordem de Serviço atribuída a você.'));
+      return _buildEmptyState(state.searchTerm.isNotEmpty, notifier);
     }
 
+    // A ordenação agora é feita na UI para garantir que OS em atendimento fiquem no topo
     final sortedList = List<OrdemServico>.from(state.ordensServico)
       ..sort((a, b) {
         if (a.status == StatusOSModel.EM_ANDAMENTO && b.status != StatusOSModel.EM_ANDAMENTO) {
@@ -112,22 +180,63 @@ class MinhasOsListScreen extends ConsumerWidget {
       });
 
     return RefreshIndicator(
-      onRefresh: () => notifier.loadMinhasOrdensServico(refresh: true),
+      onRefresh: () => notifier.refreshOrdensServico(),
       color: AppColors.primaryBlue,
       child: ListView.builder(
         padding: const EdgeInsets.all(16.0),
         itemCount: sortedList.length,
         itemBuilder: (context, index) {
           final os = sortedList[index];
-          // **CORREÇÃO AQUI: Passando o 'ref' para o método do card**
-          return _buildOsCard(context, ref, os, os.status == StatusOSModel.EM_ANDAMENTO);
+          return _buildOsCard(context, os, os.status == StatusOSModel.EM_ANDAMENTO);
         },
       ),
     );
   }
 
-  // **CORREÇÃO AQUI: Recebendo o 'WidgetRef ref' como parâmetro**
-  Widget _buildOsCard(BuildContext context, WidgetRef ref, OrdemServico os, bool isEmAtendimento) {
+  Widget _buildEmptyState(bool isSearching, MinhasOsListNotifier notifier) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+              isSearching ? Icons.search_off : Icons.list_alt_outlined,
+              size: 60,
+              color: Colors.grey.shade400
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isSearching ? 'Nenhum resultado encontrado' : 'Nenhuma OS atribuída',
+            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isSearching
+                ? 'Tente ajustar os termos da sua busca.'
+                : 'Quando novas OS forem atribuídas a você, elas aparecerão aqui.',
+            style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
+            textAlign: TextAlign.center,
+          ),
+          if (isSearching) ...[
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                _searchController.clear();
+                notifier.clearSearch();
+              },
+              icon: const Icon(Icons.clear),
+              label: const Text('Limpar Pesquisa'),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: Colors.white
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOsCard(BuildContext context, OrdemServico os, bool isEmAtendimento) {
     final cardBorder = isEmAtendimento
         ? RoundedRectangleBorder(
       side: BorderSide(color: AppColors.warningOrange, width: 2),
@@ -162,7 +271,7 @@ class MinhasOsListScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '#${os.numeroOS}',
+                    '#OS-${os.id}',
                     style: GoogleFonts.poppins(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,

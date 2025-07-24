@@ -167,7 +167,7 @@ class _NovoOrcamentoScreenState extends ConsumerState<NovoOrcamentoScreen> {
                     items: state.ordensDeServico.map((OrdemServico os) {
                       return DropdownMenuItem(
                         value: os.id.toString(),
-                        child: Text('#${os.numeroOS} - ${os.problemaRelatado}', overflow: TextOverflow.ellipsis),
+                        child: Text('#${os.id} - ${os.problemaRelatado}', overflow: TextOverflow.ellipsis),
                       );
                     }).toList(),
                     onChanged: (value) => setState(() => _selectedOsId = value),

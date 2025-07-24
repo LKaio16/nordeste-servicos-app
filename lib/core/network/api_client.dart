@@ -134,13 +134,13 @@ class ApiClient {
         message = "Tempo limite excedido ao conectar com o servidor.";
         break;
       case DioExceptionType.badResponse:
-        final statusCode = error.response?.statusCode;
         final responseData = error.response?.data;
-        message = "Erro na resposta do servidor: Status $statusCode";
-        if (responseData is Map && responseData.containsKey('message')) {
-          message += " - ${responseData['message']}";
+        if (responseData is Map && responseData['message'] is String) {
+          message = responseData['message'];
+        } else {
+          message = "Erro na resposta do servidor: Status ${error.response?.statusCode}.";
         }
-        if (statusCode == 404) {
+        if (error.response?.statusCode == 404) {
           throw NotFoundException("Recurso não encontrado.");
         }
         // Nota: O tratamento de 401 para token expirado/inválido já está no interceptor onError.

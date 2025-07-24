@@ -16,8 +16,15 @@ import '../../auth/providers/auth_provider.dart';
 import '../../../shared/styles/app_colors.dart';
 import '../../../../domain/entities/usuario.dart';
 
-class TecnicoHomeScreen extends ConsumerWidget {
+class TecnicoHomeScreen extends ConsumerStatefulWidget {
   const TecnicoHomeScreen({Key? key}) : super(key: key);
+
+  @override
+  ConsumerState<TecnicoHomeScreen> createState() => _TecnicoHomeScreenState();
+}
+
+class _TecnicoHomeScreenState extends ConsumerState<TecnicoHomeScreen> {
+  late final PageController _pageController;
 
   // Lista de páginas para a navegação do técnico
   final List<Widget> _pages = const [
@@ -27,25 +34,49 @@ class TecnicoHomeScreen extends ConsumerWidget {
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Usa o provider de navegação específico do técnico
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: ref.read(tecnicoNavigationIndexProvider));
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selectedIndex = ref.watch(tecnicoNavigationIndexProvider);
+
+    ref.listen<int>(tecnicoNavigationIndexProvider, (previous, next) {
+      if (next != previous && _pageController.hasClients && _pageController.page?.round() != next) {
+        _pageController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
-      appBar: _buildAppBar(context, ref),
+      appBar: _buildAppBar(context),
       body: SafeArea(
-        child: IndexedStack(
-          index: selectedIndex,
+        child: PageView(
+          controller: _pageController,
           children: _pages,
+          onPageChanged: (index) {
+            ref.read(tecnicoNavigationIndexProvider.notifier).state = index;
+          },
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(context, ref),
+      bottomNavigationBar: _buildBottomNavigationBar(context, selectedIndex),
     );
   }
 
   // **MODIFICADO** - Método para exibir o diálogo de confirmação de logout
-  Future<void> _showLogoutConfirmationDialog(BuildContext context, WidgetRef ref) async {
+  Future<void> _showLogoutConfirmationDialog(BuildContext context) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: false, // O usuário deve tocar em um botão
@@ -89,8 +120,10 @@ class TecnicoHomeScreen extends ConsumerWidget {
               ),
               onPressed: () {
                 Navigator.of(dialogContext).pop(); // Fecha o diálogo
-                // Zera o índice de navegação antes de deslogar
-                ref.read(tecnicoNavigationIndexProvider.notifier).state = 0;
+                // Opcional: Redefinir para a primeira aba ao sair
+                if (_pageController.hasClients) {
+                  _pageController.jumpToPage(0);
+                }
                 ref.read(authProvider.notifier).logout();
               },
             ),
@@ -100,7 +133,7 @@ class TecnicoHomeScreen extends ConsumerWidget {
     );
   }
 
-  AppBar _buildAppBar(BuildContext context, WidgetRef ref) {
+  AppBar _buildAppBar(BuildContext context) {
     final authState = ref.watch(authProvider);
     final Usuario? tecnicoUser = authState.authenticatedUser;
 
@@ -129,7 +162,7 @@ class TecnicoHomeScreen extends ConsumerWidget {
           tooltip: 'Sair',
           onPressed: () {
             // **MODIFICADO** - Chama o diálogo de confirmação
-            _showLogoutConfirmationDialog(context, ref);
+            _showLogoutConfirmationDialog(context);
           },
         ),
         Padding(
@@ -151,9 +184,7 @@ class TecnicoHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBottomNavigationBar(BuildContext context, WidgetRef ref) {
-    final selectedIndex = ref.watch(tecnicoNavigationIndexProvider);
-
+  Widget _buildBottomNavigationBar(BuildContext context, int selectedIndex) {
     return BottomNavigationBar(
       items: const <BottomNavigationBarItem>[
         BottomNavigationBarItem(
@@ -181,6 +212,7 @@ class TecnicoHomeScreen extends ConsumerWidget {
       selectedLabelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
       unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
       onTap: (index) {
+        // Apenas atualiza o estado. O listener cuidará da animação.
         ref.read(tecnicoNavigationIndexProvider.notifier).state = index;
       },
     );
