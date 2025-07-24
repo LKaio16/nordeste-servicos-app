@@ -19,14 +19,23 @@ class OrcamentosListScreen extends ConsumerStatefulWidget {
 }
 
 class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
+  final TextEditingController _searchController = TextEditingController();
 
   // MUDANÇA 2: Recarregar dados ao iniciar a tela
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(orcamentoListProvider.notifier).loadOrcamentos(refresh: true);
+      ref.read(orcamentoListProvider.notifier).refreshOrcamentos();
+      final currentSearchTerm = ref.read(orcamentoListProvider).searchTerm;
+      _searchController.text = currentSearchTerm;
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   // --- Funções Auxiliares de Estilo (sem alterações) ---
@@ -68,7 +77,7 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
       backgroundColor: AppColors.backgroundGray,
       body: Column(
         children: [
-          _buildPageHeader(context, notifier),
+          _buildPageHeader(context, notifier, state.searchTerm),
           Expanded(
             child: _buildBodyContent(context, state, notifier),
           ),
@@ -79,10 +88,10 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
         heroTag: 'orcamentoListFAB',
         onPressed: () async {
           // Após a tela de novo orçamento ser fechada, recarrega a lista
-          final result = await Navigator.of(context).push(
+          await Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => const NovoOrcamentoScreen()),
           );
-          ref.read(orcamentoListProvider.notifier).loadOrcamentos(refresh: true);
+          ref.read(orcamentoListProvider.notifier).refreshOrcamentos();
         },
         backgroundColor: AppColors.primaryBlue,
         shape: const CircleBorder(),
@@ -92,7 +101,7 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
     );
   }
 
-  Widget _buildPageHeader(BuildContext context, OrcamentoListNotifier notifier) {
+  Widget _buildPageHeader(BuildContext context, OrcamentoListNotifier notifier, String currentSearchTerm) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       decoration: BoxDecoration(
@@ -106,18 +115,49 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
         children: [
           Text('Orçamentos', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textDark)),
           const SizedBox(height: 16),
-          TextField(
-            style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textDark),
-            decoration: InputDecoration(
-              hintText: 'Buscar por número, cliente...',
-              hintStyle: GoogleFonts.poppins(color: AppColors.textLight),
-              prefixIcon: const Icon(Icons.search, color: AppColors.textLight),
-              filled: true,
-              fillColor: AppColors.backgroundGray,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
-            ),
-            onSubmitted: (searchTerm) => notifier.loadOrcamentos(searchTerm: searchTerm, refresh: true),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textDark),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por número, cliente...',
+                    hintStyle: GoogleFonts.poppins(color: AppColors.textLight),
+                    prefixIcon: const Icon(Icons.search, color: AppColors.textLight),
+                    filled: true,
+                    fillColor: AppColors.backgroundGray,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
+                  ),
+                  onChanged: notifier.updateSearchTerm,
+                  onSubmitted: notifier.searchOrcamentos,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                decoration: BoxDecoration(color: AppColors.primaryBlue, borderRadius: BorderRadius.circular(12)),
+                child: IconButton(
+                  onPressed: () => notifier.searchOrcamentos(_searchController.text),
+                  icon: const Icon(Icons.search, color: Colors.white),
+                  tooltip: 'Pesquisar',
+                ),
+              ),
+              if (currentSearchTerm.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(color: AppColors.textLight, borderRadius: BorderRadius.circular(12)),
+                  child: IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      notifier.clearSearch();
+                    },
+                    icon: const Icon(Icons.clear, color: Colors.white),
+                    tooltip: 'Limpar pesquisa',
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -130,15 +170,15 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
     }
 
     if (state.errorMessage != null && state.orcamentos.isEmpty) {
-      return _buildErrorState(state.errorMessage!, () => notifier.loadOrcamentos(refresh: true));
+      return _buildErrorState(state.errorMessage!, () => notifier.refreshOrcamentos());
     }
 
     if (state.orcamentos.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState(state.searchTerm.isNotEmpty, notifier);
     }
 
     return RefreshIndicator(
-      onRefresh: () => notifier.loadOrcamentos(refresh: true),
+      onRefresh: () => notifier.refreshOrcamentos(),
       color: AppColors.primaryBlue,
       child: ListView.builder(
         padding: const EdgeInsets.all(16.0),
@@ -163,7 +203,7 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
             MaterialPageRoute(builder: (context) => OrcamentoDetailScreen(orcamentoId: orcamento.id!)),
           );
           // Ao voltar da tela de detalhes, recarrega a lista para refletir possíveis alterações
-          ref.read(orcamentoListProvider.notifier).loadOrcamentos(refresh: true);
+          ref.read(orcamentoListProvider.notifier).refreshOrcamentos();
         },
         borderRadius: BorderRadius.circular(12.0),
         child: Padding(
@@ -256,17 +296,17 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(bool isSearching, OrcamentoListNotifier notifier) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.receipt_long_outlined, size: 60, color: AppColors.textLight),
+            Icon(isSearching ? Icons.search_off : Icons.receipt_long_outlined, size: 60, color: AppColors.textLight),
             const SizedBox(height: 20),
             Text(
-              'Nenhum Orçamento Encontrado',
+              isSearching ? 'Nenhum resultado encontrado' : 'Nenhum Orçamento Encontrado',
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -275,10 +315,26 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Crie um novo orçamento para que ele apareça aqui.',
+              isSearching ? 'Tente ajustar os termos da sua busca.' : 'Crie um novo orçamento para que ele apareça aqui.',
               style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
               textAlign: TextAlign.center,
             ),
+            if (isSearching) ...[
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  _searchController.clear();
+                  notifier.clearSearch();
+                },
+                icon: const Icon(Icons.clear, color: Colors.white),
+                label: Text('Limpar Pesquisa', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+            ]
           ],
         ),
       ),

@@ -13,6 +13,7 @@ abstract class OrcamentoRepository {
     int? clienteId,
     StatusOrcamentoModel? status,
     int? ordemServicoOrigemId,
+    String? searchTerm,
   });
 
   /// Obtém um orçamento pelo seu ID.

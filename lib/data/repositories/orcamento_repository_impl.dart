@@ -20,6 +20,7 @@ class OrcamentoRepositoryImpl implements OrcamentoRepository {
     int? clienteId,
     StatusOrcamentoModel? status,
     int? ordemServicoOrigemId,
+    String? searchTerm,
   }) async {
      try {
       final Map<String, dynamic> queryParameters = {};
@@ -31,6 +32,9 @@ class OrcamentoRepositoryImpl implements OrcamentoRepository {
       }
       if (ordemServicoOrigemId != null) {
         queryParameters['ordemServicoOrigemId'] = ordemServicoOrigemId;
+      }
+      if (searchTerm != null && searchTerm.isNotEmpty) {
+        queryParameters['searchTerm'] = searchTerm;
       }
 
       final response = await apiClient.get('/orcamentos', queryParameters: queryParameters);
