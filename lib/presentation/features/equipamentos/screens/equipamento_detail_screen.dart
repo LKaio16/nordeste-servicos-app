@@ -8,6 +8,14 @@ import '../../../shared/styles/app_colors.dart';
 import '../providers/equipamento_detail_provider.dart';
 import '../providers/equipamento_list_provider.dart';
 import 'equipamento_edit_screen.dart'; // Placeholder
+import '../../clientes/screens/cliente_detail_screen.dart';
+
+// Adicione este provider no topo do arquivo (após os imports):
+final clienteByIdProvider = FutureProvider.family.autoDispose<String, int>((ref, clienteId) async {
+  final repo = ref.read(clienteRepositoryProvider);
+  final cliente = await repo.getClienteById(clienteId);
+  return cliente.nomeCompleto;
+});
 
 class EquipamentoDetailScreen extends ConsumerWidget {
   final int equipamentoId;
@@ -139,9 +147,91 @@ class EquipamentoDetailScreen extends ConsumerWidget {
                   title: 'Proprietário',
                   icon: Icons.person_search_outlined,
                   children: [
-                    // A entidade Equipamento possui clienteId, que é o que temos aqui.
-                    // Para exibir o nome, seria necessário um novo `FutureProvider` ou enriquecer o dado no backend.
-                    _buildDetailRow(label: 'ID do Cliente', value: equipamento.clienteId.toString(), icon: Icons.badge_outlined),
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final nomeAsync = ref.watch(clienteByIdProvider(equipamento.clienteId));
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => ClienteDetailScreen(clienteId: equipamento.clienteId),
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.badge_outlined, size: 18, color: AppColors.textLight),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'ID do Cliente:',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: AppColors.textLight,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      equipamento.clienteId.toString(),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textDark,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.abc, size: 18, color: AppColors.textLight),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Nome do cliente:',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: AppColors.textLight,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    nomeAsync.when(
+                                      data: (nome) => Flexible(
+                                        child: Row(
+                                          children: [
+                                            Text(
+                                              nome,
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.primaryBlue,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textLight),
+                                          ],
+                                        ),
+                                      ),
+                                      loading: () => const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                                      error: (e, _) => const Text('--'),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ],

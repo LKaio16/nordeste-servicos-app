@@ -214,29 +214,60 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
           ),
           const SizedBox(height: 12),
           // Seção de Filtros com novo design
-          /*SizedBox(
+          SizedBox(
             height: 38,
             child: ListView(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               children: [
-                  _buildFilterChip(
-                  'Filtros',
-                  icon: Icons.filter_list,
-                  isPrimary: true,
-                  onPressed: () { /* TODO: Abrir filtros avançados */ },
+                _buildFilterChip(
+                  'Todos',
+                  isSelected: state.selectedStatus == null,
+                  onPressed: () => notifier.filterByStatus(null),
                 ),
-             
                 const SizedBox(width: 8),
-                _buildFilterChip('Status', onPressed: () {}),
+                _buildFilterChip(
+                  'Em Aberto',
+                  isSelected: state.selectedStatus == StatusOSModel.EM_ABERTO,
+                  onPressed: () => notifier.filterByStatus(StatusOSModel.EM_ABERTO),
+                ),
                 const SizedBox(width: 8),
-                _buildFilterChip('Data', onPressed: () {}),
+                _buildFilterChip(
+                  'Em Andamento',
+                  isSelected: state.selectedStatus == StatusOSModel.EM_ANDAMENTO,
+                  onPressed: () => notifier.filterByStatus(StatusOSModel.EM_ANDAMENTO),
+                ),
                 const SizedBox(width: 8),
-                _buildFilterChip('Técnico', onPressed: () {}),
-
+                _buildFilterChip(
+                  'Aguardando Aprovação',
+                  isSelected: state.selectedStatus == StatusOSModel.AGUARDANDO_APROVACAO,
+                  onPressed: () => notifier.filterByStatus(StatusOSModel.AGUARDANDO_APROVACAO),
+                ),
+                const SizedBox(width: 8),
+                _buildFilterChip(
+                  'Concluída',
+                  isSelected: state.selectedStatus == StatusOSModel.CONCLUIDA,
+                  onPressed: () => notifier.filterByStatus(StatusOSModel.CONCLUIDA),
+                ),
+                const SizedBox(width: 8),
+                _buildFilterChip(
+                  'Cancelada',
+                  isSelected: state.selectedStatus == StatusOSModel.CANCELADA,
+                  onPressed: () => notifier.filterByStatus(StatusOSModel.CANCELADA),
+                ),
+                if (state.selectedStatus != null) ...[
+                  const SizedBox(width: 8),
+                  _buildFilterChip(
+                    'Limpar Filtros',
+                    icon: Icons.clear,
+                    isPrimary: true,
+                    iconColorOverride: Colors.white,
+                    onPressed: () => notifier.clearAllFilters(),
+                  ),
+                ],
               ],
             ),
-          ),  */
+          ),
         ],
       ),
     );
@@ -285,7 +316,7 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
     }
 
     if (state.ordensServico.isEmpty) {
-      return _buildEmptyState(state.searchTerm.isNotEmpty, notifier);
+      return _buildEmptyState(false, notifier);
     }
 
     // Mostra indicador de loading se estiver buscando
@@ -336,38 +367,39 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
 
   Widget _buildEmptyState(bool isSearching, OsListNotifier notifier) {
     final state = ref.watch(osListProvider);
+    final hasFilters = state.searchTerm.isNotEmpty || state.selectedStatus != null;
     
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-              isSearching ? Icons.search_off : Icons.inbox_outlined,
+              hasFilters ? Icons.filter_list_off : Icons.inbox_outlined,
               size: 60,
               color: Colors.grey.shade400
           ),
           const SizedBox(height: 16),
           Text(
-            isSearching ? 'Nenhum resultado encontrado' : 'Nenhuma Ordem de Serviço',
+            hasFilters ? 'Nenhum resultado encontrado' : 'Nenhuma Ordem de Serviço',
             style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
           ),
           const SizedBox(height: 8),
           Text(
-            isSearching
-                ? 'Nenhuma OS encontrada para "${state.searchTerm}".\nTente ajustar os termos da sua busca.'
+            hasFilters
+                ? _getEmptyStateMessage(state)
                 : 'Quando novas OS forem criadas, elas aparecerão aqui.',
             style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
             textAlign: TextAlign.center,
           ),
-          if (isSearching) ...[
+          if (hasFilters) ...[
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () {
                 _searchController.clear();
-                notifier.clearSearch();
+                notifier.clearAllFilters();
               },
               icon: const Icon(Icons.clear),
-              label: const Text('Limpar Pesquisa'),
+              label: const Text('Limpar Filtros'),
               style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
                   foregroundColor: Colors.white
@@ -379,27 +411,60 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
     );
   }
 
+  String _getEmptyStateMessage(OsListState state) {
+    if (state.searchTerm.isNotEmpty && state.selectedStatus != null) {
+      return 'Nenhuma OS encontrada para "${state.searchTerm}" com status "${_getStatusText(state.selectedStatus!)}".\nTente ajustar os filtros.';
+    } else if (state.searchTerm.isNotEmpty) {
+      return 'Nenhuma OS encontrada para "${state.searchTerm}".\nTente ajustar os termos da sua busca.';
+    } else if (state.selectedStatus != null) {
+      return 'Nenhuma OS encontrada com status "${_getStatusText(state.selectedStatus!)}".\nTente selecionar outro status.';
+    }
+    return 'Nenhuma OS encontrada com os filtros aplicados.';
+  }
+
   // Chip de filtro com novo design
-  Widget _buildFilterChip(String label, {required VoidCallback onPressed, IconData? icon, bool isPrimary = false}) {
+  Widget _buildFilterChip(String label, {
+    required VoidCallback onPressed, 
+    IconData? icon, 
+    bool isPrimary = false,
+    bool isSelected = false,
+    Color? iconColorOverride,
+  }) {
+    final backgroundColor = isSelected 
+        ? AppColors.primaryBlue 
+        : isPrimary 
+            ? AppColors.primaryBlue 
+            : AppColors.cardBackground;
+    
+    final textColor = (isSelected || isPrimary) ? Colors.white : AppColors.textDark;
+    final iconColor = iconColorOverride ?? ((isSelected || isPrimary) ? Colors.white : AppColors.primaryBlue);
+    final borderColor = isSelected 
+        ? AppColors.primaryBlue 
+        : AppColors.dividerColor;
+
     return ActionChip(
       onPressed: onPressed,
-      backgroundColor: isPrimary ? AppColors.primaryBlue : AppColors.cardBackground,
+      backgroundColor: backgroundColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20.0),
-        side: BorderSide(color: isPrimary ? Colors.transparent : AppColors.dividerColor, width: 1),
+        side: BorderSide(color: borderColor, width: 1),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       label: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null)
-            Icon(icon, size: 18, color: isPrimary ? Colors.white : AppColors.primaryBlue),
-          if (icon != null) const SizedBox(width: 6),
+          if (icon != null) ...[
+            iconColorOverride != null
+                ? Icon(icon, size: 18, color: iconColorOverride)
+                : Icon(icon, size: 18, color: iconColor),
+            const SizedBox(width: 6),
+          ],
           Text(
             label,
             style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: isPrimary ? Colors.white : AppColors.textDark,
+              color: textColor,
             ),
           ),
         ],

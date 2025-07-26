@@ -899,75 +899,76 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 32),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ElevatedButton.icon(
+              onPressed: (_isUpdatingStatus || _isOffline)
+                  ? null
+                  : () async {
+                      setUpdating(true);
+                      try {
+                        final osRepository = ref.read(osRepositoryProvider);
+                        await osRepository.updateOrdemServicoStatus(
+                          ordemServico.id!, StatusOSModel.EM_ANDAMENTO);
+                        ref.invalidate(osDetailProvider(widget.osId));
+                        ref.read(osListProvider.notifier).refreshOrdensServico();
+                        
+                        if(mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Atendimento iniciado!'),
+                              backgroundColor: AppColors.successGreen,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Erro ao iniciar atendimento: $e'),
+                              backgroundColor: AppColors.errorRed,
+                            ),
+                          );
+                        }
+                      } finally {
+                        if (mounted) {
+                          setUpdating(false);
+                        }
+                      }
+                    },
+              icon: _isUpdatingStatus
+                  ? Container(
+                      width: 24,
+                      height: 24,
+                      padding: const EdgeInsets.all(2.0),
+                      child: const CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 3,
+                      ),
+                    )
+                  : const Icon(Icons.play_circle_outline, color: Colors.white),
+              label: Text(
+                _isUpdatingStatus ? 'Iniciando...' : 'Iniciar Atendimento',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.successGreen,
+                minimumSize: const Size(double.infinity, 56),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 4,
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ElevatedButton.icon(
-          onPressed: (_isUpdatingStatus || _isOffline)
-              ? null
-              : () async {
-                  setUpdating(true);
-                  try {
-                    final osRepository = ref.read(osRepositoryProvider);
-                    await osRepository.updateOrdemServicoStatus(
-                      ordemServico.id!, StatusOSModel.EM_ANDAMENTO);
-                    ref.invalidate(osDetailProvider(widget.osId));
-                    ref.read(osListProvider.notifier).refreshOrdensServico();
-                    
-                    if(mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Atendimento iniciado!'),
-                          backgroundColor: AppColors.successGreen,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Erro ao iniciar atendimento: $e'),
-                          backgroundColor: AppColors.errorRed,
-                        ),
-                      );
-                    }
-                  } finally {
-                    if (mounted) {
-                      setUpdating(false);
-                    }
-                  }
-                },
-          icon: _isUpdatingStatus
-              ? Container(
-                  width: 24,
-                  height: 24,
-                  padding: const EdgeInsets.all(2.0),
-                  child: const CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 3,
-                  ),
-                )
-              : const Icon(Icons.play_circle_outline, color: Colors.white),
-          label: Text(
-            _isUpdatingStatus ? 'Iniciando...' : 'Iniciar Atendimento',
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: Colors.white,
-            ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.successGreen,
-            minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            elevation: 4,
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 

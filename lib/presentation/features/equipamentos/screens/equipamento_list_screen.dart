@@ -149,15 +149,21 @@ class EquipamentoListScreen extends ConsumerWidget {
             ),
           ],
         ),
-        child: FloatingActionButton(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const NovoEquipamentoScreen()),
+        child: Consumer(
+          builder: (context, ref, _) {
+            final notifier = ref.read(equipamentoListProvider.notifier);
+            return FloatingActionButton(
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const NovoEquipamentoScreen()),
+                );
+                notifier.loadEquipamentos(refresh: true);
+              },
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: const Icon(Icons.add, color: Colors.white, size: 28),
             );
           },
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: const Icon(Icons.add, color: Colors.white, size: 28),
         ),
       ),
     );
@@ -238,47 +244,73 @@ class EquipamentoListScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              child: TextField(
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: AppColors.textDark,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Buscar por tipo, marca, modelo ou série...',
-                  hintStyle: GoogleFonts.poppins(
-                    color: AppColors.textLight.withOpacity(0.7),
-                    fontSize: 14,
-                  ),
-                  prefixIcon: Container(
-                    margin: const EdgeInsets.all(12),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Consumer(
+                      builder: (context, ref, _) {
+                        final state = ref.watch(equipamentoListProvider);
+                        final notifier = ref.read(equipamentoListProvider.notifier);
+                        return TextField(
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: AppColors.textDark,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Buscar por tipo, marca, modelo ou série...',
+                            hintStyle: GoogleFonts.poppins(
+                              color: AppColors.textLight.withOpacity(0.7),
+                              fontSize: 14,
+                            ),
+                            prefixIcon: Container(
+                              margin: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryBlue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.search,
+                                size: 20,
+                                color: AppColors.primaryBlue,
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: AppColors.backgroundGray.withOpacity(0.5),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            suffixIcon: state.searchTerm.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(Icons.clear, color: AppColors.textLight),
+                                    onPressed: () {
+                                      notifier.updateSearchTerm('');
+                                    },
+                                  )
+                                : null,
+                          ),
+                          onChanged: notifier.updateSearchTerm,
+                          controller: TextEditingController.fromValue(
+                            TextEditingValue(
+                              text: state.searchTerm,
+                              selection: TextSelection.collapsed(offset: state.searchTerm.length),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                    child: Icon(
-                      Icons.search,
-                      size: 20,
-                      color: AppColors.primaryBlue,
-                    ),
                   ),
-                  filled: true,
-                  fillColor: AppColors.backgroundGray.withOpacity(0.5),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                ),
-                onSubmitted: (searchTerm) => notifier.loadEquipamentos(searchTerm: searchTerm, refresh: true),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -387,8 +419,8 @@ class EquipamentoListScreen extends ConsumerWidget {
     if (state.errorMessage != null && state.equipamentos.isEmpty) {
       return _buildErrorState(context, state.errorMessage!, () => notifier.loadEquipamentos(refresh: true));
     }
-    if (state.equipamentos.isEmpty) {
-      return _buildEmptyState(context); // Passando contexto conforme solicitado
+    if (state.filteredEquipamentos.isEmpty) {
+      return _buildEmptyState(context);
     }
 
     return RefreshIndicator(
@@ -397,9 +429,9 @@ class EquipamentoListScreen extends ConsumerWidget {
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         physics: const BouncingScrollPhysics(),
-        itemCount: state.equipamentos.length,
+        itemCount: state.filteredEquipamentos.length,
         itemBuilder: (context, index) {
-          final equipamento = state.equipamentos[index];
+          final equipamento = state.filteredEquipamentos[index];
           return _buildEquipamentoCard(context, equipamento);
         },
       ),
