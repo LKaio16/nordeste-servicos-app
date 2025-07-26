@@ -1,5 +1,6 @@
 // lib/features/ordem_servico/presentation/providers/os_list_provider.dart
 
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:nordeste_servicos_app/domain/entities/ordem_servico.dart';
@@ -48,9 +49,16 @@ class OsListState {
 
 class OsListNotifier extends StateNotifier<OsListState> {
   final OsRepository _osRepository;
+  Timer? _debounceTimer; // Timer para debounce da busca
 
   OsListNotifier(this._osRepository) : super(OsListState.initial()) {
     loadOrdensServico(refresh: true);
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> loadOrdensServico({
@@ -97,6 +105,9 @@ class OsListNotifier extends StateNotifier<OsListState> {
 // Método específico para pesquisa
 
   Future<void> searchOrdensServico(String searchTerm) async {
+    // Cancela o timer de debounce se existir
+    _debounceTimer?.cancel();
+    
     await loadOrdensServico(refresh: true, searchTerm: searchTerm);
   }
 
@@ -114,6 +125,14 @@ class OsListNotifier extends StateNotifier<OsListState> {
 
   void updateSearchTerm(String searchTerm) {
     state = state.copyWith(searchTerm: searchTerm);
+    
+    // Cancela o timer anterior se existir
+    _debounceTimer?.cancel();
+    
+    // Cria um novo timer para fazer a busca após 500ms de inatividade
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      loadOrdensServico();
+    });
   }
 }
 

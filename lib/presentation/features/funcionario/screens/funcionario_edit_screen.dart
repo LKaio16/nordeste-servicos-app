@@ -42,6 +42,8 @@ class _FuncionarioEditScreenState extends ConsumerState<FuncionarioEditScreen> {
     _crachaController = TextEditingController();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Força a atualização ao entrar na tela, invalidando o estado anterior.
+      ref.invalidate(funcionarioEditProvider(widget.funcionarioId));
       ref.read(funcionarioEditProvider(widget.funcionarioId).notifier).loadFuncionario(widget.funcionarioId);
     });
   }

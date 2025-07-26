@@ -1,12 +1,15 @@
 // lib/presentation/features/cliente/presentation/screens/novo_cliente_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart'; // Importando Google Fonts para fontes modernas
+import 'package:google_fonts/google_fonts.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 // Importar o provider e o estado
 import '../../../../data/models/tipo_cliente.dart';
 import '../../../shared/styles/app_colors.dart';
+import '../providers/cliente_list_provider.dart';
 import '../providers/novo_cliente_provider.dart';
 import '../providers/novo_cliente_state.dart';
 
@@ -36,6 +39,13 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
 
   // Estado para o tipo de cliente selecionado
   TipoCliente _tipoClienteSelecionado = TipoCliente.PESSOA_FISICA;
+
+  // Definição das máscaras
+  final _cpfMask = MaskTextInputFormatter(mask: '###.###.###-##', filter: {"#": RegExp(r'[0-9]')});
+  final _cnpjMask = MaskTextInputFormatter(mask: '##.###.###/####-##', filter: {"#": RegExp(r'[0-9]')});
+  final _phoneMask = MaskTextInputFormatter(mask: '(##) #####-####', filter: {"#": RegExp(r'[0-9]')});
+  final _cepMask = MaskTextInputFormatter(mask: '#####-###', filter: {"#": RegExp(r'[0-9]')});
+
 
   // Estado para o estado selecionado (exemplo, precisa de uma lista real)
   String? _estadoSelecionado;
@@ -153,7 +163,8 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
             margin: EdgeInsets.all(12),
           ),
         );
-        Navigator.of(context).pop();
+        // Retorna true para indicar sucesso e permitir que a tela anterior recarregue a lista
+        Navigator.of(context).pop(true);
       }
     });
 
@@ -267,17 +278,55 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
                             controller: _nomeController,
                             label: 'Nome Completo',
                             icon: Icons.person_outline,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Campo obrigatório';
+                              }
+                              if (value.length < 3) {
+                                return 'O nome deve ter no mínimo 3 caracteres';
+                              }
+                              // Regex para não permitir números e a maioria dos símbolos, mas permite acentos.
+                              if (!RegExp(r"^[a-zA-Z\sà-úÀ-Ú]*$").hasMatch(value)) {
+                                return 'Nome não pode conter números ou símbolos';
+                              }
+                              return null;
+                            },
                           ),
                           _buildTextFormField(
                             controller: _cpfCnpjController,
-                            label: 'CPF/CNPJ',
+                            label: _tipoClienteSelecionado == TipoCliente.PESSOA_FISICA ? 'CPF' : 'CNPJ',
                             icon: Icons.badge_outlined,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [_tipoClienteSelecionado == TipoCliente.PESSOA_FISICA ? _cpfMask : _cnpjMask],
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Campo obrigatório';
+                              }
+                              final unmaskedText = (_tipoClienteSelecionado == TipoCliente.PESSOA_FISICA ? _cpfMask : _cnpjMask).getUnmaskedText();
+                              if (_tipoClienteSelecionado == TipoCliente.PESSOA_FISICA && unmaskedText.length != 11) {
+                                return 'CPF inválido';
+                              }
+                              if (_tipoClienteSelecionado == TipoCliente.PESSOA_JURIDICA && unmaskedText.length != 14) {
+                                return 'CNPJ inválido';
+                              }
+                              return null;
+                            },
                           ),
                           _buildTextFormField(
                             controller: _emailController,
                             label: 'Email',
                             icon: Icons.email_outlined,
                             keyboardType: TextInputType.emailAddress,
+                             validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Campo obrigatório';
+                              }
+                              // Regex para validação de email simples
+                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                                return 'Digite um email válido';
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 32),
                           _buildSectionTitle('Contato', Icons.phone_outlined),
@@ -286,6 +335,7 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
                             label: 'Telefone Principal',
                             icon: Icons.phone_outlined,
                             keyboardType: TextInputType.phone,
+                            inputFormatters: [_phoneMask],
                           ),
                           _buildTextFormField(
                             controller: _telAdicionalController,
@@ -293,6 +343,7 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
                             icon: Icons.phone_android_outlined,
                             isOptional: true,
                             keyboardType: TextInputType.phone,
+                            inputFormatters: [_phoneMask],
                           ),
                           const SizedBox(height: 32),
                           _buildSectionTitle('Endereço', Icons.location_on_outlined),
@@ -301,6 +352,7 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
                             label: 'CEP',
                             icon: Icons.pin_outlined,
                             keyboardType: TextInputType.number,
+                            inputFormatters: [_cepMask],
                           ),
                           _buildTextFormField(
                             controller: _ruaController,
@@ -342,6 +394,7 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
                                   controller: _cidadeController,
                                   label: 'Cidade',
                                   icon: Icons.location_city_outlined,
+                                  validator: (value) => (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -626,6 +679,8 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
     required IconData icon,
     bool isOptional = false,
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -656,6 +711,7 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
             child: TextFormField(
               controller: controller,
               keyboardType: keyboardType,
+              inputFormatters: inputFormatters,
               style: GoogleFonts.poppins(
                 color: AppColors.textDark,
                 fontSize: 15,
@@ -703,11 +759,10 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
                   color: AppColors.textLight.withOpacity(0.7),
                 ),
               ),
-              validator: (value) {
+              validator: validator ?? (value) {
                 if (!isOptional && (value == null || value.isEmpty)) {
                   return 'Campo obrigatório';
                 }
-                // TODO: Adicionar validações específicas (email, CPF/CNPJ, CEP)
                 return null;
               },
             ),

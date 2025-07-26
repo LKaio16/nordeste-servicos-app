@@ -107,7 +107,7 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
       body: Column(
         children: [
           // NOVO: Cabeçalho da página com busca e filtros
-          _buildPageHeader(context, notifier),
+          _buildPageHeader(context, state, notifier),
 
           // Conteúdo Principal
           Expanded(
@@ -128,7 +128,7 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
   }
 
   // NOVO: Widget para o cabeçalho da página
-  Widget _buildPageHeader(BuildContext context, OsListNotifier notifier) {
+  Widget _buildPageHeader(BuildContext context, OsListState state, OsListNotifier notifier) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       decoration: BoxDecoration(
@@ -173,14 +173,8 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
                     ),
                     contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
                   ),
-                  onChanged: (value) {
-                    // Atualiza o termo de pesquisa no estado sem fazer a busca
-                    notifier.updateSearchTerm(value);
-                  },
-                  onSubmitted: (searchTerm) {
-                    // Executa a pesquisa quando o usuário pressiona Enter
-                    notifier.searchOrdensServico(searchTerm);
-                  },
+                  onChanged: notifier.updateSearchTerm,
+                  onSubmitted: notifier.searchOrdensServico,
                 ),
               ),
               const SizedBox(width: 8),
@@ -201,7 +195,7 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
               ),
               const SizedBox(width: 8),
               // Botão de limpar pesquisa
-              if (_searchController.text.isNotEmpty)
+              if (state.searchTerm.isNotEmpty)
                 Container(
                   decoration: BoxDecoration(
                     color: AppColors.textLight,
@@ -291,31 +285,41 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
     }
 
     if (state.ordensServico.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.inbox_outlined, size: 60, color: AppColors.textLight),
-            const SizedBox(height: 20),
-            Text(
-              'Nenhuma Ordem de Serviço',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textDark,
+      return _buildEmptyState(state.searchTerm.isNotEmpty, notifier);
+    }
+
+    // Mostra indicador de loading se estiver buscando
+    if (state.isLoading && state.ordensServico.isNotEmpty) {
+      return Stack(
+        children: [
+          _buildOsList(state, notifier),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Quando novas OS forem criadas, elas aparecerão aqui.',
-              style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
+    return _buildOsList(state, notifier);
+  }
+
+  Widget _buildOsList(OsListState state, OsListNotifier notifier) {
     return RefreshIndicator(
       onRefresh: () => notifier.refreshOrdensServico(),
       color: AppColors.primaryBlue,
@@ -326,6 +330,51 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
           final os = state.ordensServico[index];
           return _buildOsCard(context, os);
         },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isSearching, OsListNotifier notifier) {
+    final state = ref.watch(osListProvider);
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+              isSearching ? Icons.search_off : Icons.inbox_outlined,
+              size: 60,
+              color: Colors.grey.shade400
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isSearching ? 'Nenhum resultado encontrado' : 'Nenhuma Ordem de Serviço',
+            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isSearching
+                ? 'Nenhuma OS encontrada para "${state.searchTerm}".\nTente ajustar os termos da sua busca.'
+                : 'Quando novas OS forem criadas, elas aparecerão aqui.',
+            style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
+            textAlign: TextAlign.center,
+          ),
+          if (isSearching) ...[
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                _searchController.clear();
+                notifier.clearSearch();
+              },
+              icon: const Icon(Icons.clear),
+              label: const Text('Limpar Pesquisa'),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: Colors.white
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -510,49 +559,5 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
     );
   }
 
-  // Widget para o estado de lista vazia MODIFICADO
-  Widget _buildEmptyState(bool isSearching) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-              isSearching ? Icons.search_off : Icons.list_alt_outlined,
-              size: 60,
-              color: Colors.grey.shade400
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isSearching ? 'Nenhum resultado encontrado' : 'Nenhuma OS encontrada',
-            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isSearching
-                ? 'Tente ajustar os termos de pesquisa ou limpar os filtros.'
-                : 'Crie uma nova Ordem de Serviço ou ajuste os filtros.',
-            style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
-            textAlign: TextAlign.center,
-          ),
-          if (isSearching) ...[
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () {
-                _searchController.clear();
-                ref.read(osListProvider.notifier).clearSearch();
-              },
-              icon: const Icon(Icons.clear, color: Colors.white),
-              label: Text('Limpar Pesquisa', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBlue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 }
 

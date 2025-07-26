@@ -7,6 +7,26 @@ import 'novo_tecnico_state.dart';
 // TODO: Substitua pela URL base da sua API
 const String _apiBaseUrl = AppConfig.apiBaseUrl;
 
+// Função utilitária para converter texto para title case (primeira letra maiúscula)
+String _toTitleCase(String text) {
+  if (text.isEmpty) return text;
+  
+  // Remove espaços extras e divide em palavras
+  final words = text.trim().split(RegExp(r'\s+'));
+  
+  if (words.isEmpty) return text;
+  
+  // Converte cada palavra para title case (primeira letra maiúscula)
+  List<String> titleCaseWords = [];
+  for (String word in words) {
+    if (word.isNotEmpty) {
+      titleCaseWords.add(word[0].toUpperCase() + word.substring(1).toLowerCase());
+    }
+  }
+  
+  return titleCaseWords.join(' ');
+}
+
 final novoTecnicoProvider = StateNotifierProvider.autoDispose<
     NovoTecnicoNotifier, NovoTecnicoState>((ref) {
   return NovoTecnicoNotifier();
@@ -24,9 +44,12 @@ class NovoTecnicoNotifier extends StateNotifier<NovoTecnicoState> {
     state = state.copyWith(isSubmitting: true, submissionError: null);
 
     try {
+      // Aplicar title case ao nome antes de enviar
+      final nomeTitleCase = _toTitleCase(nome);
+      
       final url = Uri.parse('$_apiBaseUrl/usuarios');
       final body = jsonEncode({
-        'nome': nome,
+        'nome': nomeTitleCase, // Nome convertido para title case
         'cracha': cracha,
         'email': email,
         'senha': senha,

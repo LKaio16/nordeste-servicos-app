@@ -166,7 +166,39 @@ class _MinhasOsListScreenState extends ConsumerState<MinhasOsListScreen> {
     if (state.ordensServico.isEmpty) {
       return _buildEmptyState(state.searchTerm.isNotEmpty, notifier);
     }
+    
+    // Mostra indicador de loading se estiver buscando
+    if (state.isLoading && state.ordensServico.isNotEmpty) {
+      return Stack(
+        children: [
+          _buildOsList(state, notifier),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
 
+    return _buildOsList(state, notifier);
+  }
+
+  Widget _buildOsList(MinhasOsListState state, MinhasOsListNotifier notifier) {
     // A ordenação agora é feita na UI para garantir que OS em atendimento fiquem no topo
     final sortedList = List<OrdemServico>.from(state.ordensServico)
       ..sort((a, b) {
@@ -194,6 +226,8 @@ class _MinhasOsListScreenState extends ConsumerState<MinhasOsListScreen> {
   }
 
   Widget _buildEmptyState(bool isSearching, MinhasOsListNotifier notifier) {
+    final state = ref.watch(minhasOsListProvider);
+    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -211,7 +245,7 @@ class _MinhasOsListScreenState extends ConsumerState<MinhasOsListScreen> {
           const SizedBox(height: 8),
           Text(
             isSearching
-                ? 'Tente ajustar os termos da sua busca.'
+                ? 'Nenhuma OS encontrada para "${state.searchTerm}".\nTente ajustar os termos da sua busca.'
                 : 'Quando novas OS forem atribuídas a você, elas aparecerão aqui.',
             style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
             textAlign: TextAlign.center,

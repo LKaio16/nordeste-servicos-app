@@ -33,10 +33,34 @@ class OsRepositoryImpl implements OsRepository {
     DateTime? dataAgendamento, // Adicionado
   }) async {
     try {
-       // First, return local data if available
-      final localOs = await localDataSource.getAllOs();
-      if(localOs.isNotEmpty){
-        return localOs.map((model) => model.toEntity()).toList();
+      // Verifica se há internet
+      final hasInternet = await connectivity.checkConnectivity() != ConnectivityResult.none;
+      
+      if (!hasInternet) {
+        // Se não há internet, filtra os dados locais pelos parâmetros fornecidos
+        final localOs = await localDataSource.getAllOs();
+        if (localOs.isNotEmpty) {
+          var filteredOs = localOs;
+          
+          // Aplica filtros nos dados locais
+          if (tecnicoId != null) {
+            filteredOs = filteredOs.where((os) => os.tecnicoAtribuidoModel?.id == tecnicoId).toList();
+          }
+          if (clienteId != null) {
+            filteredOs = filteredOs.where((os) => os.cliente.id == clienteId).toList();
+          }
+          if (status != null) {
+            filteredOs = filteredOs.where((os) => os.status == status).toList();
+          }
+          if (searchTerm != null && searchTerm.isNotEmpty) {
+            filteredOs = filteredOs.where((os) => 
+              os.numeroOS.toLowerCase().contains(searchTerm.toLowerCase()) ||
+              os.cliente.nomeCompleto.toLowerCase().contains(searchTerm.toLowerCase())
+            ).toList();
+          }
+          
+          return filteredOs.map((model) => model.toEntity()).toList();
+        }
       }
 
       final Map<String, dynamic> queryParameters = {};

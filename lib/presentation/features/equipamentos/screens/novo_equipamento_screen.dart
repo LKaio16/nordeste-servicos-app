@@ -20,10 +20,62 @@ class _NovoEquipamentoScreenState extends ConsumerState<NovoEquipamentoScreen> {
   final _serieChassiController = TextEditingController();
   final _horimetroController = TextEditingController();
   String? _selectedClienteId;
+  
+  // Função para formatar horímetro (aceita apenas números e vírgula/ponto)
+  String _formatHorimetro(String value) {
+    // Remove todos os caracteres exceto números, vírgula e ponto
+    String cleaned = value.replaceAll(RegExp(r'[^\d,.]'), '');
+    
+    // Se não há separador decimal, retorna como está
+    if (!cleaned.contains(',') && !cleaned.contains('.')) {
+      return cleaned;
+    }
+    
+    // Se há ambos separadores, mantém apenas o primeiro que aparece
+    if (cleaned.contains(',') && cleaned.contains('.')) {
+      int firstComma = cleaned.indexOf(',');
+      int firstDot = cleaned.indexOf('.');
+      if (firstComma < firstDot) {
+        // Vírgula aparece primeiro, remove pontos
+        cleaned = cleaned.replaceAll('.', '');
+      } else {
+        // Ponto aparece primeiro, remove vírgulas
+        cleaned = cleaned.replaceAll(',', '');
+      }
+    }
+    
+    // Se há múltiplos separadores do mesmo tipo, mantém apenas o primeiro
+    if (cleaned.contains(',')) {
+      List<String> parts = cleaned.split(',');
+      if (parts.length > 2) {
+        cleaned = parts[0] + ',' + parts.sublist(1).join('');
+      }
+    } else if (cleaned.contains('.')) {
+      List<String> parts = cleaned.split('.');
+      if (parts.length > 2) {
+        cleaned = parts[0] + '.' + parts.sublist(1).join('');
+      }
+    }
+    
+    return cleaned;
+  }
 
   @override
   void initState() {
     super.initState();
+    
+    // Adicionar listener para formatar horímetro em tempo real
+    _horimetroController.addListener(() {
+      final text = _horimetroController.text;
+      final formatted = _formatHorimetro(text);
+      if (text != formatted) {
+        _horimetroController.value = TextEditingValue(
+          text: formatted,
+          selection: TextSelection.collapsed(offset: formatted.length),
+        );
+      }
+    });
+    
     // Atraso para garantir que o contexto está disponível
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(novoEquipamentoProvider.notifier).loadInitialData();
@@ -114,7 +166,7 @@ class _NovoEquipamentoScreenState extends ConsumerState<NovoEquipamentoScreen> {
                   _buildTextFormField(controller: _tipoController, label: 'Tipo*', icon: Icons.category_outlined, hint: 'Ex: Gerador, Compressor'),
                   _buildTextFormField(controller: _marcaModeloController, label: 'Marca/Modelo*', icon: Icons.branding_watermark_outlined, hint: 'Ex: Cummins C220D5'),
                   _buildTextFormField(controller: _serieChassiController, label: 'Nº de Série/Chassi*', icon: Icons.confirmation_number_outlined, hint: 'Ex: ABC123XYZ789'),
-                  _buildTextFormField(controller: _horimetroController, label: 'Horímetro', icon: Icons.timer_outlined, keyboardType: const TextInputType.numberWithOptions(decimal: true), hint: 'Ex: 1500.5', isOptional: true),
+                  _buildHorimetroField(),
                   const SizedBox(height: 32),
                   _buildSaveButton(state.isSubmitting),
                 ],
@@ -147,12 +199,12 @@ class _NovoEquipamentoScreenState extends ConsumerState<NovoEquipamentoScreen> {
 
   Widget _buildDropdownFormField({required String? value, required List<DropdownMenuItem<String>> items, required ValueChanged<String?> onChanged, required String label, required IconData icon, required String hint}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+      padding: const EdgeInsets.only(bottom: 28.0), // Aumentado significativamente o espaçamento inferior
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10), // Aumentado o espaçamento entre label e campo
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -170,9 +222,17 @@ class _NovoEquipamentoScreenState extends ConsumerState<NovoEquipamentoScreen> {
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5)),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5)),
+                errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.errorRed, width: 1.5)),
+                focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.errorRed, width: 1.5)),
                 contentPadding: const EdgeInsets.all(16),
                 hintText: hint,
                 hintStyle: GoogleFonts.poppins(color: AppColors.textLight.withOpacity(0.7)),
+                // Adiciona espaçamento para a mensagem de erro
+                errorStyle: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: AppColors.errorRed,
+                  height: 1.2,
+                ),
               ),
               icon: const Icon(Icons.arrow_drop_down, color: AppColors.primaryBlue),
               dropdownColor: Colors.white,
@@ -186,12 +246,12 @@ class _NovoEquipamentoScreenState extends ConsumerState<NovoEquipamentoScreen> {
 
   Widget _buildTextFormField({required TextEditingController controller, required String label, required String hint, required IconData icon, TextInputType? keyboardType, bool isOptional = false}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+      padding: const EdgeInsets.only(bottom: 28.0), // Aumentado significativamente o espaçamento inferior
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label + (isOptional ? '' : ''), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10), // Aumentado o espaçamento entre label e campo
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -208,13 +268,84 @@ class _NovoEquipamentoScreenState extends ConsumerState<NovoEquipamentoScreen> {
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5)),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5)),
                 errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.errorRed, width: 1.5)),
+                focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.errorRed, width: 1.5)),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 hintText: hint,
                 hintStyle: GoogleFonts.poppins(color: AppColors.textLight.withOpacity(0.7)),
+                // Adiciona espaçamento para a mensagem de erro
+                errorStyle: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: AppColors.errorRed,
+                  height: 1.2,
+                ),
               ),
               validator: (value) {
                 if (!isOptional && (value == null || value.isEmpty)) {
                   return 'Campo obrigatório';
+                }
+                return null;
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHorimetroField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20.0), // Aumentado o espaçamento inferior
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Horímetro (Opcional)', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [BoxShadow(color: AppColors.primaryBlue.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))],
+            ),
+            child: TextFormField(
+              controller: _horimetroController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: GoogleFonts.poppins(color: AppColors.textDark, fontSize: 15),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.timer_outlined, color: AppColors.primaryBlue),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5)),
+                errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.errorRed, width: 1.5)),
+                focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.errorRed, width: 1.5)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                hintText: 'Ex: 1500.5 ou 1500,5',
+                hintStyle: GoogleFonts.poppins(color: AppColors.textLight.withOpacity(0.7)),
+                suffixText: 'horas',
+                suffixStyle: GoogleFonts.poppins(color: AppColors.textLight, fontSize: 12),
+                // Adiciona espaçamento para a mensagem de erro
+                errorStyle: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: AppColors.errorRed,
+                  height: 1.2,
+                ),
+              ),
+              validator: (value) {
+                if (value != null && value.isNotEmpty) {
+                  // Remove vírgula e converte para ponto para validação
+                  final cleanValue = value.replaceAll(',', '.');
+                  final doubleValue = double.tryParse(cleanValue);
+                  
+                  if (doubleValue == null) {
+                    return 'Digite um valor numérico válido';
+                  }
+                  
+                  if (doubleValue < 0) {
+                    return 'O horímetro não pode ser negativo';
+                  }
+                  
+                  if (doubleValue > 999999.99) {
+                    return 'O horímetro não pode ser maior que 999.999,99';
+                  }
                 }
                 return null;
               },

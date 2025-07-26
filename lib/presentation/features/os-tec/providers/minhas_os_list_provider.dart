@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -44,6 +45,7 @@ class MinhasOsListState extends Equatable {
 class MinhasOsListNotifier extends StateNotifier<MinhasOsListState> {
   final OsRepository _osRepository;
   final int? _tecnicoId; // ID do técnico logado
+  Timer? _debounceTimer; // Timer para debounce da busca
 
   MinhasOsListNotifier(this._osRepository, this._tecnicoId) : super(const MinhasOsListState()) {
     // Carrega as OS do técnico ao iniciar, se o ID estiver disponível
@@ -55,6 +57,12 @@ class MinhasOsListNotifier extends StateNotifier<MinhasOsListState> {
     }
   }
 
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> loadMinhasOrdensServico({bool refresh = false}) async {
     if (state.isLoading && !refresh) return;
     if (_tecnicoId == null) return; // Não faz nada se não houver ID
@@ -64,7 +72,7 @@ class MinhasOsListNotifier extends StateNotifier<MinhasOsListState> {
     try {
       // Passa o ID do técnico e o termo de busca para o repositório
       final ordens = await _osRepository.getOrdensServico(
-        tecnicoId: _tecnicoId!,
+        tecnicoId: _tecnicoId,
         searchTerm: state.searchTerm,
       );
       state = state.copyWith(ordensServico: ordens, isLoading: false);
@@ -78,9 +86,20 @@ class MinhasOsListNotifier extends StateNotifier<MinhasOsListState> {
 
   void updateSearchTerm(String searchTerm) {
     state = state.copyWith(searchTerm: searchTerm);
+    
+    // Cancela o timer anterior se existir
+    _debounceTimer?.cancel();
+    
+    // Cria um novo timer para fazer a busca após 500ms de inatividade
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      loadMinhasOrdensServico();
+    });
   }
 
   Future<void> searchOrdensServico(String searchTerm) async {
+    // Cancela o timer de debounce se existir
+    _debounceTimer?.cancel();
+    
     state = state.copyWith(searchTerm: searchTerm);
     await loadMinhasOrdensServico();
   }

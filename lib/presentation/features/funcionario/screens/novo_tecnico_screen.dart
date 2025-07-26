@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart'; // Importando Google Fonts para
 // Importar o provider e o estado
 import '../../../shared/styles/app_colors.dart';
 import '../providers/novo_tecnico_provider.dart';
+import '../providers/funcionario_list_provider.dart'; // Adicionado para ref.invalidate
 
 import '../providers/novo_tecnico_state.dart'; // Ajuste o caminho se necessário
 
@@ -33,6 +34,26 @@ class _NovoTecnicoScreenState extends ConsumerState<NovoTecnicoScreen> with Sing
   // Estado para visibilidade da senha
   bool _isSenhaObscured = true;
 
+  // Função para converter texto para title case (primeira letra maiúscula)
+  String _toTitleCase(String text) {
+    if (text.isEmpty) return text;
+    
+    // Remove espaços extras e divide em palavras
+    final words = text.trim().split(RegExp(r'\s+'));
+    
+    if (words.isEmpty) return text;
+    
+    // Converte cada palavra para title case (primeira letra maiúscula)
+    List<String> titleCaseWords = [];
+    for (String word in words) {
+      if (word.isNotEmpty) {
+        titleCaseWords.add(word[0].toUpperCase() + word.substring(1).toLowerCase());
+      }
+    }
+    
+    return titleCaseWords.join(' ');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +69,13 @@ class _NovoTecnicoScreenState extends ConsumerState<NovoTecnicoScreen> with Sing
       ),
     );
     _animationController.forward();
+    
+    // Adicionar listener para atualizar o preview do nome
+    _nomeController.addListener(() {
+      setState(() {
+        // Força a reconstrução do widget para atualizar o preview
+      });
+    });
   }
 
   @override
@@ -108,6 +136,7 @@ class _NovoTecnicoScreenState extends ConsumerState<NovoTecnicoScreen> with Sing
               margin: EdgeInsets.all(12),
             ),
           );
+          ref.invalidate(funcionarioListProvider);
           Navigator.of(context).pop();
         }
       }
@@ -172,7 +201,52 @@ class _NovoTecnicoScreenState extends ConsumerState<NovoTecnicoScreen> with Sing
                             controller: _nomeController,
                             label: 'Nome Completo',
                             icon: Icons.person_outline,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Campo obrigatório';
+                              }
+                              if (value.length < 3) {
+                                return 'O nome deve ter no mínimo 3 caracteres';
+                              }
+                              // Verificar se tem pelo menos duas palavras (nome e sobrenome)
+                              final words = value.trim().split(RegExp(r'\s+'));
+                              if (words.length < 2) {
+                                return 'Digite o nome completo (nome e sobrenome)';
+                              }
+                              // Regex para não permitir números e a maioria dos símbolos, mas permite acentos
+                              if (!RegExp(r"^[a-zA-Z\sà-úÀ-Ú]*$").hasMatch(value)) {
+                                return 'Nome não pode conter números ou símbolos';
+                              }
+                              return null;
+                            },
                           ),
+                          // Preview do nome em title case
+                          if (_nomeController.text.isNotEmpty)
+                            Container(
+                              margin: EdgeInsets.only(bottom: 16),
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryBlue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.primaryBlue.withOpacity(0.3)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.info_outline, color: AppColors.primaryBlue, size: 16),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Nome será salvo como: ${_toTitleCase(_nomeController.text)}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: AppColors.primaryBlue,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           _buildTextFormField(
                             controller: _crachaController,
                             label: 'Crachá',
@@ -291,9 +365,10 @@ class _NovoTecnicoScreenState extends ConsumerState<NovoTecnicoScreen> with Sing
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
     Widget? suffixIcon, // NOVO para botão de visibilidade da senha
+    String? Function(String?)? validator, // Validação personalizada opcional
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+      padding: const EdgeInsets.only(bottom: 28.0), // Aumentado significativamente o espaçamento inferior
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -301,7 +376,7 @@ class _NovoTecnicoScreenState extends ConsumerState<NovoTecnicoScreen> with Sing
             label + (isOptional ? '' : '*'),
             style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10), // Aumentado o espaçamento entre label e campo
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -324,8 +399,14 @@ class _NovoTecnicoScreenState extends ConsumerState<NovoTecnicoScreen> with Sing
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 hintText: 'Digite ${label.toLowerCase()}',
                 hintStyle: GoogleFonts.poppins(color: AppColors.textLight.withOpacity(0.7)),
+                // Adiciona espaçamento para a mensagem de erro
+                errorStyle: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: AppColors.errorRed,
+                  height: 1.4, // Aumentado o espaçamento da linha
+                ),
               ),
-              validator: (value) {
+              validator: validator ?? (value) {
                 if (!isOptional && (value == null || value.isEmpty)) {
                   return 'Campo obrigatório';
                 }
@@ -343,6 +424,8 @@ class _NovoTecnicoScreenState extends ConsumerState<NovoTecnicoScreen> with Sing
               },
             ),
           ),
+          // Espaçamento extra após o campo para dar "respiro" para mensagens de erro
+          const SizedBox(height: 4),
         ],
       ),
     );
