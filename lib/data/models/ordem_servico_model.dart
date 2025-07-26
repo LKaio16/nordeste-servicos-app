@@ -100,4 +100,38 @@ class OrdemServicoModel {
       solucaoAplicada: entity.solucaoAplicada,
     );
   }
+
+    OrdemServicoModel copyWith({
+    int? id,
+    String? numeroOS,
+    StatusOSModel? status,
+    DateTime? dataAbertura,
+    DateTime? dataAgendamento,
+    DateTime? dataFechamento,
+    DateTime? dataHoraEmissao,
+    ClienteModel? cliente,
+    EquipamentoModel? equipamento,
+    UsuarioModel? tecnicoAtribuidoModel,
+    String? problemaRelatado,
+    String? analiseFalha,
+    String? solucaoAplicada,
+    PrioridadeOSModel? prioridade,
+  }) {
+    return OrdemServicoModel(
+      id: id ?? this.id,
+      numeroOS: numeroOS ?? this.numeroOS,
+      status: status ?? this.status,
+      dataAbertura: dataAbertura ?? this.dataAbertura,
+      dataAgendamento: dataAgendamento ?? this.dataAgendamento,
+      dataFechamento: dataFechamento ?? this.dataFechamento,
+      dataHoraEmissao: dataHoraEmissao ?? this.dataHoraEmissao,
+      cliente: cliente ?? this.cliente,
+      equipamento: equipamento ?? this.equipamento,
+      tecnicoAtribuidoModel: tecnicoAtribuidoModel ?? this.tecnicoAtribuidoModel,
+      problemaRelatado: problemaRelatado ?? this.problemaRelatado,
+      analiseFalha: analiseFalha ?? this.analiseFalha,
+      solucaoAplicada: solucaoAplicada ?? this.solucaoAplicada,
+      prioridade: prioridade ?? this.prioridade,
+    );
+  }
 }

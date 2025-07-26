@@ -28,15 +28,15 @@ class OrdemServico extends Equatable {
 
   final Usuario? tecnicoAtribuido;
   final String? problemaRelatado;
-  final String? analiseFalha;
-  final String? solucaoAplicada;
+  String? analiseFalha;
+  String? solucaoAplicada;
   final List<RegistroTempo>? registrosTempo;
   final List<RegistroDeslocamento>? registrosDeslocamento;
   final List<ItemOSUtilizado>? itensUtilizados;
   final List<FotoOS>? fotos;
   final AssinaturaOS? assinatura;
 
-  const OrdemServico({
+  OrdemServico({
     this.id,
     required this.numeroOS,
     required this.status,
@@ -57,6 +57,42 @@ class OrdemServico extends Equatable {
     this.fotos,
     this.assinatura,
   });
+
+  OrdemServico copyWith({
+    int? id,
+    String? numeroOS,
+    StatusOSModel? status,
+    PrioridadeOSModel? prioridade,
+    DateTime? dataAbertura,
+    DateTime? dataAgendamento,
+    DateTime? dataFechamento,
+    DateTime? dataHoraEmissao,
+    Cliente? cliente,
+    Equipamento? equipamento,
+    Usuario? tecnicoAtribuido,
+    String? problemaRelatado,
+    String? analiseFalha,
+    String? solucaoAplicada,
+  }) {
+    return OrdemServico(
+      id: id ?? this.id,
+      numeroOS: numeroOS ?? this.numeroOS,
+      status: status ?? this.status,
+      prioridade: prioridade ?? this.prioridade,
+      dataAbertura: dataAbertura ?? this.dataAbertura,
+      dataAgendamento: dataAgendamento ?? this.dataAgendamento,
+      dataFechamento: dataFechamento ?? this.dataFechamento,
+      dataHoraEmissao: dataHoraEmissao ?? this.dataHoraEmissao,
+      cliente: cliente ?? this.cliente,
+      equipamento: equipamento ?? this.equipamento,
+      tecnicoAtribuido: tecnicoAtribuido ?? this.tecnicoAtribuido,
+      problemaRelatado: problemaRelatado ?? this.problemaRelatado,
+      analiseFalha: analiseFalha ?? this.analiseFalha,
+      solucaoAplicada: solucaoAplicada ?? this.solucaoAplicada,
+      fotos: this.fotos, // Keep existing photos
+      assinatura: this.assinatura, // Keep existing signature
+    );
+  }
 
   @override
   List<Object?> get props => [

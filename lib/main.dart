@@ -16,8 +16,11 @@ import 'package:nordeste_servicos_app/presentation/features/orcamentos/providers
 import 'package:nordeste_servicos_app/domain/entities/usuario.dart'; // Importe a entidade Usuario
 import 'package:nordeste_servicos_app/data/models/perfil_usuario_model.dart'; // Importe o PerfilUsuarioModel
 import 'package:nordeste_servicos_app/presentation/features/os/screens/nova_os_screen.dart';
+import 'package:nordeste_servicos_app/core/sync/sync_service.dart';
+import 'package:nordeste_servicos_app/presentation/shared/providers/repository_providers.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -30,6 +33,10 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+
+    // Start the sync service
+    ref.read(syncServiceProvider).start();
+
     ref.listen<AuthState>(authProvider, (previousState, newState) {
       if (newState.authenticatedUser != null && previousState?.authenticatedUser == null) {
         print('DEBUG: Usuário logado detectado. Acionando busca de dados do dashboard.');

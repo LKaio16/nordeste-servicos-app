@@ -9,13 +9,20 @@ import '../../domain/entities/ordem_servico.dart'; // Importe a entidade de dom�
 import '../../domain/repositories/os_repository.dart'; // Importe a interface do repositório
 import '../../data/models/status_os_model.dart'; // Para usar o enum como parâmetro
 import '../models/prioridade_os_model.dart';
+import '../datasources/local/os_local_data_source.dart';
+import '../datasources/local/sync_queue_local_data_source.dart';
+import '../models/sync_queue_item_model.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 
 
 class OsRepositoryImpl implements OsRepository {
   final ApiClient apiClient;
+  final OsLocalDataSource localDataSource;
+  final SyncQueueLocalDataSource syncQueue;
+  final Connectivity connectivity;
 
-  OsRepositoryImpl(this.apiClient);
+  OsRepositoryImpl(this.apiClient, this.localDataSource, this.syncQueue, this.connectivity);
 
   @override
   Future<List<OrdemServico>> getOrdensServico({
@@ -26,6 +33,12 @@ class OsRepositoryImpl implements OsRepository {
     DateTime? dataAgendamento, // Adicionado
   }) async {
     try {
+       // First, return local data if available
+      final localOs = await localDataSource.getAllOs();
+      if(localOs.isNotEmpty){
+        return localOs.map((model) => model.toEntity()).toList();
+      }
+
       final Map<String, dynamic> queryParameters = {};
       if (searchTerm != null && searchTerm.isNotEmpty) queryParameters['searchTerm'] = searchTerm;
       if (clienteId != null) queryParameters['clienteId'] = clienteId;
@@ -38,6 +51,13 @@ class OsRepositoryImpl implements OsRepository {
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = response.data;
         final List<OrdemServicoModel> osModels = jsonList.map((json) => OrdemServicoModel.fromJson(json)).toList();
+
+        // Cache the results
+        await localDataSource.clearAll();
+        for (var os in osModels) {
+          await localDataSource.saveOrUpdateOs(os);
+        }
+
         return osModels.map((model) => model.toEntity()).toList();
       } else {
         throw ApiException('Falha ao carregar ordens de serviço: Status ${response.statusCode}');
@@ -52,23 +72,48 @@ class OsRepositoryImpl implements OsRepository {
   }
 
   @override
-  Future<OrdemServico> getOrdemServicoById(int id) async {
-    try {
-      final response = await apiClient.get('/ordens-servico/$id');
+  Future<OrdemServico> getOrdemServicoById(int osId) async {
+    final hasInternet = await connectivity.checkConnectivity() != ConnectivityResult.none;
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> json = response.data;
-        final OrdemServicoModel osModel = OrdemServicoModel.fromJson(json);
-        return osModel.toEntity();
-      } else {
-        throw ApiException('Falha ao carregar ordem de serviço $id: Status ${response.statusCode}');
+    if (hasInternet) {
+      try {
+        final response = await apiClient.get('/ordens-servico/$osId');
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> json = response.data;
+          final OrdemServicoModel osModel = OrdemServicoModel.fromJson(json);
+          // Cache the fresh result
+          await localDataSource.saveOrUpdateOs(osModel);
+          return osModel.toEntity();
+        } else {
+          // If network fails, try to fall back to cache
+          final localOs = await localDataSource.getOsById(osId);
+          if (localOs != null) {
+            return localOs.toEntity();
+          }
+          throw ApiException('Falha ao carregar ordem de serviço $osId: Status ${response.statusCode}');
+        }
+      } on ApiException {
+        rethrow;
+      } on DioException catch (e) {
+         // If network fails, try to fall back to cache
+        final localOs = await localDataSource.getOsById(osId);
+        if (localOs != null) {
+          return localOs.toEntity();
+        }
+        throw ApiException('Erro de rede ao carregar ordem de serviço $osId: ${e.message}');
+      } catch (e) {
+        throw ApiException('Erro inesperado ao carregar ordem de serviço $osId: ${e.toString()}');
       }
-    } on ApiException {
-      rethrow;
-    } on DioException catch (e) {
-      throw ApiException('Erro de rede ao carregar ordem de serviço $id: ${e.message}');
-    } catch (e) {
-      throw ApiException('Erro inesperado ao carregar ordem de serviço $id: ${e.toString()}');
+    } else {
+      // Se não houver internet, vá direto para o cache local
+      final localOs = await localDataSource.getOsById(osId);
+      if (localOs != null) {
+        return localOs.toEntity();
+      } else {
+        throw Exception(
+            'Dispositivo offline e sem dados de OS em cache.');
+      }
     }
   }
 
@@ -84,11 +129,31 @@ class OsRepositoryImpl implements OsRepository {
         print('JSON sendo enviado para createOrdemServico: ${osModel.toJson()}');
       }
 
+      // Check connectivity
+      final connectivityResult = await connectivity.checkConnectivity();
+      if (connectivityResult == ConnectivityResult.none) {
+        // Offline: save to sync queue and local db with temporary ID
+        final tempOs = osModel.copyWith(id: DateTime.now().millisecondsSinceEpoch * -1);
+        await localDataSource.saveOrUpdateOs(tempOs);
+        await syncQueue.addToQueue(
+          SyncQueueItemModel(
+            url: '/ordens-servico',
+            method: 'POST',
+            body: osModel.toJson(),
+            timestamp: DateTime.now().millisecondsSinceEpoch,
+            tempId: tempOs.id,
+          ),
+        );
+        return tempOs.toEntity();
+      }
+
       final response = await apiClient.post('/ordens-servico', data: osModel.toJson());
 
       if (response.statusCode == 201) {
         final Map<String, dynamic> json = response.data;
         final OrdemServicoModel createdOsModel = OrdemServicoModel.fromJson(json);
+        // Cache the new OS
+        await localDataSource.saveOrUpdateOs(createdOsModel);
         return createdOsModel.toEntity();
       } else {
         throw ApiException('Falha ao criar Ordem de Serviço: Status ${response.statusCode}');
@@ -152,12 +217,43 @@ class OsRepositoryImpl implements OsRepository {
         print('JSON sendo enviado para updateOrdemServico: $requestData');
       }
 
+       // Check connectivity
+      final connectivityResult = await connectivity.checkConnectivity();
+      if (connectivityResult == ConnectivityResult.none) {
+        // Offline: update local db and add to sync queue
+        final osToUpdate = await localDataSource.getOsById(osId);
+        if (osToUpdate != null) {
+          // This is a simplified update. A real implementation might need more complex merging logic.
+          final updatedOs = osToUpdate.copyWith(
+            status: status,
+            analiseFalha: analiseFalha ?? osToUpdate.analiseFalha,
+            solucaoAplicada: solucaoAplicada ?? osToUpdate.solucaoAplicada,
+          );
+          await localDataSource.saveOrUpdateOs(updatedOs);
+          // Return the locally updated entity
+          return;
+        }
+        await syncQueue.addToQueue(
+          SyncQueueItemModel(
+            url: '/ordens-servico/$osId',
+            method: 'PUT',
+            body: requestData,
+            timestamp: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
+        return;
+      }
+
       final response = await apiClient.put(
         '/ordens-servico/$osId',
         data: requestData,
       );
 
       if (response.statusCode == 200) {
+        // After update, fetch the updated OS and cache it
+        final updatedOs = await getOrdemServicoById(osId);
+        final osModel = OrdemServicoModel.fromEntity(updatedOs);
+        await localDataSource.saveOrUpdateOs(osModel);
         return;
       } else {
         throw ApiException('Falha ao atualizar ordem de serviço $osId: Status ${response.statusCode}');
@@ -210,9 +306,26 @@ class OsRepositoryImpl implements OsRepository {
   @override
   Future<void> deleteOrdemServico(int id) async {
     try {
+       // Check connectivity
+      final connectivityResult = await connectivity.checkConnectivity();
+      if (connectivityResult == ConnectivityResult.none) {
+        // Offline: delete from local db and add to sync queue
+        await localDataSource.deleteOs(id);
+        await syncQueue.addToQueue(
+          SyncQueueItemModel(
+            url: '/ordens-servico/$id',
+            method: 'DELETE',
+            body: {},
+            timestamp: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
+        return;
+      }
       final response = await apiClient.delete('/ordens-servico/$id');
 
       if (response.statusCode == 204) {
+        // Also delete from local cache
+        await localDataSource.deleteOs(id);
         return;
       } else {
         throw ApiException('Falha ao deletar ordem de serviço $id: Status ${response.statusCode}');
@@ -276,6 +389,26 @@ class OsRepositoryImpl implements OsRepository {
   @override
   Future<void> updateOrdemServicoStatus(int id, StatusOSModel status) async {
     try {
+      // Check connectivity
+      final connectivityResult = await connectivity.checkConnectivity();
+      if (connectivityResult == ConnectivityResult.none) {
+        // Offline: update local db and add to sync queue
+        final osToUpdate = await localDataSource.getOsById(id);
+        if (osToUpdate != null) {
+          final updatedOs = osToUpdate.copyWith(status: status);
+          await localDataSource.saveOrUpdateOs(updatedOs);
+        }
+        await syncQueue.addToQueue(
+          SyncQueueItemModel(
+            url: '/ordens-servico/$id/status',
+            method: 'PATCH',
+            body: {'status': status.name},
+            timestamp: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
+        return;
+      }
+
       // O backend espera um objeto com uma chave "status"
       final response = await apiClient.patch(
         '/ordens-servico/$id/status',
@@ -286,6 +419,11 @@ class OsRepositoryImpl implements OsRepository {
         throw ApiException(
             'Falha ao atualizar o status da OS $id: Status ${response.statusCode}');
       }
+      // Update local cache on success
+      final updatedOs = await getOrdemServicoById(id);
+      final osModel = OrdemServicoModel.fromEntity(updatedOs);
+      await localDataSource.saveOrUpdateOs(osModel);
+
     } on DioException catch (e) {
       throw ApiException(
           'Erro de rede ao atualizar o status da OS $id: ${e.message}');

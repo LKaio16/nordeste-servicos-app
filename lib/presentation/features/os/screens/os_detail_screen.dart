@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -15,7 +16,11 @@ import 'package:nordeste_servicos_app/presentation/features/os/screens/signature
 import 'package:open_filex/open_filex.dart';
 
 import '../../../../data/models/perfil_usuario_model.dart';
+import '../../../../domain/entities/cliente.dart';
+import '../../../../domain/entities/equipamento.dart';
+import '../../../../domain/entities/foto_os.dart';
 import '../../../../domain/entities/ordem_servico.dart';
+import '../../../../domain/entities/usuario.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../../shared/styles/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -27,6 +32,42 @@ import '../providers/registro_tempo_provider.dart';
 import 'os_edit_screen.dart';
 import '../../clientes/screens/cliente_detail_screen.dart';
 import '../../equipamentos/screens/equipamento_detail_screen.dart';
+
+extension OrdemServicoCopyWith on OrdemServico {
+  OrdemServico copyWith({
+    int? id,
+    String? numeroOS,
+    StatusOSModel? status,
+    PrioridadeOSModel? prioridade,
+    DateTime? dataAbertura,
+    DateTime? dataAgendamento,
+    DateTime? dataFechamento,
+    DateTime? dataHoraEmissao,
+    Cliente? cliente,
+    Equipamento? equipamento,
+    Usuario? tecnicoAtribuido,
+    String? problemaRelatado,
+    String? analiseFalha,
+    String? solucaoAplicada,
+  }) {
+    return OrdemServico(
+      id: id ?? this.id,
+      numeroOS: numeroOS ?? this.numeroOS,
+      status: status ?? this.status,
+      prioridade: prioridade ?? this.prioridade,
+      dataAbertura: dataAbertura ?? this.dataAbertura,
+      dataAgendamento: dataAgendamento ?? this.dataAgendamento,
+      dataFechamento: dataFechamento ?? this.dataFechamento,
+      dataHoraEmissao: dataHoraEmissao ?? this.dataHoraEmissao,
+      cliente: cliente ?? this.cliente,
+      equipamento: equipamento ?? this.equipamento,
+      tecnicoAtribuido: tecnicoAtribuido ?? this.tecnicoAtribuido,
+      problemaRelatado: problemaRelatado ?? this.problemaRelatado,
+      analiseFalha: analiseFalha ?? this.analiseFalha,
+      solucaoAplicada: solucaoAplicada ?? this.solucaoAplicada,
+    );
+  }
+}
 
 class OsDetailScreen extends ConsumerStatefulWidget {
   final int osId;
@@ -46,6 +87,8 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
   bool _isEditingSolucao = false;
   bool _isEditingAnalise = false;
   bool _isUpdatingStatus = false;
+  bool _isOffline = false;
+  bool _isTecnico = false;
 
   @override
   void initState() {
@@ -61,6 +104,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
   void dispose() {
     _imagePageController.dispose();
     _solucaoAplicadaController.dispose();
+    _analiseController.dispose();
     super.dispose();
   }
 
@@ -124,7 +168,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
           ref.invalidate(osListProvider);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('OS excluída com sucesso!'),
+              content: const Text('OS excluída com sucesso!'),
               backgroundColor: AppColors.successGreen,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -171,38 +215,12 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
       final String fileName = 'relatorio_os_${os.id}.pdf';
       String? filePath;
 
-      if (!kIsWeb) {
-        filePath = await FileSaver.instance.saveFile(
-          name: fileName,
-          bytes: pdfBytes,
-          ext: 'pdf',
-          mimeType: MimeType.pdf,
-        );
-
-        if (filePath == null) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).removeCurrentSnackBar();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Erro: Não foi possível salvar o arquivo PDF. Verifique as permissões do aplicativo ou tente novamente.'),
-                backgroundColor: AppColors.errorRed,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-            );
-          }
-          return;
-        }
-      } else {
-        filePath = await FileSaver.instance.saveFile(
-          name: fileName,
-          bytes: pdfBytes,
-          ext: 'pdf',
-          mimeType: MimeType.pdf,
-        );
-      }
+      filePath = await FileSaver.instance.saveFile(
+        name: fileName,
+        bytes: pdfBytes,
+        ext: 'pdf',
+        mimeType: MimeType.pdf,
+      );
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).removeCurrentSnackBar();
@@ -242,7 +260,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
     }
   }
 
-  void _showImageFullScreen(List<dynamic> fotos, int initialIndex) {
+  void _showImageFullScreen(List<FotoOS> fotos, int initialIndex) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => _ImageFullScreenViewer(
@@ -254,101 +272,84 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
   }
 
   Future<void> _saveAnaliseFalha(OrdemServico os) async {
-    final newAnalise = _analiseController.text;
-    if (newAnalise == os.analiseFalha) {
-      setState(() => _isEditingAnalise = false);
-      return;
-    }
-
-    try {
-      final osRepository = ref.read(osRepositoryProvider);
-      await osRepository.updateOrdemServico(
-        osId: os.id!,
-        clienteId: os.cliente.id!,
-        equipamentoId: os.equipamento.id!,
-        problemaRelatado: os.problemaRelatado ?? '',
-        analiseFalha: newAnalise,
-        // Atualiza o campo
-        solucaoAplicada: os.solucaoAplicada,
-        status: os.status,
-        prioridade: os.prioridade,
-        tecnicoAtribuidoId: os.tecnicoAtribuido?.id,
-        dataAgendamento: os.dataAgendamento,
+    if (_analiseController.text.isNotEmpty) {
+      final updatedOs = os.copyWith(
+        analiseFalha: _analiseController.text,
       );
+      try {
+        await ref.read(osRepositoryProvider).updateOrdemServico(
+              osId: updatedOs.id!,
+              clienteId: updatedOs.cliente.id!,
+              equipamentoId: updatedOs.equipamento.id!,
+              problemaRelatado: updatedOs.problemaRelatado ?? '',
+              analiseFalha: updatedOs.analiseFalha,
+              solucaoAplicada: updatedOs.solucaoAplicada,
+              status: updatedOs.status,
+              prioridade: updatedOs.prioridade,
+              tecnicoAtribuidoId: updatedOs.tecnicoAtribuido?.id,
+              dataAgendamento: updatedOs.dataAgendamento,
+            );
+        ref.invalidate(osDetailProvider(os.id!));
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Análise da Falha atualizada com sucesso!'),
-              backgroundColor: AppColors.successGreen),
-        );
-        ref.invalidate(osDetailProvider(widget.osId));
         setState(() => _isEditingAnalise = false);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('Erro ao atualizar Análise da Falha: ${e.toString()}'),
-              backgroundColor: AppColors.errorRed),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Análise de falha atualizada com sucesso!'),
+              backgroundColor: AppColors.successGreen,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao atualizar: ${e.toString()}'),
+              backgroundColor: AppColors.errorRed,
+            ),
+          );
+        }
       }
     }
   }
 
   Future<void> _saveSolucaoAplicada(OrdemServico os) async {
-    final newSolucao = _solucaoAplicadaController.text;
-    if (newSolucao == os.solucaoAplicada) {
-      setState(() {
-        _isEditingSolucao = false;
-      });
-      return;
-    }
-
-    try {
-      final osRepository = ref.read(osRepositoryProvider);
-
-      await osRepository.updateOrdemServico(
-        osId: os.id!,
-        clienteId: os.cliente.id!,
-        equipamentoId: os.equipamento.id!,
-        tecnicoAtribuidoId: os.tecnicoAtribuido?.id,
-        problemaRelatado: os.problemaRelatado ?? '',
-        analiseFalha: os.analiseFalha,
-        solucaoAplicada: newSolucao,
-        status: os.status,
-        prioridade: os.prioridade,
-        dataAgendamento: os.dataAgendamento,
+    if (_solucaoAplicadaController.text.isNotEmpty) {
+      final updatedOs = os.copyWith(
+        solucaoAplicada: _solucaoAplicadaController.text,
       );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Solução Aplicada atualizada com sucesso!'),
-            backgroundColor: AppColors.successGreen,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-        ref.invalidate(osDetailProvider(widget.osId));
-        setState(() {
-          _isEditingSolucao = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text('Erro ao atualizar Solução Aplicada: ${e.toString()}'),
-            backgroundColor: AppColors.errorRed,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
+      try {
+        await ref.read(osRepositoryProvider).updateOrdemServico(
+              osId: updatedOs.id!,
+              clienteId: updatedOs.cliente.id!,
+              equipamentoId: updatedOs.equipamento.id!,
+              problemaRelatado: updatedOs.problemaRelatado ?? '',
+              analiseFalha: updatedOs.analiseFalha,
+              solucaoAplicada: updatedOs.solucaoAplicada,
+              status: updatedOs.status,
+              prioridade: updatedOs.prioridade,
+              tecnicoAtribuidoId: updatedOs.tecnicoAtribuido?.id,
+              dataAgendamento: updatedOs.dataAgendamento,
+            );
+        ref.invalidate(osDetailProvider(os.id!));
+        setState(() => _isEditingSolucao = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Solução aplicada atualizada com sucesso!'),
+              backgroundColor: AppColors.successGreen,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao atualizar: ${e.toString()}'),
+              backgroundColor: AppColors.errorRed,
+            ),
+          );
+        }
       }
     }
   }
@@ -357,17 +358,24 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
   Widget build(BuildContext context) {
     final osAsyncValue = ref.watch(osDetailProvider(widget.osId));
     final authState = ref.watch(authProvider);
-    final bool isTecnico =
+    _isTecnico =
         authState.authenticatedUser?.perfil == PerfilUsuarioModel.TECNICO;
-    final bool isAdmin =
+    final isAdmin =
         authState.authenticatedUser?.perfil == PerfilUsuarioModel.ADMIN;
+    final connectivity = ref.watch(connectivityProvider);
+    _isOffline = connectivity.when(
+      data: (status) => status == ConnectivityResult.none,
+      loading: () => false, // Default to online to avoid showing offline message on load
+      error: (e, s) => true, // If connectivity check fails, assume offline
+    );
+    final bool shouldHideActions = _isOffline && _isTecnico;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundGray,
       appBar: AppBar(
         title: Text(
           osAsyncValue.when(
-            data: (ordemServico) => ordemServico.id.toString(),
+            data: (ordemServico) => "OS #${ordemServico.id.toString()}",
             loading: () => 'Carregando...',
             error: (err, stack) => 'Detalhes da OS',
           ),
@@ -403,73 +411,64 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
             onPressed: () => ref.invalidate(osDetailProvider(widget.osId)),
             tooltip: 'Atualizar',
           ),
-          if (authState.authenticatedUser?.perfil == PerfilUsuarioModel.ADMIN)
+          if (isAdmin)
             IconButton(
               icon: const Icon(Icons.edit_outlined, color: Colors.white),
-              onPressed: osAsyncValue.maybeWhen(
-                data: (ordemServico) => () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => OsEditScreen(osId: widget.osId),
-                    ),
-                  );
-                  ref.invalidate(osDetailProvider(widget.osId));
-                  ref.invalidate(osListProvider);
-                },
-                orElse: () => null,
-              ),
+              onPressed: shouldHideActions
+                  ? null
+                  : () {
+                      osAsyncValue.whenData((os) async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => OsEditScreen(osId: os.id!),
+                          ),
+                        );
+                        ref.invalidate(osDetailProvider(widget.osId));
+                        ref.invalidate(osListProvider);
+                      });
+                    },
               tooltip: 'Editar OS',
             ),
-          IconButton(
-            icon:
-                const Icon(Icons.picture_as_pdf_outlined, color: Colors.white),
-            onPressed: osAsyncValue.maybeWhen(
-              data: (ordemServico) =>
-                  () => _downloadPdf(context, ref, ordemServico),
-              orElse: () => null,
+          if (osAsyncValue.hasValue && !shouldHideActions)
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf_outlined,
+                  color: Colors.white),
+              onPressed: () => _downloadPdf(context, ref, osAsyncValue.value!),
+              tooltip: 'Baixar Relatório PDF',
             ),
-            tooltip: 'Baixar Relatório PDF',
-          ),
-          if (authState.authenticatedUser?.perfil == PerfilUsuarioModel.ADMIN)
+          if (isAdmin)
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.white),
-              onPressed: osAsyncValue.maybeWhen(
-                data: (ordemServico) => () => _deleteOs(context, ref),
-                orElse: () => null,
-              ),
+              onPressed:
+                  shouldHideActions ? null : () => _deleteOs(context, ref),
               tooltip: 'Excluir OS',
             ),
         ],
       ),
       body: osAsyncValue.when(
         data: (ordemServico) {
-          // Initialize controller with current solution text when data is loaded
           if (!_isEditingSolucao) {
             _solucaoAplicadaController.text =
                 ordemServico.solucaoAplicada ?? '';
           }
+          if (!_isEditingAnalise) {
+            _analiseController.text = ordemServico.analiseFalha ?? '';
+          }
 
-          if (isTecnico && ordemServico.status == StatusOSModel.EM_ABERTO) {
-            return _buildSimplifiedView(context, ref, ordemServico);
+          if (_isTecnico && ordemServico.status == StatusOSModel.EM_ABERTO) {
+            return _buildSimplifiedView(context, ref, ordemServico,
+                (val) => setState(() => _isUpdatingStatus = val));
           }
 
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(osDetailProvider(widget.osId));
-              ref.invalidate(fotoOsProvider(widget.osId));
-              ref
-                  .read(registroTempoProvider(widget.osId).notifier)
-                  .fetchRegistros();
             },
             color: AppColors.primaryBlue,
             child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
                 _buildHeaderCard(ordemServico),
-                const SizedBox(height: 16),
-                if (ordemServico.tecnicoAtribuido?.id != null)
-                  _buildTimerControls(context, ref, ordemServico.id!,
-                      ordemServico.tecnicoAtribuido!.id!),
                 const SizedBox(height: 16),
                 _buildInfoCard(
                   title: 'Informações Gerais',
@@ -479,7 +478,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                       label: 'Cliente',
                       value: ordemServico.cliente.nomeCompleto,
                       icon: Icons.person_outline,
-                      onTap: () {
+                      onTap: shouldHideActions ? null : () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => ClienteDetailScreen(
@@ -493,7 +492,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                       value:
                           "${ordemServico.equipamento.marcaModelo} - ${ordemServico.equipamento.numeroSerieChassi}",
                       icon: Icons.build_outlined,
-                      onTap: () {
+                      onTap: shouldHideActions ? null : () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => EquipamentoDetailScreen(
@@ -540,14 +539,6 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16.0),
-                      decoration: BoxDecoration(
-                        color: AppColors.backgroundGray.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(12.0),
-                        border: Border.all(
-                          color: AppColors.dividerColor.withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
                       child: Text(
                         ordemServico.problemaRelatado ??
                             'Nenhuma descrição fornecida.',
@@ -561,108 +552,83 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildSolucaoAplicadaCard(ordemServico),
-                const SizedBox(height: 16),
-                _buildAnaliseFalhaCard(ordemServico),
-                const SizedBox(height: 16),
                 _buildTimeRecordsCard(context, ref, ordemServico.id!),
-                const SizedBox(height: 16),
-                _buildFotosCard(context, ref, widget.osId),
-                const SizedBox(height: 16),
-                _buildAssinaturaCard(context, ref, widget.osId),
-                const SizedBox(height: 16),
-                if (isTecnico &&
-                    ordemServico.status == StatusOSModel.EM_ANDAMENTO)
-                  _buildEnviarAprovacaoButton(context, ref, ordemServico),
-                if (isAdmin &&
-                    ordemServico.status == StatusOSModel.AGUARDANDO_APROVACAO)
-                  _buildAprovarConcluirButton(context, ref, ordemServico),
+
+                if (shouldHideActions)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24.0),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.wifi_off_rounded,
+                            size: 48,
+                            color: AppColors.textLight.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Você está offline',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'As ações de edição e outras seções estão ocultas. Conecte-se à internet para ter acesso a todas as funcionalidades.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: AppColors.textLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else ...[
+                  if (ordemServico.tecnicoAtribuido?.id != null) ...[
+                    const SizedBox(height: 16),
+                    _buildTimerControls(context, ref, ordemServico.id!,
+                        ordemServico.tecnicoAtribuido!.id!),
+                  ],
+                  const SizedBox(height: 16),
+                  _buildAnaliseFalhaCard(ordemServico),
+                  const SizedBox(height: 16),
+                  _buildSolucaoAplicadaCard(ordemServico),
+                  const SizedBox(height: 16),
+                  _buildFotosCard(context, ref, widget.osId),
+                  const SizedBox(height: 16),
+                  _buildAssinaturaCard(context, ref, widget.osId),
+                  const SizedBox(height: 16),
+                  if (_isTecnico &&
+                      ordemServico.status == StatusOSModel.EM_ANDAMENTO)
+                    _buildEnviarAprovacaoButton(
+                        context, ref, ordemServico,
+                        (val) => setState(() => _isUpdatingStatus = val)),
+                  if (isAdmin &&
+                      ordemServico.status ==
+                          StatusOSModel.AGUARDANDO_APROVACAO)
+                    _buildAprovarConcluirButton(
+                        context, ref, ordemServico,
+                        (val) => setState(() => _isUpdatingStatus = val)),
+                ],
               ],
             ),
           );
         },
-        loading: () => Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.backgroundGray,
-                AppColors.backgroundGray.withOpacity(0.8),
-              ],
-            ),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Carregando detalhes da OS...',
-                  style: GoogleFonts.poppins(
-                    color: AppColors.textLight,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.errorRed.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: AppColors.errorRed,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Erro ao carregar OS',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  err.toString(),
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: AppColors.textLight,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: () =>
-                      ref.invalidate(osDetailProvider(widget.osId)),
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: Text('Tentar Novamente'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                  ),
+                Text('Erro ao carregar OS: ${err.toString()}'),
+                ElevatedButton(
+                  onPressed: () => ref.invalidate(osDetailProvider(widget.osId)),
+                  child: const Text('Tentar Novamente'),
                 ),
               ],
             ),
@@ -711,159 +677,168 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
   }
 
   Widget _buildAprovarConcluirButton(
-      BuildContext context, WidgetRef ref, OrdemServico ordemServico) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
-      child: ElevatedButton.icon(
-        onPressed: _isUpdatingStatus
-            ? null
-            : () async {
-                final confirmed = await _showConfirmationDialog(
-                  context: context,
-                  title: 'Confirmar Conclusão',
-                  content: 'Deseja realmente aprovar e concluir esta OS?',
-                  confirmText: 'Confirmar',
-                );
-                if (!confirmed) return;
+      BuildContext context, WidgetRef ref, OrdemServico ordemServico, Function(bool) setUpdating) {
+    if (ordemServico.status == StatusOSModel.AGUARDANDO_APROVACAO ||
+        ordemServico.status == StatusOSModel.CONCLUIDA) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16.0),
+        child: ElevatedButton.icon(
+          onPressed: _isUpdatingStatus
+              ? null
+              : () async {
+                  final confirmed = await _showConfirmationDialog(
+                    context: context,
+                    title: 'Confirmar Conclusão',
+                    content: 'Deseja realmente aprovar e concluir esta OS?',
+                    confirmText: 'Confirmar',
+                  );
+                  if (!confirmed) return;
 
-                setState(() {
-                  _isUpdatingStatus = true;
-                });
-                try {
-                  final osRepository = ref.read(osRepositoryProvider);
-                  await osRepository.updateOrdemServicoStatus(
-                      ordemServico.id!, StatusOSModel.CONCLUIDA);
-                  ref.invalidate(osDetailProvider(widget.osId));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('OS Aprovada e Concluída!'),
-                      backgroundColor: AppColors.successGreen,
-                    ),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Erro ao aprovar a OS: $e'),
-                      backgroundColor: AppColors.errorRed,
-                    ),
-                  );
-                } finally {
-                  if (mounted) {
-                    setState(() {
-                      _isUpdatingStatus = false;
-                    });
+                  setUpdating(true);
+                  try {
+                    final osRepository = ref.read(osRepositoryProvider);
+                    await osRepository.updateOrdemServicoStatus(
+                        ordemServico.id!, StatusOSModel.CONCLUIDA);
+                    ref.invalidate(osDetailProvider(widget.osId));
+                    if(mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('OS Aprovada e Concluída!'),
+                          backgroundColor: AppColors.successGreen,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Erro ao aprovar a OS: $e'),
+                          backgroundColor: AppColors.errorRed,
+                        ),
+                      );
+                    }
+                  } finally {
+                    if (mounted) {
+                      setUpdating(false);
+                    }
                   }
-                }
-              },
-        icon: _isUpdatingStatus
-            ? Container(
-                width: 24,
-                height: 24,
-                padding: const EdgeInsets.all(2.0),
-                child: const CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 3,
-                ),
-              )
-            : const Icon(Icons.check_circle_outline, color: Colors.white),
-        label: Text(
-          _isUpdatingStatus ? 'Processando...' : 'Aprovar e Concluir',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: Colors.white,
+                },
+          icon: _isUpdatingStatus
+              ? Container(
+                  width: 24,
+                  height: 24,
+                  padding: const EdgeInsets.all(2.0),
+                  child: const CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
+                )
+              : const Icon(Icons.check_circle_outline, color: Colors.white),
+          label: Text(
+            _isUpdatingStatus ? 'Processando...' : 'Aprovar e Concluir',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.successGreen,
+            minimumSize: const Size(double.infinity, 56),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 4,
           ),
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.successGreen,
-          minimumSize: const Size(double.infinity, 56),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 4,
-        ),
-      ),
-    );
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   Widget _buildEnviarAprovacaoButton(
-      BuildContext context, WidgetRef ref, OrdemServico ordemServico) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
-      child: ElevatedButton.icon(
-        onPressed: _isUpdatingStatus
-            ? null
-            : () async {
-                final confirmed = await _showConfirmationDialog(
-                  context: context,
-                  title: 'Confirmar Envio',
-                  content: 'Deseja realmente enviar esta OS para aprovação?',
-                  confirmText: 'Enviar',
-                );
-                if (!confirmed) return;
+      BuildContext context, WidgetRef ref, OrdemServico ordemServico, Function(bool) setUpdating) {
 
-                setState(() {
-                  _isUpdatingStatus = true;
-                });
-                try {
-                  final osRepository = ref.read(osRepositoryProvider);
-                  await osRepository.updateOrdemServicoStatus(
-                      ordemServico.id!, StatusOSModel.AGUARDANDO_APROVACAO);
-                  ref.invalidate(osDetailProvider(widget.osId));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('OS enviada para aprovação!'),
-                      backgroundColor: AppColors.successGreen,
-                    ),
+    if (ordemServico.status == StatusOSModel.EM_ANDAMENTO) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16.0),
+        child: ElevatedButton.icon(
+          onPressed: _isUpdatingStatus
+              ? null
+              : () async {
+                  final confirmed = await _showConfirmationDialog(
+                    context: context,
+                    title: 'Confirmar Envio',
+                    content: 'Deseja realmente enviar esta OS para aprovação?',
+                    confirmText: 'Enviar',
                   );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Erro ao enviar para aprovação: $e'),
-                      backgroundColor: AppColors.errorRed,
-                    ),
-                  );
-                } finally {
-                  if (mounted) {
-                    setState(() {
-                      _isUpdatingStatus = false;
-                    });
+                  if (!confirmed) return;
+
+                  setUpdating(true);
+                  try {
+                    final osRepository = ref.read(osRepositoryProvider);
+                    await osRepository.updateOrdemServicoStatus(
+                        ordemServico.id!, StatusOSModel.AGUARDANDO_APROVACAO);
+                    ref.invalidate(osDetailProvider(widget.osId));
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('OS enviada para aprovação!'),
+                          backgroundColor: AppColors.successGreen,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                     if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Erro ao enviar para aprovação: $e'),
+                          backgroundColor: AppColors.errorRed,
+                        ),
+                      );
+                    }
+                  } finally {
+                    if (mounted) {
+                      setUpdating(false);
+                    }
                   }
-                }
-              },
-        icon: _isUpdatingStatus
-            ? Container(
-                width: 24,
-                height: 24,
-                padding: const EdgeInsets.all(2.0),
-                child: const CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 3,
-                ),
-              )
-            : const Icon(Icons.send_outlined, color: Colors.white),
-        label: Text(
-          _isUpdatingStatus ? 'Enviando...' : 'Enviar para Aprovação',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: Colors.white,
+                },
+          icon: _isUpdatingStatus
+              ? Container(
+                  width: 24,
+                  height: 24,
+                  padding: const EdgeInsets.all(2.0),
+                  child: const CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
+                )
+              : const Icon(Icons.send_outlined, color: Colors.white),
+          label: Text(
+            _isUpdatingStatus ? 'Enviando...' : 'Enviar para Aprovação',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              color: Colors.white,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.warningOrange,
+            minimumSize: const Size(double.infinity, 56),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 4,
           ),
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.warningOrange,
-          minimumSize: const Size(double.infinity, 56),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 4,
-        ),
-      ),
-    );
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   Widget _buildSimplifiedView(
-      BuildContext context, WidgetRef ref, OrdemServico ordemServico) {
+      BuildContext context, WidgetRef ref, OrdemServico ordemServico, Function(bool) setUpdating) {
+    
     return Scaffold(
       body: ListView(
         padding: const EdgeInsets.all(16.0),
@@ -912,14 +887,6 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundGray.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12.0),
-                  border: Border.all(
-                    color: AppColors.dividerColor.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
                 child: Text(
                   ordemServico.problemaRelatado ??
                       'Nenhuma descrição fornecida.',
@@ -937,35 +904,37 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
       floatingActionButton: Padding(
         padding: const EdgeInsets.all(8.0),
         child: ElevatedButton.icon(
-          onPressed: _isUpdatingStatus
+          onPressed: (_isUpdatingStatus || _isOffline)
               ? null
               : () async {
-                  setState(() {
-                    _isUpdatingStatus = true;
-                  });
+                  setUpdating(true);
                   try {
                     final osRepository = ref.read(osRepositoryProvider);
                     await osRepository.updateOrdemServicoStatus(
-                        ordemServico.id!, StatusOSModel.EM_ANDAMENTO);
+                      ordemServico.id!, StatusOSModel.EM_ANDAMENTO);
                     ref.invalidate(osDetailProvider(widget.osId));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Atendimento iniciado!'),
-                        backgroundColor: AppColors.successGreen,
-                      ),
-                    );
+                    ref.read(osListProvider.notifier).refreshOrdensServico();
+                    
+                    if(mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Atendimento iniciado!'),
+                          backgroundColor: AppColors.successGreen,
+                        ),
+                      );
+                    }
                   } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Erro ao iniciar atendimento: $e'),
-                        backgroundColor: AppColors.errorRed,
-                      ),
-                    );
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Erro ao iniciar atendimento: $e'),
+                          backgroundColor: AppColors.errorRed,
+                        ),
+                      );
+                    }
                   } finally {
                     if (mounted) {
-                      setState(() {
-                        _isUpdatingStatus = false;
-                      });
+                      setUpdating(false);
                     }
                   }
                 },
@@ -1015,27 +984,21 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
       return "${twoDigits(d.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
     }
 
-    if (registroTempoState.isLoading) {
-      return _buildInfoCard(
-        title: 'Controle de Tempo',
-        icon: Icons.timer_outlined,
-        children: [
+    final displayDuration = registroTempoState.totalDuration + registroTempoState.elapsed;
+
+    return _buildInfoCard(
+      title: 'Controle de Tempo',
+      icon: Icons.timer_outlined,
+      children: [
+        if (registroTempoState.isLoading)
           const Center(
             child: Padding(
               padding: EdgeInsets.all(32.0),
               child: CircularProgressIndicator(),
             ),
-          ),
-        ],
-      );
-    }
-
-    if (registroTempoState.errorMessage != null) {
-      return _buildInfoCard(
-        title: 'Controle de Tempo',
-        icon: Icons.timer_off_outlined,
-        children: [
-          Center(
+          )
+        else if (registroTempoState.errorMessage != null)
+           Center(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -1044,109 +1007,108 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                 textAlign: TextAlign.center,
               ),
             ),
-          ),
-        ],
-      );
-    }
-
-    Duration displayDuration = registroTempoState.totalDuration;
-    if (registroTempoState.activeRegistro != null) {
-      displayDuration += registroTempoState.elapsed;
-    }
-
-    return _buildInfoCard(
-      title: 'Controle de Tempo',
-      icon: Icons.timer_outlined,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(24.0),
-          decoration: BoxDecoration(
-            color: AppColors.primaryBlue.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.primaryBlue.withOpacity(0.1),
-              width: 1,
+          )
+        else ...[
+          Container(
+            padding: const EdgeInsets.all(24.0),
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.primaryBlue.withOpacity(0.1),
+                width: 1,
+              ),
             ),
-          ),
-          child: Center(
-            child: Text(
-              formatDuration(displayDuration),
-              style: GoogleFonts.robotoMono(
-                fontSize: 42,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryBlue,
-                letterSpacing: 2,
+            child: Center(
+              child: Text(
+                formatDuration(displayDuration),
+                style: GoogleFonts.robotoMono(
+                  fontSize: 42,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryBlue,
+                  letterSpacing: 2,
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 20),
-        _buildTimerButtons(registroTempoState, registroTempoNotifier),
+          const SizedBox(height: 20),
+          _buildTimerButtons(registroTempoState, registroTempoNotifier),
+        ]
       ],
     );
   }
 
-  Widget _buildTimerButtons(registroTempoState, registroTempoNotifier) {
-    List<Widget> buttons = [];
+  Widget _buildTimerButtons(RegistroTempoState state, RegistroTempoNotifier notifier) {
+      
+      bool isRunning = state.activeRegistro != null;
+      
+      List<Widget> buttons = [];
 
-    if (registroTempoState.activeRegistro == null &&
-        registroTempoState.registros.isEmpty) {
-      buttons.add(
-        Expanded(
-          child: _buildTimerButton(
-            onPressed: () => registroTempoNotifier.iniciarRegistro(),
-            icon: Icons.play_arrow_rounded,
-            label: 'Iniciar',
-            color: AppColors.successGreen,
-          ),
-        ),
-      );
-    } else {
-      if (registroTempoState.activeRegistro != null) {
+      if (!isRunning && state.registros.isEmpty) { // Initial state
         buttons.add(
           Expanded(
             child: _buildTimerButton(
-              onPressed: () => registroTempoNotifier.finalizarRegistroTempo(),
+              onPressed: () => notifier.iniciarRegistro(),
+              icon: Icons.play_arrow_rounded,
+              label: 'Iniciar',
+              color: AppColors.successGreen,
+            ),
+          ),
+        );
+      } else if (isRunning) { // Running state
+        buttons.add(
+          Expanded(
+            child: _buildTimerButton(
+              onPressed: () => notifier.finalizarRegistroTempo(),
               icon: Icons.pause_rounded,
               label: 'Pausar',
               color: AppColors.warningOrange,
             ),
           ),
         );
-      } else if (registroTempoState.registros.isNotEmpty) {
+        buttons.add(const SizedBox(width: 12));
         buttons.add(
           Expanded(
             child: _buildTimerButton(
-              onPressed: () => registroTempoNotifier.iniciarRegistro(),
+              onPressed: () => notifier.finalizarRegistroTempo(),
+              icon: Icons.stop_rounded,
+              label: 'Finalizar',
+              color: AppColors.errorRed,
+            ),
+          ),
+        );
+      } else { // Paused state
+        buttons.add(
+          Expanded(
+            child: _buildTimerButton(
+              onPressed: () => notifier.iniciarRegistro(),
               icon: Icons.play_arrow_rounded,
               label: 'Retomar',
               color: AppColors.primaryBlue,
             ),
           ),
         );
-      }
-
-      if (buttons.isNotEmpty) {
-        buttons.add(const SizedBox(width: 12));
-      }
-
-      buttons.add(
-        Expanded(
-          child: _buildTimerButton(
-            onPressed: () => registroTempoNotifier.finalizarRegistroTempo(),
-            icon: Icons.stop_rounded,
-            label: 'Parar',
-            color: AppColors.errorRed,
+         buttons.add(const SizedBox(width: 12));
+         buttons.add(
+          Expanded(
+            child: _buildTimerButton(
+              onPressed: () => notifier.finalizarRegistroTempo(),
+              icon: Icons.stop_rounded,
+              label: 'Finalizar',
+              color: AppColors.errorRed,
+            ),
           ),
-        ),
+        );
+      }
+      
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: buttons
       );
-    }
-
-    return Row(children: buttons);
   }
 
   Widget _buildTimerButton({
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     required IconData icon,
     required String label,
     required Color color,
@@ -1176,7 +1138,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
 
   Widget _buildTimeRecordsCard(BuildContext context, WidgetRef ref, int osId) {
     final registroTempoState = ref.watch(registroTempoProvider(osId));
-
+   
     String formatDuration(Duration d) {
       String twoDigits(int n) => n.toString().padLeft(2, '0');
       String twoDigitMinutes = twoDigits(d.inMinutes.remainder(60));
@@ -1513,13 +1475,15 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Divider(
-              color: AppColors.dividerColor.withOpacity(0.3),
-              thickness: 1,
-            ),
-            const SizedBox(height: 16),
-            ...children,
+            if (children.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Divider(
+                color: AppColors.dividerColor.withOpacity(0.3),
+                thickness: 1,
+              ),
+              const SizedBox(height: 16),
+              ...children,
+            ]
           ],
         ),
       ),
@@ -1589,67 +1553,14 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
     return content;
   }
 
-  Widget _buildDetailSection({
-    required String label,
-    required String value,
-    IconData? icon,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 18,
-                color: AppColors.primaryBlue,
-              ),
-              const SizedBox(width: 8),
-            ],
-            Text(
-              '$label:',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textDark,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16.0),
-          decoration: BoxDecoration(
-            color: AppColors.backgroundGray.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(12.0),
-            border: Border.all(
-              color: AppColors.dividerColor.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: AppColors.textDark,
-              height: 1.6,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildFotosCard(BuildContext context, WidgetRef ref, int osId) {
     final fotosState = ref.watch(fotoOsProvider(osId));
     final fotosNotifier = ref.read(fotoOsProvider(osId).notifier);
 
-    Future<void> _pickAndUploadImage() async {
+    Future<void> _pickAndUploadImage(ImageSource source) async {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 70,
         maxWidth: 1024,
       );
@@ -1720,8 +1631,8 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
               padding: EdgeInsets.all(32.0),
               child: CircularProgressIndicator(),
             ),
-          ),
-        if (!fotosState.isLoading && fotosState.errorMessage != null)
+          )
+        else if (fotosState.errorMessage != null)
           Center(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -1731,8 +1642,8 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                 textAlign: TextAlign.center,
               ),
             ),
-          ),
-        if (!fotosState.isLoading && fotosState.fotos.isEmpty)
+          )
+        else if (fotosState.fotos.isEmpty)
           Center(
             child: Padding(
               padding: const EdgeInsets.all(32.0),
@@ -1754,8 +1665,8 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                 ],
               ),
             ),
-          ),
-        if (fotosState.fotos.isNotEmpty) ...[
+          )
+        else ...[
           SizedBox(
             height: 220,
             child: PageView.builder(
@@ -1832,7 +1743,7 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                                 color: Colors.black.withOpacity(0.5),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(
+                              child: const Icon(
                                 Icons.zoom_in,
                                 color: Colors.white,
                                 size: 16,
@@ -1868,36 +1779,48 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
             ),
           const SizedBox(height: 16),
         ],
-        ElevatedButton.icon(
-          onPressed: fotosState.isUploading ? null : _pickAndUploadImage,
-          icon: fotosState.isUploading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : const Icon(
-                  Icons.add_a_photo_outlined,
-                  size: 18,
-                  color: Colors.white,
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: fotosState.isUploading ? null : () => _pickAndUploadImage(ImageSource.camera),
+                icon: const Icon( Icons.camera_alt_outlined, size: 18, color: Colors.white),
+                label: Text('Câmera', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder( borderRadius: BorderRadius.circular(12)),
+                  elevation: 2,
                 ),
-          label: Text(
-            fotosState.isUploading ? 'Enviando...' : 'Adicionar Foto',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryBlue,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 48),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            elevation: 2,
-          ),
-        ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: fotosState.isUploading ? null : () => _pickAndUploadImage(ImageSource.gallery),
+                icon: fotosState.isUploading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon( Icons.photo_library_outlined, size: 18, color: Colors.white),
+                label: Text(fotosState.isUploading ? 'Enviando...' : 'Galeria', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 2,
+                ),
+              ),
+            ),
+          ],
+        )
       ],
     );
   }
@@ -2019,13 +1942,13 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
           Row(
             children: [
               buildSignatureDisplay(
-                "Cliente",
+                'Cliente',
                 state.assinatura?.nomeClienteResponsavel,
                 state.assinatura?.assinaturaClienteBase64,
               ),
               const SizedBox(width: 12),
               buildSignatureDisplay(
-                "Técnico",
+                'Técnico',
                 state.assinatura?.nomeTecnicoResponsavel,
                 state.assinatura?.assinaturaTecnicoBase64,
               ),
@@ -2070,95 +1993,29 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
 
   Widget _buildSolucaoAplicadaCard(OrdemServico os) {
     return _buildInfoCard(
-      title: 'Solução Aplicada',
-      icon: Icons.check_circle_outline,
-      children: [
-        if (_isEditingSolucao)
-          Column(
-            children: [
-              TextFormField(
-                controller: _solucaoAplicadaController,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: 'Descreva a solução aplicada...',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: AppColors.backgroundGray.withOpacity(0.5),
-                ),
-                style: GoogleFonts.poppins(
-                    fontSize: 14, color: AppColors.textDark),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _isEditingSolucao = false;
-                        _solucaoAplicadaController.text =
-                            os.solucaoAplicada ?? '';
-                      });
-                    },
-                    child: Text('Cancelar',
-                        style: GoogleFonts.poppins(color: AppColors.textLight)),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () => _saveSolucaoAplicada(os),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryBlue,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text('Salvar',
-                        style: GoogleFonts.poppins(
-                            color: Colors.white, fontWeight: FontWeight.w600)),
-                  ),
-                ],
-              ),
-            ],
-          )
-        else
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  os.solucaoAplicada?.isNotEmpty == true
-                      ? os.solucaoAplicada!
-                      : 'Nenhuma solução aplicada informada.',
-                  style: GoogleFonts.poppins(
-                      fontSize: 14, color: AppColors.textDark, height: 1.6),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton.icon(
-                  onPressed: () => setState(() => _isEditingSolucao = true),
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                  label: Text('Editar Solução',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-      ],
-    );
+        title: 'Solução Aplicada',
+        icon: Icons.check_circle_outline,
+        children: [
+          if (_isEditingSolucao)
+            _buildEditableField(
+              controller: _solucaoAplicadaController,
+              hint: 'Descreva a solução aplicada...',
+              onSave: () => _saveSolucaoAplicada(os),
+              onCancel: () {
+                setState(() {
+                  _isEditingSolucao = false;
+                  _solucaoAplicadaController.text = os.solucaoAplicada ?? '';
+                });
+              },
+            )
+          else
+            _buildReadOnlyField(
+              content: os.solucaoAplicada,
+              emptyText: 'Nenhuma solução aplicada informada.',
+              onEdit: () => setState(() => _isEditingSolucao = true),
+              editButtonLabel: 'Editar Solução',
+            ),
+        ]);
   }
 
   Widget _buildAnaliseFalhaCard(OrdemServico os) {
@@ -2167,95 +2024,119 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
       icon: Icons.search_outlined,
       children: [
         if (_isEditingAnalise)
-          Column(
-            children: [
-              TextFormField(
-                controller: _analiseController,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: 'Descreva a análise técnica da falha...',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  filled: true,
-                  fillColor: AppColors.backgroundGray.withOpacity(0.5),
-                ),
-                style: GoogleFonts.poppins(
-                    fontSize: 14, color: AppColors.textDark),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _isEditingAnalise = false;
-                        _analiseController.text = os.analiseFalha ?? '';
-                      });
-                    },
-                    child: Text('Cancelar',
-                        style: GoogleFonts.poppins(color: AppColors.textLight)),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () => _saveAnaliseFalha(os),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryBlue,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text('Salvar',
-                        style: GoogleFonts.poppins(
-                            color: Colors.white, fontWeight: FontWeight.w600)),
-                  ),
-                ],
-              ),
-            ],
+          _buildEditableField(
+            controller: _analiseController,
+            hint: 'Descreva a análise técnica da falha...',
+            onSave: () => _saveAnaliseFalha(os),
+            onCancel: () {
+              setState(() {
+                _isEditingAnalise = false;
+                _analiseController.text = os.analiseFalha ?? '';
+              });
+            },
           )
         else
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  os.analiseFalha?.isNotEmpty == true
-                      ? os.analiseFalha!
-                      : 'Nenhuma análise da falha informada.',
-                  style: GoogleFonts.poppins(
-                      fontSize: 14, color: AppColors.textDark, height: 1.6),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton.icon(
-                  onPressed: () => setState(() => _isEditingAnalise = true),
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                  label: Text('Editar Análise',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-            ],
+          _buildReadOnlyField(
+            content: os.analiseFalha,
+            emptyText: 'Nenhuma análise da falha informada.',
+            onEdit: () => setState(() => _isEditingAnalise = true),
+            editButtonLabel: 'Editar Análise',
           ),
+      ],
+    );
+  }
+
+  Widget _buildReadOnlyField({
+    required String? content,
+    required String emptyText,
+    required VoidCallback onEdit,
+    required String editButtonLabel,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            content?.isNotEmpty == true ? content! : emptyText,
+            style: GoogleFonts.poppins(
+                fontSize: 14, color: AppColors.textDark, height: 1.6),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ElevatedButton.icon(
+            onPressed: onEdit,
+            icon: const Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Colors.white,
+            ),
+            label: Text(editButtonLabel,
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditableField({
+    required TextEditingController controller,
+    required String hint,
+    required VoidCallback onSave,
+    required VoidCallback onCancel,
+  }) {
+    return Column(
+      children: [
+        TextFormField(
+          controller: controller,
+          maxLines: 5,
+          decoration: InputDecoration(
+            hintText: hint,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: AppColors.backgroundGray.withOpacity(0.5),
+          ),
+          style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textDark),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: onCancel,
+              child: Text('Cancelar',
+                  style: GoogleFonts.poppins(color: AppColors.textLight)),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: onSave,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Salvar',
+                  style: GoogleFonts.poppins(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
       ],
     );
   }
 }
 
 class _ImageFullScreenViewer extends StatefulWidget {
-  final List<dynamic> fotos;
+  final List<FotoOS> fotos;
   final int initialIndex;
 
   const _ImageFullScreenViewer({

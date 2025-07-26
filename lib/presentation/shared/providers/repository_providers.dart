@@ -3,6 +3,7 @@
 // Importe os pacotes necessários do Riverpod
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 // Importe as classes que você quer prover (ApiClient e implementações de repositório)
 import '../../../core/network/api_client.dart';
@@ -33,6 +34,34 @@ import '../../../data/repositories/peca_material_repository_impl.dart';
 import '../../../domain/repositories/peca_material_repository.dart';
 import '../../../data/repositories/tipo_servico_repository_impl.dart';
 import '../../../domain/repositories/tipo_servico_repository.dart';
+import '../../../core/db/database_service.dart';
+import '../../../data/datasources/local/os_local_data_source.dart';
+import '../../../data/datasources/local/sync_queue_local_data_source.dart';
+import '../../../core/sync/sync_service.dart';
+
+final syncServiceProvider = Provider<SyncService>((ref) {
+  final syncQueue = ref.read(syncQueueLocalDataSourceProvider);
+  final osLocalDataSource = ref.read(osLocalDataSourceProvider);
+  final apiClient = ref.read(apiClientProvider);
+  final connectivity = ref.read(connectivityProvider).value ?? ConnectivityResult.none;
+  return SyncService(syncQueue, osLocalDataSource, apiClient, Connectivity());
+});
+
+final syncQueueLocalDataSourceProvider = Provider<SyncQueueLocalDataSource>((ref) {
+  final dbService = ref.read(databaseServiceProvider);
+  return SyncQueueLocalDataSource(dbService);
+});
+
+final connectivityProvider = StreamProvider<ConnectivityResult>((ref) {
+  return Connectivity().onConnectivityChanged;
+});
+
+final osLocalDataSourceProvider = Provider<OsLocalDataSource>((ref) {
+  final dbService = ref.read(databaseServiceProvider);
+  return OsLocalDataSource(dbService);
+});
+
+final databaseServiceProvider = Provider<DatabaseService>((ref) => DatabaseService());
 
 final dioProvider = Provider<Dio>((ref) => Dio());
 // Provider para o ApiClient
@@ -64,7 +93,10 @@ final equipamentoRepositoryProvider = Provider<EquipamentoRepository>((ref) {
 // Provider para OsRepository (implementação)
 final osRepositoryProvider = Provider<OsRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  return OsRepositoryImpl(apiClient);
+  final localDataSource = ref.watch(osLocalDataSourceProvider);
+  final syncQueue = ref.watch(syncQueueLocalDataSourceProvider);
+  final connectivity = ref.watch(connectivityProvider).value ?? ConnectivityResult.none;
+  return OsRepositoryImpl(apiClient, localDataSource, syncQueue, Connectivity());
 });
 
 // Provider para ItemOrcamentoRepository (implementação)
