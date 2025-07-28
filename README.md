@@ -16,55 +16,43 @@
 
 ## 📱 Demonstração do App
 
-### 🎯 Funcionalidades Principais
+### 🎯 GIFs Demonstrativos
 
-### Tela de Login
-![Login Screen](assets/demo/login.gif)
-
-*Interface de login intuitiva com autenticação segura e validação de credenciais.*
-
-### Dashboard Administrativo
-![Admin Dashboard](assets/demo/adm-dashboard.jpg)
-
-*Dashboard completo para administradores com visão geral de ordens de serviço, técnicos e relatórios.*
-
-### Gestão de Clientes
-![Clientes](assets/demo/gestao.gif)
-
-*Sistema completo de gestão de clientes com histórico de serviços e informações detalhadas.*
-
-### Criação de Ordem de Serviço
-![Nova OS](assets/demo/criar-os.jpg)
-
-*Interface para criação de novas ordens de serviço com seleção de cliente e equipamento.*
-
-### Orçamentos
-![Orçamentos](assets/demo/orcamento.gif)
-
-*Criação e gestão de orçamentos com lista de materiais e controle de valores.*
-
-### Perfil Técnico
-![Perfil Técnico](assets/screenshots/perfil-tec.jpg)
-
-*Perfil do técnico com informações pessoais e configurações de trabalho.*
+<table>
+<tr>
+<td align="center">
+<strong>Tela de Login</strong><br>
+<img src="assets/demo/login.gif" width="300"><br>
+<em>Interface de login intuitiva com autenticação segura</em>
+</td>
+<td align="center">
+<strong>Gestão de Clientes</strong><br>
+<img src="assets/demo/gestao.gif" width="300"><br>
+<em>Sistema completo de gestão de clientes e histórico</em>
+</td>
+</tr>
+<tr>
+<td align="center">
+<strong>Fluxo de Ordem de Serviço</strong><br>
+<img src="assets/demo/fluxo-os.gif" width="300"><br>
+<em>Processo completo de criação e gestão de OS</em>
+</td>
+<td align="center">
+<strong>Orçamentos</strong><br>
+<img src="assets/demo/orcamento.gif" width="300"><br>
+<em>Criação e gestão de orçamentos com materiais</em>
+</td>
+</tr>
+</table>
 
 ## 📄 Relatórios em PDF
 
 O sistema gera relatórios profissionais em PDF para ordens de serviço e orçamentos.
 
-### 📋 Relatório de Ordem de Serviço
-![PDF OS](assets/screenshots/pdf-os.jpg)
-
-**[📄 Ver PDF Completo](assets/demo/pdf-os.pdf)**
-
-*Relatório detalhado da ordem de serviço com informações do cliente, equipamento, serviços realizados, peças utilizadas e assinatura digital.*
-
-### 💰 Relatório de Orçamento
-![PDF Orçamento](assets/screenshots/pdf-orcamento.jpg)
-
-**[📄 Ver PDF Completo](assets/demo/pdf-orcamento.pdf)**
-
-*Orçamento profissional com lista de materiais, valores, prazos e condições comerciais.*
+| Relatório | Preview | Download | Descrição |
+|-----------|---------|----------|-----------|
+| **Ordem de Serviço** | ![PDF OS](assets/screenshots/pdf-os.jpg) | **[📄 Ver PDF](assets/demo/pdf-os.pdf)** | Relatório detalhado com cliente, equipamento, serviços e assinatura |
+| **Orçamento** | ![PDF Orçamento](assets/screenshots/pdf-orcamento.jpg) | **[📄 Ver PDF](assets/demo/pdf-orcamento.pdf)** | Orçamento profissional com materiais, valores e prazos |
 
 ### 🎯 Características dos Relatórios
 - ✅ **Layout Profissional**: Design limpo e organizado
@@ -76,23 +64,33 @@ O sistema gera relatórios profissionais em PDF para ordens de serviço e orçam
 
 ## 📱 Screenshots das Principais Telas
 
-### Dashboard Administrativo
-![Dashboard Admin](assets/demo/adm-dashboard.jpg)
+<table>
+<tr>
+<td align="center">
+<strong>Dashboard Administrativo</strong><br>
+<img src="assets/screenshots/adm-dashboard.jpg" width="300"><br>
+<em>Visão geral do sistema para administradores</em>
+</td>
+<td align="center">
+<strong>Criação de Ordem de Serviço</strong><br>
+<img src="assets/screenshots/criar-os.jpg" width="300"><br>
+<em>Interface para criação de novas OS</em>
+</td>
+</tr>
 
-### Criação de Ordem de Serviço
-![Criar OS](assets/demo/criar-os.jpg)
-
-### Orçamentos
-![Orçamentos](assets/demo/orcamento.jpg)
-
-### Relatório de OS
-![PDF OS](assets/screenshots/pdf-os.jpg)
-
-### Relatório de Orçamento
-![PDF Orçamento](assets/screenshots/pdf-orcamento.jpg)
-
-### Perfil Técnico
-![Perfil Técnico](assets/screenshots/perfil-tec.jpg)
+<tr>
+<td align="center">
+<strong>Orçamentos</strong><br>
+<img src="assets/screenshots/orcamento.jpg" width="300"><br>
+<em>Gestão de orçamentos e materiais</em>
+</td>
+<td align="center">
+<strong>Perfil Técnico</strong><br>
+<img src="assets/screenshots/perfil-tec.jpg" width="300"><br>
+<em>Configurações e informações do técnico</em>
+</td>
+</tr>
+</table>
 
 ## 🎯 Sobre o Projeto
 
@@ -271,27 +269,6 @@ O app se conecta a uma API REST. Configure a URL base no arquivo:
 const String baseUrl = 'https://sua-api.com/api';
 ```
 
-## 📱 Screenshots
-
-
-### Login
-![Login](assets/screenshots/login.png)
-
-### Dashboard Admin
-![Dashboard Admin](assets/screenshots/dashboard-admin.png)
-
-### Dashboard Técnico
-![Dashboard Técnico](assets/screenshots/dashboard-tecnico.png)
-
-### Nova OS
-![Nova OS](assets/screenshots/nova-os.png)
-
-### Clientes
-![Clientes](assets/screenshots/clientes.png)
-
-### Orçamentos
-![Orçamentos](assets/screenshots/orcamentos.png)
-
 
 ## 🎯 Casos de Uso
 
@@ -346,7 +323,7 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 <div align="center">
 
-**Desenvolvido com ❤️ pela equipe Nordeste Serviços**
+**Desenvolvido com ❤️ pela CODAGIS**
 
 [![Flutter](https://img.shields.io/badge/Made%20with-Flutter-blue.svg)](https://flutter.dev/)
 [![Dart](https://img.shields.io/badge/Powered%20by-Dart-blue.svg)](https://dart.dev/)
