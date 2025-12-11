@@ -43,12 +43,46 @@ class AuthService {
     _refreshToken = prefs.getString(_refreshTokenKey);
     _tokenType = prefs.getString(_tokenTypeKey);
     
-    // Se não tem token ou token expirou, faz login automático
+    debugPrint('AuthService: Token carregado: ${hasToken ? "sim" : "não"}');
+    
+    // Se não tem token, faz login automático
     if (!hasToken) {
+      debugPrint('AuthService: Sem token, fazendo login automático...');
       await _autoLogin();
+    } else {
+      // Verifica se o token ainda é válido tentando uma requisição
+      // Se falhar, limpa e faz login novamente
+      debugPrint('AuthService: Token encontrado, verificando validade...');
+      final isValid = await _verifyToken();
+      if (!isValid) {
+        debugPrint('AuthService: Token inválido/expirado, limpando e fazendo novo login...');
+        await clearTokens();
+        await _autoLogin();
+      }
     }
     
     _isInitialized = true;
+  }
+  
+  /// Verifica se o token atual é válido
+  Future<bool> _verifyToken() async {
+    try {
+      // Tenta fazer uma requisição simples para verificar o token
+      final uri = Uri.parse('${AppConstants.apiBaseUrl}/api/dicas');
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $_accessToken',
+        },
+      );
+      debugPrint('AuthService: Verificação de token - Status: ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('AuthService: Erro ao verificar token - $e');
+      return false;
+    }
   }
   
   /// Faz login automático com credenciais padrão

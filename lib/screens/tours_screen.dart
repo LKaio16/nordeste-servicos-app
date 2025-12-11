@@ -673,21 +673,67 @@ class _TourListCard extends StatelessWidget {
   }
 }
 
-class _TourDetailModal extends StatelessWidget {
+class _TourDetailModal extends StatefulWidget {
   final Tour tour;
   final VoidCallback onClose;
 
   const _TourDetailModal({required this.tour, required this.onClose});
 
   @override
+  State<_TourDetailModal> createState() => _TourDetailModalState();
+}
+
+class _TourDetailModalState extends State<_TourDetailModal>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 350),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleClose() async {
+    await _controller.reverse();
+    widget.onClose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onClose,
-      child: Container(
-        color: Colors.black54,
-        child: GestureDetector(
-          onTap: () {},
-          child: DraggableScrollableSheet(
+      onTap: _handleClose,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Container(
+          color: Colors.black54,
+          child: GestureDetector(
+            onTap: () {},
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: DraggableScrollableSheet(
             initialChildSize: 0.85,
             minChildSize: 0.5,
             maxChildSize: 0.95,
@@ -724,7 +770,7 @@ class _TourDetailModal extends StatelessWidget {
                             ),
                           ),
                           IconButton(
-                            onPressed: onClose,
+                            onPressed: _handleClose,
                             icon: const Icon(Icons.close),
                           ),
                         ],
@@ -744,9 +790,9 @@ class _TourDetailModal extends StatelessWidget {
                                 SizedBox(
                                   height: 250,
                                   width: double.infinity,
-                                  child: _TourImage(imageUrl: tour.imageUrl),
+                                  child: _TourImage(imageUrl: widget.tour.imageUrl),
                                 ),
-                                if (tour.topSeller != null)
+                                if (widget.tour.topSeller != null)
                                   Positioned(
                                     top: 16,
                                     left: 16,
@@ -764,7 +810,7 @@ class _TourDetailModal extends StatelessWidget {
                                           const Icon(Icons.emoji_events, color: Colors.white, size: 16),
                                           const SizedBox(width: 6),
                                           Text(
-                                            'Top ${tour.topSeller} Mais Vendido',
+                                            'Top ${widget.tour.topSeller} Mais Vendido',
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontSize: 12,
@@ -784,7 +830,7 @@ class _TourDetailModal extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    tour.name,
+                                    widget.tour.name,
                                     style: const TextStyle(
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
@@ -793,7 +839,7 @@ class _TourDetailModal extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    tour.fullDescription,
+                                    widget.tour.fullDescription,
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: AppColors.gray600,
@@ -834,7 +880,7 @@ class _TourDetailModal extends StatelessWidget {
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
-                                                tour.duration,
+                                                widget.tour.duration,
                                                 style: const TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w600,
@@ -877,7 +923,7 @@ class _TourDetailModal extends StatelessWidget {
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
-                                                tour.price,
+                                                widget.tour.price,
                                                 style: const TextStyle(
                                                   fontSize: 13,
                                                   fontWeight: FontWeight.w600,
@@ -895,7 +941,7 @@ class _TourDetailModal extends StatelessWidget {
                                   const SizedBox(height: 20),
 
                                   // What's included
-                                  if (tour.includes.isNotEmpty) ...[
+                                  if (widget.tour.includes.isNotEmpty) ...[
                                     const Text(
                                       'O que está incluído:',
                                       style: TextStyle(
@@ -905,7 +951,7 @@ class _TourDetailModal extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(height: 12),
-                                    ...tour.includes.map((item) => Padding(
+                                    ...widget.tour.includes.map((item) => Padding(
                                       padding: const EdgeInsets.only(bottom: 8),
                                       child: Row(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -938,7 +984,7 @@ class _TourDetailModal extends StatelessWidget {
                                   // WhatsApp Button
                                   WhatsAppButton(
                                     text: 'Agendar Passeio via WhatsApp',
-                                    message: 'Olá! Gostaria de agendar o passeio: ${tour.name}',
+                                    message: 'Olá! Gostaria de agendar o passeio: ${widget.tour.name}',
                                   ),
                                 ],
                               ),
@@ -952,8 +998,10 @@ class _TourDetailModal extends StatelessWidget {
               );
             },
           ),
+            ),
         ),
       ),
+        ),
     );
   }
 }

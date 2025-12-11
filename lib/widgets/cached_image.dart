@@ -54,16 +54,12 @@ class CachedImage extends StatelessWidget {
         width: width,
         height: height,
         color: AppColors.gray200,
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.image_not_supported_rounded, color: AppColors.gray400, size: 32),
-            SizedBox(height: 8),
-            Text(
-              'Imagem indisponível',
-              style: TextStyle(color: AppColors.gray500, fontSize: 12),
-            ),
-          ],
+        child: const Center(
+          child: Icon(
+            Icons.image_outlined,
+            color: AppColors.gray400,
+            size: 28,
+          ),
         ),
       ),
     );

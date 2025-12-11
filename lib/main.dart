@@ -243,20 +243,24 @@ class _MainNavigatorState extends State<MainNavigator> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
+        toolbarHeight: 48, // Altura reduzida
         leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
+          icon: const Icon(Icons.menu, color: Colors.white, size: 22),
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
         ),
+        leadingWidth: 48,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.flight, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
+            const Icon(Icons.flight, color: Colors.white, size: 18),
+            const SizedBox(width: 6),
             Text(
               _getAppBarTitle(),
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -269,7 +273,21 @@ class _MainNavigatorState extends State<MainNavigator> {
         onNavigate: _navigateTo,
       ),
       body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 300),
+        switchInCurve: Curves.easeInOut,
+        switchOutCurve: Curves.easeInOut,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.03, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          );
+        },
         child: _buildCurrentPage(),
       ),
       bottomNavigationBar: AppBottomNavBar(

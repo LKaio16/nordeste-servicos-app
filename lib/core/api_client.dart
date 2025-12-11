@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_constants.dart';
 import '../services/auth_service.dart';
@@ -95,15 +96,22 @@ class ApiClient {
     bool requiresAuth,
   ) async {
     try {
+      debugPrint('ApiClient: Executando requisição...');
+      debugPrint('ApiClient: Token disponível: ${_authService.hasToken}');
       var response = await request();
+      debugPrint('ApiClient: Status: ${response.statusCode}');
+      debugPrint('ApiClient: Body: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}...');
 
       // Se receber 401 e requer auth, tenta refresh do token
       if (response.statusCode == 401 && requiresAuth) {
+        debugPrint('ApiClient: 401 recebido, tentando refresh...');
         final refreshResult = await _authService.refreshAccessToken();
         if (refreshResult.isSuccess) {
           // Retry da requisição original com novo token
+          debugPrint('ApiClient: Refresh OK, repetindo requisição...');
           response = await request();
         } else {
+          debugPrint('ApiClient: Refresh falhou');
           return ApiResponse.error(
             'Sessão expirada. Faça login novamente.',
             statusCode: 401,
@@ -113,6 +121,7 @@ class ApiClient {
 
       return _handleResponse<T>(response, fromJson);
     } catch (e) {
+      debugPrint('ApiClient: ERRO - $e');
       return ApiResponse.error('Erro de conexão: $e');
     }
   }

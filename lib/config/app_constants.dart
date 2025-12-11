@@ -20,10 +20,11 @@ class AppConstants {
   // Para desenvolvimento local:
   // - Android emulator: http://10.0.2.2:8080
   // - iOS simulator / Web local: http://localhost:8080
-  // - Dispositivo físico na mesma rede: usar IP da máquina
-  // Descubra seu IP com: ipconfig (Windows) ou ifconfig (Mac/Linux)
-  static const String apiBaseUrl = 'http://localhost:8080'; // Mude para seu IP para testar em dispositivos físicos
-  
+
+
+   static const String apiBaseUrl = 'http://localhost:8080';
+  // static const String apiBaseUrl = 'https://me-leva-noronha-ms-homolog.up.railway.app';
+
   // Coordenadas de Fernando de Noronha (para API de clima)
   static const double noronhaLatitude = -3.8548;
   static const double noronhaLongitude = -32.4233;

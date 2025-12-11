@@ -1,14 +1,52 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
+import '../models/article.dart';
+import '../services/api_service.dart';
 import '../widgets/cached_image.dart';
 import '../widgets/whatsapp_button.dart';
 
 /// Tela inicial do app
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final Function(String) onNavigate;
 
   const HomeScreen({super.key, required this.onNavigate});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final _apiService = ApiService();
+  List<Article> _dicas = [];
+  bool _isLoadingDicas = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarDicas();
+  }
+
+  Future<void> _carregarDicas() async {
+    try {
+      final response = await _apiService.getTips();
+      if (response.isSuccess && response.data != null) {
+        setState(() {
+          _dicas = (response.data as List)
+              .take(3) // Mostra apenas 3 na home
+              .map((json) => Article.fromApiJson(json as Map<String, dynamic>))
+              .toList();
+          _isLoadingDicas = false;
+        });
+      } else {
+        debugPrint('Erro ao carregar dicas: ${response.error}');
+        setState(() => _isLoadingDicas = false);
+      }
+    } catch (e) {
+      debugPrint('Exceção ao carregar dicas: $e');
+      setState(() => _isLoadingDicas = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -127,22 +165,22 @@ class HomeScreen extends StatelessWidget {
                 _QuickActionCard(
                   icon: Icons.flight_rounded,
                   label: 'Passeios',
-                  onTap: () => onNavigate('tours'),
+                  onTap: () => widget.onNavigate('tours'),
                 ),
                 _QuickActionCard(
                   icon: Icons.waves_rounded,
                   label: 'Tábua de Maré',
-                  onTap: () => onNavigate('tide'),
+                  onTap: () => widget.onNavigate('tide'),
                 ),
                 _QuickActionCard(
                   icon: Icons.wb_sunny_rounded,
                   label: 'Previsão',
-                  onTap: () => onNavigate('weather'),
+                  onTap: () => widget.onNavigate('weather'),
                 ),
                 _QuickActionCard(
                   icon: Icons.calculate_rounded,
                   label: 'Calculadora de Viagem',
-                  onTap: () => onNavigate('calculator'),
+                  onTap: () => widget.onNavigate('calculator'),
                 ),
               ],
             ),
@@ -150,35 +188,12 @@ class HomeScreen extends StatelessWidget {
 
           const SizedBox(height: 24),
 
-          // Dicas Section
-          _buildSectionHeader(context, 'Dicas', () => onNavigate('articles')),
+          // Dicas Section - AGORA DA API!
+          _buildSectionHeader(context, 'Dicas', () => widget.onNavigate('articles')),
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                _ArticleCard(
-                  imageUrl: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05',
-                  title: 'Como chegar em Fernando de Noronha',
-                  subtitle: 'Descubra as melhores formas de chegar ao paraíso',
-                  onTap: () => onNavigate('articles'),
-                ),
-                const SizedBox(height: 12),
-                _ArticleCard(
-                  imageUrl: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19',
-                  title: 'Melhores praias de Noronha',
-                  subtitle: 'Conheça as praias mais paradisíacas da ilha',
-                  onTap: () => onNavigate('articles'),
-                ),
-                const SizedBox(height: 12),
-                _ArticleCard(
-                  imageUrl: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828',
-                  title: 'Dicas essenciais para sua viagem',
-                  subtitle: 'Tudo que você precisa saber antes de viajar',
-                  onTap: () => onNavigate('articles'),
-                ),
-              ],
-            ),
+            child: _buildDicasSection(),
           ),
 
           const SizedBox(height: 24),
@@ -194,35 +209,35 @@ class HomeScreen extends StatelessWidget {
                   icon: Icons.menu_book_rounded,
                   label: 'Dicas',
                   description: 'Tudo sobre a ilha',
-                  onTap: () => onNavigate('articles'),
+                  onTap: () => widget.onNavigate('articles'),
                 ),
                 const SizedBox(height: 8),
                 _ServiceCard(
                   icon: Icons.directions_car_rounded,
                   label: 'Aluguel de Veículos',
                   description: 'Carros, motos e buggies',
-                  onTap: () => onNavigate('rental'),
+                  onTap: () => widget.onNavigate('rental'),
                 ),
                 const SizedBox(height: 8),
                 _ServiceCard(
                   icon: Icons.map_rounded,
                   label: 'Mapa da Ilha',
                   description: 'Pontos turísticos',
-                  onTap: () => onNavigate('map'),
+                  onTap: () => widget.onNavigate('map'),
                 ),
                 const SizedBox(height: 8),
                 _ServiceCard(
                   icon: Icons.directions_bus_rounded,
                   label: 'Transporte',
                   description: 'Táxi e ônibus',
-                  onTap: () => onNavigate('transport'),
+                  onTap: () => widget.onNavigate('transport'),
                 ),
                 const SizedBox(height: 8),
                 _ServiceCard(
                   icon: Icons.phone_rounded,
                   label: 'Telefones Úteis',
                   description: 'Emergências e contatos',
-                  onTap: () => onNavigate('services'),
+                  onTap: () => widget.onNavigate('services'),
                 ),
               ],
             ),
@@ -242,6 +257,44 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 100), // Espaço para bottom nav
         ],
       ),
+    );
+  }
+
+  Widget _buildDicasSection() {
+    if (_isLoadingDicas) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (_dicas.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: Text(
+            'Nenhuma dica disponível',
+            style: TextStyle(color: AppColors.gray500),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: _dicas.map((dica) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _ArticleCard(
+            imageUrl: dica.imageUrl,
+            title: dica.title,
+            subtitle: dica.content,
+            category: dica.category,
+            onTap: () => widget.onNavigate('articles'),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -328,12 +381,14 @@ class _ArticleCard extends StatelessWidget {
   final String imageUrl;
   final String title;
   final String subtitle;
+  final String? category;
   final VoidCallback onTap;
 
   const _ArticleCard({
     required this.imageUrl,
     required this.title,
     required this.subtitle,
+    this.category,
     required this.onTap,
   });
 
@@ -358,40 +413,55 @@ class _ArticleCard extends StatelessWidget {
                 child: SizedBox(
                   width: 100,
                   height: double.infinity,
-                  child: CachedImage(imageUrl: imageUrl),
+                  child: CachedImage(
+                    imageUrl: imageUrl,
+                    useAuth: true, // Imagens da API precisam de auth
+                  ),
                 ),
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Flexible(
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            color: AppColors.gray800,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                      if (category != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          margin: const EdgeInsets.only(bottom: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.secondaryBg,
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          child: Text(
+                            category!,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: AppColors.gray800,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      Flexible(
-                        child: Text(
-                          subtitle,
-                          style: const TextStyle(
-                            color: AppColors.gray500,
-                            fontSize: 12,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: AppColors.gray500,
+                          fontSize: 12,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -473,10 +543,3 @@ class _ServiceCard extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
