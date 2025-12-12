@@ -34,6 +34,8 @@ import '../../../data/repositories/peca_material_repository_impl.dart';
 import '../../../domain/repositories/peca_material_repository.dart';
 import '../../../data/repositories/tipo_servico_repository_impl.dart';
 import '../../../domain/repositories/tipo_servico_repository.dart';
+import '../../../data/repositories/recibo_repository_impl.dart';
+import '../../../domain/repositories/recibo_repository.dart';
 import '../../../core/db/database_service.dart';
 import '../../../data/datasources/local/os_local_data_source.dart';
 import '../../../data/datasources/local/sync_queue_local_data_source.dart';
@@ -142,6 +144,11 @@ final tipoServicoRepositoryProvider = Provider<TipoServicoRepository>((ref) {
 final orcamentoRepositoryProvider = Provider<OrcamentoRepository>((ref) {
   final apiClient = ref.read(apiClientProvider);
   return OrcamentoRepositoryImpl(apiClient);
+});
+
+final reciboRepositoryProvider = Provider<ReciboRepository>((ref) {
+  final apiClient = ref.read(apiClientProvider);
+  return ReciboRepositoryImpl(apiClient);
 });
 
 // TODO: Adicionar providers para Use Cases aqui se você os criar na camada domain/usecases

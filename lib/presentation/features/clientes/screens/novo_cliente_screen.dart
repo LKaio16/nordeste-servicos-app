@@ -9,6 +9,7 @@ import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 // Importar o provider e o estado
 import '../../../../data/models/tipo_cliente.dart';
 import '../../../shared/styles/app_colors.dart';
+import '../../../../core/services/cep_service.dart';
 import '../providers/cliente_list_provider.dart';
 import '../providers/novo_cliente_provider.dart';
 import '../providers/novo_cliente_state.dart';
@@ -39,6 +40,7 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
 
   // Estado para o tipo de cliente selecionado
   TipoCliente _tipoClienteSelecionado = TipoCliente.PESSOA_FISICA;
+  bool _isLoadingCEP = false;
 
   // Definição das máscaras
   final _cpfMask = MaskTextInputFormatter(mask: '###.###.###-##', filter: {"#": RegExp(r'[0-9]')});
@@ -107,7 +109,7 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
         email: _emailController.text,
         telefonePrincipal: _telPrincipalController.text,
         telefoneAdicional: _telAdicionalController.text.isNotEmpty ? _telAdicionalController.text : null,
-        cep: _cepController.text,
+        cep: _cepMask.getUnmaskedText(), // Remove máscara do CEP
         rua: _ruaController.text,
         numero: _numeroController.text,
         complemento: _complementoController.text.isNotEmpty ? _complementoController.text : null,
@@ -353,6 +355,52 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
                             icon: Icons.pin_outlined,
                             keyboardType: TextInputType.number,
                             inputFormatters: [_cepMask],
+                            onChanged: (value) async {
+                              // Busca endereço quando CEP estiver completo (8 dígitos)
+                              final cepLimpo = _cepMask.getUnmaskedText();
+                              if (cepLimpo.length == 8) {
+                                setState(() => _isLoadingCEP = true);
+                                try {
+                                  final endereco = await CepService.buscarEnderecoPorCEP(cepLimpo);
+                                  _ruaController.text = endereco['rua'] ?? '';
+                                  _bairroController.text = endereco['bairro'] ?? '';
+                                  _cidadeController.text = endereco['cidade'] ?? '';
+                                  _estadoSelecionado = endereco['estado'];
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Endereço encontrado!', style: GoogleFonts.poppins()),
+                                      backgroundColor: AppColors.successGreen,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      margin: EdgeInsets.all(12),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('CEP não encontrado. Preencha o endereço manualmente.', style: GoogleFonts.poppins()),
+                                      backgroundColor: AppColors.warningOrange,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      margin: EdgeInsets.all(12),
+                                    ),
+                                  );
+                                } finally {
+                                  setState(() => _isLoadingCEP = false);
+                                }
+                              }
+                            },
+                            suffixIcon: _isLoadingCEP ? Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
+                                ),
+                              ),
+                            ) : null,
                           ),
                           _buildTextFormField(
                             controller: _ruaController,
@@ -681,6 +729,8 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
+    Function(String)? onChanged,
+    Widget? suffixIcon,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -716,11 +766,13 @@ class _NovoClienteScreenState extends ConsumerState<NovoClienteScreen> with Sing
                 color: AppColors.textDark,
                 fontSize: 15,
               ),
+              onChanged: onChanged,
               decoration: InputDecoration(
                 prefixIcon: Icon(
                   icon,
                   color: AppColors.primaryBlue,
                 ),
+                suffixIcon: suffixIcon,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,

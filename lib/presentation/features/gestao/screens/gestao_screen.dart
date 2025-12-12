@@ -4,6 +4,8 @@ import 'package:nordeste_servicos_app/presentation/features/equipamentos/screens
 import 'package:nordeste_servicos_app/presentation/features/funcionario/screens/funcionario_list_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/funcionario/screens/novo_tecnico_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/servicos/screens/novo_tipo_servico_screen.dart';
+import 'package:nordeste_servicos_app/presentation/features/recibos/screens/recibo_list_screen.dart';
+import 'package:nordeste_servicos_app/presentation/features/recibos/screens/novo_recibo_screen.dart';
 import '../../clientes/screens/cliente_list_screen.dart';
 import '../../clientes/screens/novo_cliente_screen.dart';
 import '../../equipamentos/screens/novo_equipamento_screen.dart';
@@ -197,6 +199,15 @@ class GestaoScreen extends StatelessWidget {
                         color: AppColors.darkBlue,
                         onCardTap: () => navigateTo(const ServicosListScreen()),
                         onAddButtonTap: () => navigateTo(const NovoTipoServicoScreen()),
+                      ),
+                      const SizedBox(height: 16),
+                      ManagementCard(
+                        icon: Icons.receipt_long_outlined,
+                        title: 'Recibos',
+                        subtitle: 'Gerenciar recibos de pagamento',
+                        color: AppColors.successGreen,
+                        onCardTap: () => navigateTo(const RecibosListScreen()),
+                        onAddButtonTap: () => navigateTo(const NovoReciboScreen()),
                       ),
                       const SizedBox(height: 20),
                     ],

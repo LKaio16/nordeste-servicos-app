@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 
 import 'package:nordeste_servicos_app/data/models/tipo_cliente.dart';
 import 'package:nordeste_servicos_app/domain/entities/cliente.dart';
 import 'package:nordeste_servicos_app/presentation/shared/styles/app_colors.dart';
+import 'package:nordeste_servicos_app/core/services/cep_service.dart';
 import '../providers/cliente_detail_provider.dart';
 import '../providers/cliente_edit_provider.dart';
 import '../providers/cliente_list_provider.dart';
@@ -35,8 +37,22 @@ class _ClienteEditScreenState extends ConsumerState<ClienteEditScreen> {
   // State variables
   TipoCliente? _tipoClienteSelecionado;
   String? _estadoSelecionado;
+  bool _isLoadingCEP = false;
 
   final List<String> _estados = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
+  
+  // Máscara manual para CEP
+  String _formatCEP(String value) {
+    final digitsOnly = value.replaceAll(RegExp(r'[^\d]'), '');
+    if (digitsOnly.length <= 5) {
+      return digitsOnly;
+    }
+    return '${digitsOnly.substring(0, 5)}-${digitsOnly.substring(5, digitsOnly.length > 8 ? 8 : digitsOnly.length)}';
+  }
+  
+  String _getUnmaskedCEP(String value) {
+    return value.replaceAll(RegExp(r'[^\d]'), '');
+  }
 
   @override
   void initState() {
@@ -70,7 +86,8 @@ class _ClienteEditScreenState extends ConsumerState<ClienteEditScreen> {
     _emailController.text = cliente.email;
     _telPrincipalController.text = cliente.telefonePrincipal;
     _telAdicionalController.text = cliente.telefoneAdicional ?? '';
-    _cepController.text = cliente.cep;
+    // Aplica máscara no CEP
+    _cepController.text = _formatCEP(cliente.cep);
     _ruaController.text = cliente.rua;
     _numeroController.text = cliente.numero;
     _complementoController.text = cliente.complemento ?? '';
@@ -94,7 +111,7 @@ class _ClienteEditScreenState extends ConsumerState<ClienteEditScreen> {
         email: _emailController.text,
         telefonePrincipal: _telPrincipalController.text,
         telefoneAdicional: _telAdicionalController.text,
-        cep: _cepController.text,
+        cep: _getUnmaskedCEP(_cepController.text), // Remove máscara do CEP
         rua: _ruaController.text,
         numero: _numeroController.text,
         complemento: _complementoController.text,
@@ -184,7 +201,78 @@ class _ClienteEditScreenState extends ConsumerState<ClienteEditScreen> {
               const SizedBox(height: 20),
               _buildTextFormField(controller: _telAdicionalController, label: 'Telefone Adicional', icon: Icons.phone_android_outlined, keyboardType: TextInputType.phone, isOptional: true),
               const SizedBox(height: 20),
-              _buildTextFormField(controller: _cepController, label: 'CEP*', icon: Icons.pin_outlined, keyboardType: TextInputType.number),
+              _buildTextFormField(
+                controller: _cepController,
+                label: 'CEP*',
+                icon: Icons.pin_outlined,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(9),
+                  TextInputFormatter.withFunction((oldValue, newValue) {
+                    if (newValue.text.isEmpty) {
+                      return newValue;
+                    }
+                    final formatted = _formatCEP(newValue.text);
+                    return TextEditingValue(
+                      text: formatted,
+                      selection: TextSelection.collapsed(offset: formatted.length),
+                    );
+                  }),
+                ],
+                onChanged: (value) async {
+                  // Busca endereço quando CEP estiver completo (8 dígitos)
+                  final cepLimpo = _getUnmaskedCEP(value);
+                  if (cepLimpo.length == 8) {
+                    setState(() => _isLoadingCEP = true);
+                    try {
+                      final endereco = await CepService.buscarEnderecoPorCEP(cepLimpo);
+                      _ruaController.text = endereco['rua'] ?? '';
+                      _bairroController.text = endereco['bairro'] ?? '';
+                      _cidadeController.text = endereco['cidade'] ?? '';
+                      setState(() {
+                        _estadoSelecionado = endereco['estado'];
+                      });
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Endereço encontrado!', style: GoogleFonts.poppins()),
+                            backgroundColor: AppColors.successGreen,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            margin: EdgeInsets.all(12),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('CEP não encontrado. Preencha o endereço manualmente.', style: GoogleFonts.poppins()),
+                            backgroundColor: AppColors.warningOrange,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            margin: EdgeInsets.all(12),
+                          ),
+                        );
+                      }
+                    } finally {
+                      setState(() => _isLoadingCEP = false);
+                    }
+                  }
+                },
+                suffixIcon: _isLoadingCEP ? Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
+                    ),
+                  ),
+                ) : null,
+              ),
               const SizedBox(height: 20),
               _buildTextFormField(controller: _ruaController, label: 'Rua*', icon: Icons.signpost_outlined),
               const SizedBox(height: 20),
@@ -251,7 +339,16 @@ class _ClienteEditScreenState extends ConsumerState<ClienteEditScreen> {
     );
   }
 
-  Widget _buildTextFormField({required TextEditingController controller, required String label, IconData? icon, bool isOptional = false, TextInputType? keyboardType}) {
+  Widget _buildTextFormField({
+    required TextEditingController controller,
+    required String label,
+    IconData? icon,
+    bool isOptional = false,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    Function(String)? onChanged,
+    Widget? suffixIcon,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -260,9 +357,12 @@ class _ClienteEditScreenState extends ConsumerState<ClienteEditScreen> {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           style: GoogleFonts.poppins(color: AppColors.textDark, fontSize: 15),
+          onChanged: onChanged,
           decoration: InputDecoration(
             prefixIcon: icon != null ? Icon(icon, color: AppColors.primaryBlue) : null,
+            suffixIcon: suffixIcon,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primaryBlue, width: 2)),

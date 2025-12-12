@@ -72,6 +72,8 @@ class MyApp extends ConsumerWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
+        useMaterial3: false, // Garante compatibilidade com Material Icons
+        iconTheme: const IconThemeData(color: Colors.black87), // Define cor padrão para ícones
       ),
       // Use o método _getHomeScreen para decidir qual tela de início
       home: _getHomeScreen(),
