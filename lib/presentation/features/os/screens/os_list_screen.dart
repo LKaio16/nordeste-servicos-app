@@ -21,20 +21,33 @@ class OsListScreen extends ConsumerStatefulWidget {
 
 class _OsListScreenState extends ConsumerState<OsListScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    // Inicializa o controlador com o termo de pesquisa atual do estado
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentSearchTerm = ref.read(osListProvider).searchTerm;
       _searchController.text = currentSearchTerm;
     });
+    
+    // Adiciona listener para detectar quando chega ao final da lista
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.8) {
+      final state = ref.read(osListProvider);
+      if (!state.isLoadingMore && state.hasMore) {
+        ref.read(osListProvider.notifier).loadMoreOrdensServico();
+      }
+    }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -355,9 +368,20 @@ class _OsListScreenState extends ConsumerState<OsListScreen> {
       onRefresh: () => notifier.refreshOrdensServico(),
       color: AppColors.primaryBlue,
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16.0),
-        itemCount: state.ordensServico.length,
+        itemCount: state.ordensServico.length + (state.hasMore ? 1 : 0), // +1 para o indicador de loading
         itemBuilder: (context, index) {
+          // Se chegou ao último item e há mais para carregar, mostra indicador
+          if (index == state.ordensServico.length) {
+            return state.isLoadingMore
+                ? const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
+                  )
+                : const SizedBox.shrink();
+          }
+          
           final os = state.ordensServico[index];
           return _buildOsCard(context, os);
         },

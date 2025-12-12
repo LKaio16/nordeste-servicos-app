@@ -14,16 +14,24 @@ import '../../../shared/providers/repository_providers.dart';
 class OsListState {
   final List<OrdemServico> ordensServico;
   final bool isLoading;
+  final bool isLoadingMore; // Para indicar carregamento de mais itens
   final String? errorMessage;
-  final String searchTerm; // Adicionado para armazenar o termo de pesquisa atual
-  final StatusOSModel? selectedStatus; // Filtro por status
+  final String searchTerm;
+  final StatusOSModel? selectedStatus;
+  final int currentPage;
+  final bool hasMore; // Indica se há mais páginas para carregar
+  final int pageSize;
 
   OsListState({
     required this.ordensServico,
     this.isLoading = false,
+    this.isLoadingMore = false,
     this.errorMessage,
-    this.searchTerm = '', // Valor padrão vazio
-    this.selectedStatus, // Valor padrão null (sem filtro)
+    this.searchTerm = '',
+    this.selectedStatus,
+    this.currentPage = 0,
+    this.hasMore = true,
+    this.pageSize = 20,
   });
 
   factory OsListState.initial() => OsListState(ordensServico: []);
@@ -31,17 +39,27 @@ class OsListState {
   OsListState copyWith({
     List<OrdemServico>? ordensServico,
     bool? isLoading,
+    bool? isLoadingMore,
     String? errorMessage,
     String? searchTerm,
     StatusOSModel? selectedStatus,
+    int? currentPage,
+    bool? hasMore,
     bool clearStatus = false,
+    bool append = false, // Se true, adiciona à lista existente
   }) {
     return OsListState(
-      ordensServico: ordensServico ?? this.ordensServico,
+      ordensServico: append && ordensServico != null
+          ? [...this.ordensServico, ...ordensServico]
+          : (ordensServico ?? this.ordensServico),
       isLoading: isLoading ?? this.isLoading,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       errorMessage: errorMessage,
       searchTerm: searchTerm ?? this.searchTerm,
       selectedStatus: clearStatus ? null : (selectedStatus ?? this.selectedStatus),
+      currentPage: currentPage ?? this.currentPage,
+      hasMore: hasMore ?? this.hasMore,
+      pageSize: this.pageSize,
     );
   }
 }
@@ -67,54 +85,89 @@ class OsListNotifier extends StateNotifier<OsListState> {
     String? searchTerm,
     StatusOSModel? statusFilter,
     bool clearStatus = false,
+    bool loadMore = false, // Novo parâmetro para carregar mais
   }) async {
-    if (state.isLoading && !refresh) {
+    if (state.isLoading && !refresh && !loadMore) {
+      return;
+    }
+    if (loadMore && (state.isLoadingMore || !state.hasMore)) {
       return;
     }
 
-    // Atualiza o termo de pesquisa e filtro de status no estado se fornecidos
     final currentSearchTerm = searchTerm ?? state.searchTerm;
     final currentStatusFilter = clearStatus ? null : (statusFilter ?? state.selectedStatus);
+    final page = loadMore ? state.currentPage + 1 : 0;
 
-    state = state.copyWith(
-      isLoading: true,
-      errorMessage: null,
-      searchTerm: currentSearchTerm,
-      selectedStatus: currentStatusFilter,
-      clearStatus: clearStatus,
-    );
+    if (loadMore) {
+      state = state.copyWith(isLoadingMore: true);
+    } else {
+      state = state.copyWith(
+        isLoading: true,
+        errorMessage: null,
+        searchTerm: currentSearchTerm,
+        selectedStatus: currentStatusFilter,
+        clearStatus: clearStatus,
+        currentPage: 0,
+        hasMore: true,
+      );
+    }
 
     try {
       final ordens = await _osRepository.getOrdensServico(
         searchTerm: currentSearchTerm.isNotEmpty ? currentSearchTerm : null,
+        status: currentStatusFilter,
+        page: page,
+        size: state.pageSize,
       );
 
-      // Aplica filtro por status se necessário
+      // Aplica filtro por status se necessário (caso o backend não faça)
       List<OrdemServico> filteredOrdens = ordens;
-      if (currentStatusFilter != null) {
+      if (currentStatusFilter != null && ordens.any((os) => os.status != currentStatusFilter)) {
         filteredOrdens = ordens.where((os) => os.status == currentStatusFilter).toList();
       }
 
+      final hasMore = filteredOrdens.length == state.pageSize;
+
       if (mounted) {
-        state = state.copyWith(
-          isLoading: false,
-          ordensServico: filteredOrdens,
-          searchTerm: currentSearchTerm,
-          selectedStatus: currentStatusFilter,
-          clearStatus: clearStatus,
-        );
+        if (loadMore) {
+          // Adiciona os novos itens à lista existente
+          state = state.copyWith(
+            isLoadingMore: false,
+            ordensServico: filteredOrdens,
+            currentPage: page,
+            hasMore: hasMore,
+            append: true, // Indica que deve adicionar à lista existente
+          );
+        } else {
+          // Substitui a lista completa
+          state = state.copyWith(
+            isLoading: false,
+            ordensServico: filteredOrdens,
+            searchTerm: currentSearchTerm,
+            selectedStatus: currentStatusFilter,
+            clearStatus: clearStatus,
+            currentPage: page,
+            hasMore: hasMore,
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         state = state.copyWith(
           isLoading: false,
-          errorMessage: 'Erro ao carregar Ordens de Serviço:  ${e.toString()}',
+          isLoadingMore: false,
+          errorMessage: 'Erro ao carregar Ordens de Serviço: ${e.toString()}',
           searchTerm: currentSearchTerm,
           selectedStatus: currentStatusFilter,
           clearStatus: clearStatus,
         );
       }
     }
+  }
+
+  // Método para carregar mais itens (infinite scroll)
+  Future<void> loadMoreOrdensServico() async {
+    await loadOrdensServico(loadMore: true);
   }
 
 // Método específico para pesquisa

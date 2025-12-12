@@ -30,7 +30,9 @@ class OsRepositoryImpl implements OsRepository {
     int? clienteId,
     int? tecnicoId,
     StatusOSModel? status,
-    DateTime? dataAgendamento, // Adicionado
+    DateTime? dataAgendamento,
+    int page = 0,
+    int size = 20,
   }) async {
     try {
       // Verifica se há internet
@@ -59,16 +61,27 @@ class OsRepositoryImpl implements OsRepository {
             ).toList();
           }
           
-          return filteredOs.map((model) => model.toEntity()).toList();
+          // Aplica paginação local
+          final startIndex = page * size;
+          final endIndex = (startIndex + size).clamp(0, filteredOs.length);
+          final paginatedOs = filteredOs.sublist(
+            startIndex.clamp(0, filteredOs.length),
+            endIndex,
+          );
+          
+          return paginatedOs.map((model) => model.toEntity()).toList();
         }
       }
 
-      final Map<String, dynamic> queryParameters = {};
+      final Map<String, dynamic> queryParameters = {
+        'page': page,
+        'size': size,
+      };
       if (searchTerm != null && searchTerm.isNotEmpty) queryParameters['searchTerm'] = searchTerm;
       if (clienteId != null) queryParameters['clienteId'] = clienteId;
       if (tecnicoId != null) queryParameters['tecnicoId'] = tecnicoId;
       if (status != null) queryParameters['status'] = status.name;
-      if (dataAgendamento != null) queryParameters['dataAgendamento'] = dataAgendamento.toIso8601String(); // Adicionado
+      if (dataAgendamento != null) queryParameters['dataAgendamento'] = dataAgendamento.toIso8601String();
 
       final response = await apiClient.get('/ordens-servico', queryParameters: queryParameters);
 
@@ -76,8 +89,7 @@ class OsRepositoryImpl implements OsRepository {
         final List<dynamic> jsonList = response.data;
         final List<OrdemServicoModel> osModels = jsonList.map((json) => OrdemServicoModel.fromJson(json)).toList();
 
-        // Cache the results
-        await localDataSource.clearAll();
+        // Cache the results (apenas as OS retornadas, não limpa tudo)
         for (var os in osModels) {
           await localDataSource.saveOrUpdateOs(os);
         }
@@ -92,6 +104,32 @@ class OsRepositoryImpl implements OsRepository {
       throw ApiException('Erro de rede ao carregar ordens de serviço: ${e.message}');
     } catch (e) {
       throw ApiException('Erro inesperado ao carregar ordens de serviço: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<Map<String, int>> getDashboardStats() async {
+    try {
+      final response = await apiClient.get('/ordens-servico/dashboard/stats');
+      
+      if (response.statusCode == 200) {
+        final data = response.data;
+        return {
+          'totalOs': data['totalOs'] ?? 0,
+          'osEmAndamento': data['osEmAndamento'] ?? 0,
+          'osPendentes': data['osPendentes'] ?? 0,
+          'osAbertas': data['osAbertas'] ?? 0,
+          'osConcluidas': data['osConcluidas'] ?? 0,
+        };
+      } else {
+        throw ApiException('Falha ao carregar estatísticas: Status ${response.statusCode}');
+      }
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      throw ApiException('Erro de rede ao carregar estatísticas: ${e.message}');
+    } catch (e) {
+      throw ApiException('Erro inesperado ao carregar estatísticas: ${e.toString()}');
     }
   }
 
