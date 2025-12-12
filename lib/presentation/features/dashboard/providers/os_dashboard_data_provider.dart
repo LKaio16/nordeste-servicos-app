@@ -2,7 +2,6 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nordeste_servicos_app/core/error/exceptions.dart';
-import 'package:nordeste_servicos_app/data/models/status_os_model.dart'; // Importe seu enum de Status OS
 import 'package:nordeste_servicos_app/domain/repositories/os_repository.dart';
 import 'package:nordeste_servicos_app/presentation/features/dashboard/models/dashboard_data.dart';
 import 'package:nordeste_servicos_app/presentation/shared/providers/repository_providers.dart';
@@ -44,14 +43,13 @@ class OsDashboardNotifier extends StateNotifier<OsDashboardState> {
   Future<void> fetchOsDashboardData() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final allOs = await _osRepository.getOrdensServico();
-      final osEmAndamento = await _osRepository.getOrdensServico(status: StatusOSModel.EM_ANDAMENTO);
-      final osPendentes = await _osRepository.getOrdensServico(status: StatusOSModel.AGUARDANDO_APROVACAO);
+      // Usa o método otimizado que busca apenas estatísticas (sem buscar todas as OS)
+      final stats = await _osRepository.getDashboardStats();
 
       final DashboardData dashboardData = DashboardData(
-        totalOS: allOs.length,
-        osEmAndamento: osEmAndamento.length,
-        osPendentes: osPendentes.length,
+        totalOS: stats['totalOs'] ?? 0,
+        osEmAndamento: stats['osEmAndamento'] ?? 0,
+        osPendentes: stats['osPendentes'] ?? 0,
         totalOrcamentos: 0, // Orçamentos não são foco aqui, pode ser zero ou buscar de outro provider
         orcamentosAprovados: 0,
         orcamentosRejeitados: 0,
