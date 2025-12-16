@@ -1,17 +1,125 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import '../models/point_of_interest.dart';
+import '../services/api_service.dart';
 import '../services/mock_data_service.dart';
 import '../core/utils.dart';
+import '../widgets/image_viewer.dart';
 
 /// Tela do Mapa
-class MapScreen extends StatelessWidget {
-  MapScreen({super.key});
+class MapScreen extends StatefulWidget {
+  const MapScreen({super.key});
 
-  final _dataService = MockDataService();
+  @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  final _apiService = ApiService();
+  final _mockDataService = MockDataService();
+  
+  List<PointOfInterest> _points = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarPontosInteresse();
+  }
+
+  Future<void> _carregarPontosInteresse() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      debugPrint('MapScreen: Iniciando carregamento de pontos de interesse...');
+      final response = await _apiService.getPointsOfInterest();
+      debugPrint('MapScreen: Resposta recebida - success: ${response.isSuccess}');
+      
+      if (!mounted) return;
+      
+      if (response.isSuccess && response.data != null) {
+        debugPrint('MapScreen: Dados recebidos: ${response.data}');
+        final pontos = (response.data as List)
+            .map((json) => PointOfInterest.fromApiJson(json as Map<String, dynamic>))
+            .toList();
+        debugPrint('MapScreen: ${pontos.length} pontos de interesse carregados');
+        setState(() {
+          _points = pontos;
+          _isLoading = false;
+        });
+      } else {
+        debugPrint('MapScreen: Erro - ${response.error}');
+        // Se falhar, usa dados mock como fallback
+        _loadMockData();
+      }
+    } catch (e) {
+      debugPrint('MapScreen: Exceção - $e');
+      // Em caso de erro, usa dados mock
+      if (mounted) {
+        _loadMockData();
+      }
+    }
+  }
+
+  void _loadMockData() {
+    if (!mounted) return;
+    
+    setState(() {
+      _points = _mockDataService.getPointsOfInterest();
+      _isLoading = false;
+      _errorMessage = null; // Não mostra erro se tem mock data
+    });
+  }
+
+  void _abrirMapaPDF(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ImageViewer(
+          imagePath: 'assets/images/MAPA_NORONHA.jpg',
+          title: 'Mapa de Fernando de Noronha',
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final points = _dataService.getPointsOfInterest();
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_errorMessage != null && _points.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: AppColors.gray400),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: AppColors.gray600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _carregarPontosInteresse,
+              child: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final points = _points;
 
     return SingleChildScrollView(
       child: Column(
@@ -24,12 +132,7 @@ class MapScreen extends StatelessWidget {
               color: AppColors.primary,
               borderRadius: BorderRadius.circular(20),
               child: InkWell(
-                onTap: () {
-                  AppUtils.showSnackBar(
-                    context, 
-                    'Funcionalidade de PDF em desenvolvimento',
-                  );
-                },
+                onTap: () => _abrirMapaPDF(context),
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
                   padding: const EdgeInsets.all(32),
@@ -190,7 +293,13 @@ class MapScreen extends StatelessWidget {
                         color: AppColors.secondaryBg,
                         borderRadius: BorderRadius.circular(10),
                         child: InkWell(
-                          onTap: () => AppUtils.openGoogleMaps(),
+                          onTap: () {
+                            if (point.linkGoogleMaps != null && point.linkGoogleMaps!.isNotEmpty) {
+                              AppUtils.openUrl(point.linkGoogleMaps!);
+                            } else {
+                              AppUtils.openGoogleMaps();
+                            }
+                          },
                           borderRadius: BorderRadius.circular(10),
                           child: const Padding(
                             padding: EdgeInsets.all(10),

@@ -1,25 +1,121 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import '../models/nightlife_venue.dart';
+import '../services/api_service.dart';
 import '../services/mock_data_service.dart';
 import '../widgets/cached_image.dart';
 import '../core/utils.dart';
 
 /// Tela de Vida Noturna
-class NightlifeScreen extends StatelessWidget {
+class NightlifeScreen extends StatefulWidget {
   final VoidCallback? onBack;
 
-  NightlifeScreen({super.key, this.onBack});
+  const NightlifeScreen({super.key, this.onBack});
 
-  final _dataService = MockDataService();
+  @override
+  State<NightlifeScreen> createState() => _NightlifeScreenState();
+}
+
+class _NightlifeScreenState extends State<NightlifeScreen> {
+  final _apiService = ApiService();
+  final _mockDataService = MockDataService();
+  
+  List<NightlifeVenue> _venues = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarVidaNoturna();
+  }
+
+  Future<void> _carregarVidaNoturna() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      debugPrint('NightlifeScreen: Iniciando carregamento de vida noturna...');
+      final response = await _apiService.getNightlife();
+      debugPrint('NightlifeScreen: Resposta recebida - success: ${response.isSuccess}');
+      
+      if (!mounted) return;
+      
+      if (response.isSuccess && response.data != null) {
+        debugPrint('NightlifeScreen: Dados recebidos: ${response.data}');
+        final venues = (response.data as List)
+            .map((json) => NightlifeVenue.fromApiJson(json as Map<String, dynamic>))
+            .toList();
+        debugPrint('NightlifeScreen: ${venues.length} locais de vida noturna carregados');
+        setState(() {
+          _venues = venues;
+          _isLoading = false;
+        });
+      } else {
+        debugPrint('NightlifeScreen: Erro - ${response.error}');
+        // Se falhar, usa dados mock como fallback
+        _loadMockData();
+      }
+    } catch (e) {
+      debugPrint('NightlifeScreen: Exceção - $e');
+      // Em caso de erro, usa dados mock
+      if (mounted) {
+        _loadMockData();
+      }
+    }
+  }
+
+  void _loadMockData() {
+    if (!mounted) return;
+    
+    setState(() {
+      _venues = _mockDataService.getNightlifeVenues();
+      _isLoading = false;
+      _errorMessage = null; // Não mostra erro se tem mock data
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final venues = _dataService.getNightlifeVenues();
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_errorMessage != null && _venues.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: AppColors.gray400),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: AppColors.gray600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _carregarVidaNoturna,
+              child: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final venues = _venues;
 
     return Column(
       children: [
         // Header with back button
-        if (onBack != null)
+        if (widget.onBack != null)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             decoration: BoxDecoration(
@@ -29,7 +125,7 @@ class NightlifeScreen extends StatelessWidget {
             child: Row(
               children: [
                 IconButton(
-                  onPressed: onBack,
+                  onPressed: widget.onBack,
                   icon: const Icon(Icons.arrow_back),
                 ),
                 Text(
@@ -74,11 +170,14 @@ class NightlifeScreen extends StatelessWidget {
                               children: [
                                 ClipRRect(
                                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                                  child: SizedBox(
-                                    height: 200,
-                                    width: double.infinity,
-                                    child: CachedImage(imageUrl: venue.imageUrl),
-                                  ),
+                                    child: SizedBox(
+                                      height: 200,
+                                      width: double.infinity,
+                                      child: CachedImage(
+                                        imageUrl: venue.imageUrl,
+                                        useAuth: true, // Imagens da API precisam de auth
+                                      ),
+                                    ),
                                 ),
                                 Positioned(
                                   bottom: 0,
@@ -177,7 +276,13 @@ class NightlifeScreen extends StatelessWidget {
                                         color: AppColors.secondaryBg,
                                         borderRadius: BorderRadius.circular(12),
                                         child: InkWell(
-                                          onTap: () => AppUtils.openGoogleMaps(),
+                                          onTap: () {
+                                            if (venue.linkGoogleMaps != null && venue.linkGoogleMaps!.isNotEmpty) {
+                                              AppUtils.openUrl(venue.linkGoogleMaps!);
+                                            } else {
+                                              AppUtils.openGoogleMaps();
+                                            }
+                                          },
                                           borderRadius: BorderRadius.circular(12),
                                           child: const Padding(
                                             padding: EdgeInsets.all(12),

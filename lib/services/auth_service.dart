@@ -44,22 +44,17 @@ class AuthService {
     _tokenType = prefs.getString(_tokenTypeKey);
     
     debugPrint('AuthService: Token carregado: ${hasToken ? "sim" : "não"}');
+    debugPrint('AuthService: API URL: ${AppConstants.apiBaseUrl}');
     
-    // Se não tem token, faz login automático
-    if (!hasToken) {
-      debugPrint('AuthService: Sem token, fazendo login automático...');
-      await _autoLogin();
-    } else {
-      // Verifica se o token ainda é válido tentando uma requisição
-      // Se falhar, limpa e faz login novamente
-      debugPrint('AuthService: Token encontrado, verificando validade...');
-      final isValid = await _verifyToken();
-      if (!isValid) {
-        debugPrint('AuthService: Token inválido/expirado, limpando e fazendo novo login...');
-        await clearTokens();
-        await _autoLogin();
-      }
+    // SEMPRE limpa e faz novo login para garantir token correto do servidor atual
+    // TODO: Remover isso depois de resolver o problema de tokens
+    if (hasToken) {
+      debugPrint('AuthService: Limpando token antigo e fazendo novo login...');
+      await clearTokens();
     }
+    
+    debugPrint('AuthService: Fazendo login automático...');
+    await _autoLogin();
     
     _isInitialized = true;
   }
@@ -69,6 +64,7 @@ class AuthService {
     try {
       // Tenta fazer uma requisição simples para verificar o token
       final uri = Uri.parse('${AppConstants.apiBaseUrl}/api/dicas');
+      debugPrint('AuthService: Verificando token em ${AppConstants.apiBaseUrl}');
       final response = await http.get(
         uri,
         headers: {
@@ -78,6 +74,13 @@ class AuthService {
         },
       );
       debugPrint('AuthService: Verificação de token - Status: ${response.statusCode}');
+      
+      // Se 401, token inválido
+      if (response.statusCode == 401) {
+        debugPrint('AuthService: Token rejeitado (401), limpando...');
+        return false;
+      }
+      
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('AuthService: Erro ao verificar token - $e');
@@ -107,7 +110,10 @@ class AuthService {
   /// Realiza login e salva os tokens
   Future<AuthResult> login(String username, String senha) async {
     try {
-      final uri = Uri.parse('${AppConstants.apiBaseUrl}/api/auth/login');
+      final loginUrl = '${AppConstants.apiBaseUrl}/api/auth/login';
+      debugPrint('AuthService: Fazendo login em $loginUrl');
+      
+      final uri = Uri.parse(loginUrl);
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
@@ -117,9 +123,12 @@ class AuthService {
         }),
       );
 
+      debugPrint('AuthService: Login response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final authResponse = AuthResponse.fromJson(jsonDecode(response.body));
         await _saveTokens(authResponse);
+        debugPrint('AuthService: Login OK! Token salvo.');
         return AuthResult.success(authResponse);
       } else {
         String message = 'Erro ao fazer login';
@@ -127,9 +136,11 @@ class AuthService {
           final json = jsonDecode(response.body);
           message = json['message'] ?? json['error'] ?? message;
         } catch (_) {}
+        debugPrint('AuthService: Login FALHOU - $message');
         return AuthResult.error(message, statusCode: response.statusCode);
       }
     } catch (e) {
+      debugPrint('AuthService: Login ERRO - $e');
       return AuthResult.error('Erro de conexão: $e');
     }
   }

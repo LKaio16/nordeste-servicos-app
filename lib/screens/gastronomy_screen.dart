@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../models/restaurant.dart';
+import '../services/api_service.dart';
 import '../services/mock_data_service.dart';
 import '../widgets/cached_image.dart';
 import '../core/utils.dart';
@@ -15,15 +17,113 @@ class GastronomyScreen extends StatefulWidget {
 }
 
 class _GastronomyScreenState extends State<GastronomyScreen> {
-  final _dataService = MockDataService();
+  final _apiService = ApiService();
+  final _mockDataService = MockDataService();
   String _priceFilter = 'all';
+  
+  List<Restaurant> _restaurants = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarRestaurantes();
+  }
+
+  Future<void> _carregarRestaurantes() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      debugPrint('GastronomyScreen: Iniciando carregamento de restaurantes...');
+      
+      // Carrega todos os restaurantes (sem filtro)
+      final response = await _apiService.getRestaurants();
+      debugPrint('GastronomyScreen: Resposta recebida - success: ${response.isSuccess}');
+      
+      if (!mounted) return;
+      
+      if (response.isSuccess && response.data != null) {
+        debugPrint('GastronomyScreen: Dados recebidos: ${response.data}');
+        final restaurantes = (response.data as List)
+            .map((json) => Restaurant.fromApiJson(json as Map<String, dynamic>))
+            .toList();
+        debugPrint('GastronomyScreen: ${restaurantes.length} restaurantes carregados');
+        setState(() {
+          _restaurants = restaurantes;
+          _isLoading = false;
+        });
+      } else {
+        debugPrint('GastronomyScreen: Erro - ${response.error}');
+        // Se falhar, usa dados mock como fallback
+        _loadMockData();
+      }
+    } catch (e) {
+      debugPrint('GastronomyScreen: Exceção - $e');
+      // Em caso de erro, usa dados mock
+      if (mounted) {
+        _loadMockData();
+      }
+    }
+  }
+
+  void _loadMockData() {
+    if (!mounted) return;
+    
+    setState(() {
+      _restaurants = _mockDataService.getRestaurants();
+      _isLoading = false;
+      _errorMessage = null; // Não mostra erro se tem mock data
+    });
+  }
+
+  void _onFilterChanged(String newFilter) {
+    if (_priceFilter != newFilter) {
+      setState(() {
+        _priceFilter = newFilter;
+      });
+      // Não precisa recarregar da API, apenas filtra localmente
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final restaurants = _dataService.getRestaurants();
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_errorMessage != null && _restaurants.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: AppColors.gray400),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: AppColors.gray600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _carregarRestaurantes,
+              child: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
+      );
+    }
+
     final filteredRestaurants = _priceFilter == 'all'
-        ? restaurants
-        : restaurants.where((r) => r.priceRange == _priceFilter).toList();
+        ? _restaurants
+        : _restaurants.where((r) => r.priceRange == _priceFilter).toList();
 
     return SingleChildScrollView(
       child: Column(
@@ -58,27 +158,27 @@ class _GastronomyScreenState extends State<GastronomyScreen> {
                 _FilterChip(
                   label: 'Todos',
                   isSelected: _priceFilter == 'all',
-                  onTap: () => setState(() => _priceFilter = 'all'),
+                  onTap: () => _onFilterChanged('all'),
                 ),
                 _FilterChip(
                   label: '\$ Econômico',
                   isSelected: _priceFilter == '\$',
-                  onTap: () => setState(() => _priceFilter = '\$'),
+                  onTap: () => _onFilterChanged('\$'),
                 ),
                 _FilterChip(
                   label: '\$\$ Moderado',
                   isSelected: _priceFilter == '\$\$',
-                  onTap: () => setState(() => _priceFilter = '\$\$'),
+                  onTap: () => _onFilterChanged('\$\$'),
                 ),
                 _FilterChip(
                   label: '\$\$\$ Sofisticado',
                   isSelected: _priceFilter == '\$\$\$',
-                  onTap: () => setState(() => _priceFilter = '\$\$\$'),
+                  onTap: () => _onFilterChanged('\$\$\$'),
                 ),
                 _FilterChip(
                   label: '\$\$\$\$ Premium',
                   isSelected: _priceFilter == '\$\$\$\$',
-                  onTap: () => setState(() => _priceFilter = '\$\$\$\$'),
+                  onTap: () => _onFilterChanged('\$\$\$\$'),
                 ),
               ],
             ),
@@ -224,7 +324,10 @@ class _RestaurantCard extends StatelessWidget {
                 child: SizedBox(
                   height: 160,
                   width: double.infinity,
-                  child: CachedImage(imageUrl: restaurant.imageUrl),
+                  child: CachedImage(
+                    imageUrl: restaurant.imageUrl,
+                    useAuth: true, // Imagens da API precisam de auth
+                  ),
                 ),
               ),
               Positioned(

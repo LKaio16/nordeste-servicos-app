@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
@@ -25,11 +26,22 @@ class CachedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Log da URL
+    debugPrint('CachedImage: URL = $imageUrl');
+    debugPrint('CachedImage: useAuth = $useAuth');
+    
+    // Se URL vazia, mostra placeholder
+    if (imageUrl.isEmpty) {
+      debugPrint('CachedImage: URL vazia!');
+      return _buildErrorWidget();
+    }
+
     // Obtém headers de autenticação se necessário
     Map<String, String>? headers;
     if (useAuth) {
       final authService = AuthService();
       final token = authService.accessToken;
+      debugPrint('CachedImage: Token disponível = ${token != null && token.isNotEmpty}');
       if (token != null && token.isNotEmpty) {
         headers = {'Authorization': 'Bearer $token'};
       }
@@ -41,27 +53,23 @@ class CachedImage extends StatelessWidget {
       height: height,
       fit: fit,
       httpHeaders: headers,
-      placeholder: (context, url) => Shimmer.fromColors(
-        baseColor: AppColors.gray200,
-        highlightColor: AppColors.gray100,
-        child: Container(
-          width: width,
-          height: height,
-          color: AppColors.gray200,
-        ),
-      ),
-      errorWidget: (context, url, error) => Container(
-        width: width,
-        height: height,
-        color: AppColors.gray200,
-        child: const Center(
-          child: Icon(
-            Icons.image_outlined,
-            color: AppColors.gray400,
-            size: 28,
+      placeholder: (context, url) {
+        debugPrint('CachedImage: Carregando... $url');
+        return Shimmer.fromColors(
+          baseColor: AppColors.gray200,
+          highlightColor: AppColors.gray100,
+          child: Container(
+            width: width,
+            height: height,
+            color: AppColors.gray200,
           ),
-        ),
-      ),
+        );
+      },
+      errorWidget: (context, url, error) {
+        debugPrint('CachedImage: ERRO ao carregar $url');
+        debugPrint('CachedImage: Erro = $error');
+        return _buildErrorWidget();
+      },
     );
 
     if (borderRadius != null) {
@@ -72,6 +80,21 @@ class CachedImage extends StatelessWidget {
     }
 
     return image;
+  }
+
+  Widget _buildErrorWidget() {
+    return Container(
+      width: width,
+      height: height,
+      color: AppColors.gray200,
+      child: const Center(
+        child: Icon(
+          Icons.image_outlined,
+          color: AppColors.gray400,
+          size: 28,
+        ),
+      ),
+    );
   }
 }
 
@@ -98,8 +121,17 @@ class AuthenticatedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('AuthenticatedImage: URL = $imageUrl');
+    
+    if (imageUrl.isEmpty) {
+      debugPrint('AuthenticatedImage: URL vazia!');
+      return _buildDefaultError();
+    }
+
     final authService = AuthService();
     final token = authService.accessToken;
+    
+    debugPrint('AuthenticatedImage: Token disponível = ${token != null && token.isNotEmpty}');
     
     Map<String, String>? headers;
     if (token != null && token.isNotEmpty) {
@@ -112,25 +144,23 @@ class AuthenticatedImage extends StatelessWidget {
       height: height,
       fit: fit,
       httpHeaders: headers,
-      placeholder: (context, url) => placeholder ?? Shimmer.fromColors(
-        baseColor: AppColors.gray200,
-        highlightColor: AppColors.gray100,
-        child: Container(
-          width: width,
-          height: height,
-          color: AppColors.gray200,
-        ),
-      ),
-      errorWidget: (context, url, error) => errorWidget ?? Container(
-        width: width,
-        height: height,
-        color: AppColors.gray100,
-        child: Icon(
-          Icons.image_not_supported_rounded, 
-          color: AppColors.gray400, 
-          size: width != null ? width! * 0.4 : 32,
-        ),
-      ),
+      placeholder: (context, url) {
+        debugPrint('AuthenticatedImage: Carregando... $url');
+        return placeholder ?? Shimmer.fromColors(
+          baseColor: AppColors.gray200,
+          highlightColor: AppColors.gray100,
+          child: Container(
+            width: width,
+            height: height,
+            color: AppColors.gray200,
+          ),
+        );
+      },
+      errorWidget: (context, url, error) {
+        debugPrint('AuthenticatedImage: ERRO ao carregar $url');
+        debugPrint('AuthenticatedImage: Erro = $error');
+        return errorWidget ?? _buildDefaultError();
+      },
     );
 
     if (borderRadius != null) {
@@ -141,5 +171,18 @@ class AuthenticatedImage extends StatelessWidget {
     }
 
     return image;
+  }
+
+  Widget _buildDefaultError() {
+    return Container(
+      width: width,
+      height: height,
+      color: AppColors.gray100,
+      child: Icon(
+        Icons.image_not_supported_rounded, 
+        color: AppColors.gray400, 
+        size: width != null ? width! * 0.4 : 32,
+      ),
+    );
   }
 }
