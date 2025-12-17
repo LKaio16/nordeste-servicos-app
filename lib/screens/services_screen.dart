@@ -116,11 +116,13 @@ class ServicesScreen extends StatelessWidget {
                             children: [
                               const Icon(Icons.info_outline, color: Colors.white, size: 18),
                               const SizedBox(width: 8),
-                              Text(
-                                'Único posto da ilha - Abasteça com antecedência!',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.9),
-                                  fontSize: 12,
+                              Expanded(
+                                child: Text(
+                                  'Único posto da ilha - Abasteça com antecedência!',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                             ],

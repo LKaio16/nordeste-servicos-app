@@ -12,6 +12,8 @@ class Restaurant {
   final bool hasReservation;
   final bool hasDelivery;
   final String priceRange;
+  final String? linkCardapio;
+  final String? tipoAcao; // FAZER_RESERVA, FAZER_PEDIDO
 
   Restaurant({
     required this.id,
@@ -23,6 +25,8 @@ class Restaurant {
     required this.hasReservation,
     required this.hasDelivery,
     required this.priceRange,
+    this.linkCardapio,
+    this.tipoAcao,
   });
 
   /// Cria um Restaurant a partir do JSON da API (RestauranteResponse)
@@ -70,6 +74,11 @@ class Restaurant {
       }
     }
     
+    // Determina hasReservation e hasDelivery baseado no tipoAcao
+    final tipoAcao = json['tipoAcao']?.toString() ?? '';
+    final hasReservation = tipoAcao == 'FAZER_RESERVA';
+    final hasDelivery = tipoAcao == 'FAZER_PEDIDO';
+    
     return Restaurant(
       id: id,
       name: json['nome']?.toString() ?? json['name']?.toString() ?? '',
@@ -77,9 +86,11 @@ class Restaurant {
       whatsapp: json['numeroWhatsapp']?.toString() ?? json['whatsapp']?.toString() ?? '',
       phone: json['phone']?.toString() ?? json['numeroWhatsapp']?.toString() ?? '',
       imageUrl: imageUrl,
-      hasReservation: true, // Por padrão, restaurantes podem ter reserva
-      hasDelivery: false, // Por padrão, sem delivery (pode ser ajustado se a API retornar)
+      hasReservation: hasReservation,
+      hasDelivery: hasDelivery,
       priceRange: priceRange,
+      linkCardapio: json['linkCardapio']?.toString(),
+      tipoAcao: tipoAcao.isNotEmpty ? tipoAcao : null,
     );
   }
 
@@ -100,6 +111,8 @@ class Restaurant {
       hasReservation: json['hasReservation'] ?? false,
       hasDelivery: json['hasDelivery'] ?? false,
       priceRange: json['priceRange'] ?? '\$\$',
+      linkCardapio: json['linkCardapio'],
+      tipoAcao: json['tipoAcao'],
     );
   }
 
@@ -114,6 +127,8 @@ class Restaurant {
       'hasReservation': hasReservation,
       'hasDelivery': hasDelivery,
       'priceRange': priceRange,
+      'linkCardapio': linkCardapio,
+      'tipoAcao': tipoAcao,
     };
   }
 }

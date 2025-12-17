@@ -239,14 +239,14 @@ class MockDataService {
 
   List<HourlyWeather> getHourlyWeather(DateTime date) {
     return [
-      HourlyWeather(time: '00:00', temp: '24°', icon: WeatherIcon.cloud, rain: '10%'),
-      HourlyWeather(time: '03:00', temp: '23°', icon: WeatherIcon.cloud, rain: '5%'),
-      HourlyWeather(time: '06:00', temp: '24°', icon: WeatherIcon.sun, rain: '0%'),
-      HourlyWeather(time: '09:00', temp: '27°', icon: WeatherIcon.sun, rain: '5%'),
-      HourlyWeather(time: '12:00', temp: '29°', icon: WeatherIcon.cloud, rain: '10%'),
-      HourlyWeather(time: '15:00', temp: '28°', icon: WeatherIcon.cloud, rain: '20%'),
-      HourlyWeather(time: '18:00', temp: '26°', icon: WeatherIcon.cloud, rain: '10%'),
-      HourlyWeather(time: '21:00', temp: '25°', icon: WeatherIcon.cloud, rain: '10%'),
+      HourlyWeather(time: '00:00', temp: '24°', icon: WeatherIcon.cloud, rain: '10%', humidity: 80),
+      HourlyWeather(time: '03:00', temp: '23°', icon: WeatherIcon.cloud, rain: '5%', humidity: 82),
+      HourlyWeather(time: '06:00', temp: '24°', icon: WeatherIcon.sun, rain: '0%', humidity: 78),
+      HourlyWeather(time: '09:00', temp: '27°', icon: WeatherIcon.sun, rain: '5%', humidity: 75),
+      HourlyWeather(time: '12:00', temp: '29°', icon: WeatherIcon.cloud, rain: '10%', humidity: 72),
+      HourlyWeather(time: '15:00', temp: '28°', icon: WeatherIcon.cloud, rain: '20%', humidity: 74),
+      HourlyWeather(time: '18:00', temp: '26°', icon: WeatherIcon.cloud, rain: '10%', humidity: 76),
+      HourlyWeather(time: '21:00', temp: '25°', icon: WeatherIcon.cloud, rain: '10%', humidity: 78),
     ];
   }
 

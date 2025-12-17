@@ -19,8 +19,8 @@ import 'screens/weather_screen.dart';
 import 'screens/transport_screen.dart';
 import 'screens/services_screen.dart';
 import 'screens/nightlife_screen.dart';
-import 'screens/vehicle_rental_screen.dart';
 import 'screens/calculator_screen.dart';
+import 'models/article.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,9 +76,13 @@ class AppInitializer extends StatefulWidget {
 }
 
 class _AppInitializerState extends State<AppInitializer> {
+  bool _showSplash = true;
+  DateTime? _splashStartTime;
+
   @override
   void initState() {
     super.initState();
+    _splashStartTime = DateTime.now();
     // Usa addPostFrameCallback para evitar chamar setState durante build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeApp();
@@ -89,30 +93,55 @@ class _AppInitializerState extends State<AppInitializer> {
     // Inicializa o AuthProvider para obter tokens automaticamente
     final authProvider = context.read<AuthProvider>();
     await authProvider.init();
+    
+    // Garante que a splash fique pelo menos 2 segundos
+    if (_splashStartTime != null) {
+      final elapsed = DateTime.now().difference(_splashStartTime!);
+      final remaining = const Duration(seconds: 2) - elapsed;
+      if (remaining > Duration.zero) {
+        await Future.delayed(remaining);
+      }
+    }
+    
+    if (mounted) {
+      setState(() {
+        _showSplash = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, _) {
-        // Mostra splash enquanto inicializa
-        if (!authProvider.isInitialized) {
+        // Mostra splash enquanto inicializa ou enquanto não passou 2 segundos
+        if (_showSplash || !authProvider.isInitialized) {
           return Scaffold(
             backgroundColor: AppColors.primary,
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Logo
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Icon(
-                      Icons.flight_rounded,
-                      size: 48,
-                      color: AppColors.primary,
+                    child: Image.asset(
+                      'assets/images/Logo Logomarca Me Leva Noronha.png',
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        // Fallback para ícone se a imagem não carregar
+                        return const Icon(
+                          Icons.flight_rounded,
+                          size: 48,
+                          color: AppColors.primary,
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -159,11 +188,15 @@ class _MainNavigatorState extends State<MainNavigator> {
   // Páginas secundárias (não na bottom nav)
   final _secondaryPages = [
     'articles', 'tide', 'weather', 'transport', 
-    'services', 'nightlife', 'rental', 'calculator'
+    'services', 'nightlife', 'calculator'
   ];
 
   void _navigateTo(String page) {
     setState(() {
+      // Se não está navegando para articles com artigo específico, salva a página atual
+      if (page != 'articles' || _selectedArticleForNavigation == null) {
+        _previousPage = _currentPage;
+      }
       _currentPage = page;
       // Atualiza o index da bottom nav se for uma página principal
       final index = _bottomNavPages.indexOf(page);
@@ -202,10 +235,22 @@ class _MainNavigatorState extends State<MainNavigator> {
     }
   }
 
+  Article? _selectedArticleForNavigation;
+  String _previousPage = 'home'; // Rastreia a página anterior
+
   Widget _buildCurrentPage() {
     switch (_currentPage) {
       case 'home':
-        return HomeScreen(onNavigate: _navigateTo);
+        return HomeScreen(
+          onNavigate: _navigateTo,
+          onNavigateToArticle: (article) {
+            setState(() {
+              _previousPage = _currentPage; // Salva a página atual
+              _selectedArticleForNavigation = article;
+              _currentPage = 'articles';
+            });
+          },
+        );
       case 'tours':
         return const ToursScreen();
       case 'map':
@@ -215,7 +260,25 @@ class _MainNavigatorState extends State<MainNavigator> {
       case 'more':
         return MoreScreen(onNavigate: _navigateTo);
       case 'articles':
-        return ArticlesScreen(onBack: () => _navigateTo('home'));
+        return ArticlesScreen(
+          onBack: () {
+            setState(() {
+              _selectedArticleForNavigation = null;
+              // Se a página anterior não é 'articles', volta para ela
+              if (_previousPage != 'articles') {
+                _currentPage = _previousPage;
+                // Atualiza o index da bottom nav se necessário
+                final index = _bottomNavPages.indexOf(_previousPage);
+                if (index != -1) {
+                  _currentIndex = index;
+                }
+              }
+              // Se estava na lista de artigos, apenas limpa o artigo selecionado
+              // (o ArticlesScreen vai voltar para a lista automaticamente)
+            });
+          },
+          initialArticle: _selectedArticleForNavigation,
+        );
       case 'tide':
         return TideScreen(onBack: () => _navigateTo('more'));
       case 'weather':
@@ -226,8 +289,6 @@ class _MainNavigatorState extends State<MainNavigator> {
         return ServicesScreen(onBack: () => _navigateTo('more'));
       case 'nightlife':
         return NightlifeScreen(onBack: () => _navigateTo('more'));
-      case 'rental':
-        return VehicleRentalScreen(onBack: () => _navigateTo('home'));
       case 'calculator':
         return CalculatorScreen(onBack: () => _navigateTo('more'));
       default:

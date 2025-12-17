@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import '../core/utils.dart';
 
 /// Drawer lateral do app
 class AppDrawer extends StatelessWidget {
@@ -18,7 +19,6 @@ class AppDrawer extends StatelessWidget {
       _MenuItem(id: 'home', label: 'Me Leva Noronha', icon: Icons.home_rounded),
       _MenuItem(id: 'articles', label: 'Dicas e Artigos', icon: Icons.menu_book_rounded),
       _MenuItem(id: 'tours', label: 'Passeios', icon: Icons.sailing_rounded),
-      _MenuItem(id: 'rental', label: 'Aluguel de Veículos', icon: Icons.directions_car_rounded),
       _MenuItem(id: 'map', label: 'Mapa da Ilha', icon: Icons.map_rounded),
       _MenuItem(id: 'tide', label: 'Tábua de Maré', icon: Icons.waves_rounded),
       _MenuItem(id: 'weather', label: 'Previsão do Tempo', icon: Icons.cloud_rounded),
@@ -46,7 +46,7 @@ class AppDrawer extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
@@ -58,10 +58,19 @@ class AppDrawer extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.flight_rounded,
-                    color: AppColors.primary,
-                    size: 28,
+                  child: Image.asset(
+                    'assets/images/Logo Logomarca Me Leva Noronha.png',
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback para ícone se a imagem não carregar
+                      return const Icon(
+                        Icons.flight_rounded,
+                        color: AppColors.primary,
+                        size: 28,
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -161,7 +170,7 @@ class AppDrawer extends StatelessWidget {
                 child: InkWell(
                   onTap: () {
                     Navigator.pop(context);
-                    // Abre WhatsApp
+                    AppUtils.openWhatsApp();
                   },
                   borderRadius: BorderRadius.circular(16),
                   child: const Padding(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import '../services/api_service.dart';
 import '../services/mock_data_service.dart';
 import '../widgets/whatsapp_button.dart';
 import '../core/utils.dart';
@@ -15,15 +16,100 @@ class TransportScreen extends StatefulWidget {
 }
 
 class _TransportScreenState extends State<TransportScreen> with SingleTickerProviderStateMixin {
+  final _apiService = ApiService();
   final _dataService = MockDataService();
   late TabController _tabController;
   String? _origin;
   String? _destination;
+  
+  List<String> _origins = [];
+  List<String> _destinations = [];
+  Map<String, dynamic>? _taxiPrice;
+  bool _isLoadingOrigins = false;
+  bool _isLoadingPrice = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadOriginsDestinations();
+  }
+  
+  Future<void> _loadOriginsDestinations() async {
+    setState(() {
+      _isLoadingOrigins = true;
+      _errorMessage = null;
+    });
+    
+    try {
+      final response = await _apiService.getTaxiOriginsDestinations();
+      if (response.isSuccess && response.data != null) {
+        setState(() {
+          _origins = List<String>.from(response.data!['origens'] ?? []);
+          _destinations = List<String>.from(response.data!['destinos'] ?? []);
+          _isLoadingOrigins = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = response.error ?? 'Erro ao carregar locais';
+          _isLoadingOrigins = false;
+          // Fallback para dados mockados
+          final locations = _dataService.getTransportLocations();
+          _origins = locations;
+          _destinations = locations;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Erro ao carregar locais: $e';
+        _isLoadingOrigins = false;
+        // Fallback para dados mockados
+        final locations = _dataService.getTransportLocations();
+        _origins = locations;
+        _destinations = locations;
+      });
+    }
+  }
+  
+  Future<void> _calculateTaxiPrice() async {
+    if (_origin == null || _destination == null) {
+      setState(() {
+        _taxiPrice = null;
+      });
+      return;
+    }
+    
+    setState(() {
+      _isLoadingPrice = true;
+      _errorMessage = null;
+    });
+    
+    try {
+      final response = await _apiService.calculateTaxi(
+        origem: _origin!,
+        destino: _destination!,
+      );
+      
+      if (response.isSuccess && response.data != null) {
+        setState(() {
+          _taxiPrice = response.data;
+          _isLoadingPrice = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = response.error ?? 'Erro ao calcular preço';
+          _taxiPrice = null;
+          _isLoadingPrice = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Erro ao calcular preço: $e';
+        _taxiPrice = null;
+        _isLoadingPrice = false;
+      });
+    }
   }
 
   @override
@@ -34,11 +120,7 @@ class _TransportScreenState extends State<TransportScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    final locations = _dataService.getTransportLocations();
     final busStops = _dataService.getBusStops();
-    final taxiPrice = _origin != null && _destination != null
-        ? _dataService.getTaxiPrice(_origin!, _destination!)
-        : null;
 
     return Column(
       children: [
@@ -154,10 +236,16 @@ class _TransportScreenState extends State<TransportScreen> with SingleTickerProv
                                 prefixIcon: Icon(Icons.location_on),
                               ),
                               value: _origin,
-                              items: locations.map((loc) {
+                              items: _origins.map((loc) {
                                 return DropdownMenuItem(value: loc, child: Text(loc));
                               }).toList(),
-                              onChanged: (val) => setState(() => _origin = val),
+                              onChanged: (val) {
+                                setState(() {
+                                  _origin = val;
+                                  _taxiPrice = null;
+                                });
+                                _calculateTaxiPrice();
+                              },
                             ),
                             const SizedBox(height: 12),
 
@@ -168,78 +256,140 @@ class _TransportScreenState extends State<TransportScreen> with SingleTickerProv
                                 prefixIcon: Icon(Icons.flag),
                               ),
                               value: _destination,
-                              items: locations.map((loc) {
+                              items: _destinations.map((loc) {
                                 return DropdownMenuItem(value: loc, child: Text(loc));
                               }).toList(),
-                              onChanged: (val) => setState(() => _destination = val),
+                              onChanged: (val) {
+                                setState(() {
+                                  _destination = val;
+                                  _taxiPrice = null;
+                                });
+                                _calculateTaxiPrice();
+                              },
                             ),
-
-                            if (taxiPrice != null) ...[
+                            
+                            if (_isLoadingPrice) ...[
                               const SizedBox(height: 20),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        gradient: AppColors.primaryGradient,
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Tarifa 1',
-                                            style: TextStyle(
-                                              color: Colors.white.withOpacity(0.8),
-                                              fontSize: 12,
-                                            ),
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              ),
+                            ],
+
+                            if (_taxiPrice != null) ...[
+                              const SizedBox(height: 20),
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final cardWidth = (constraints.maxWidth - 12) / 2;
+                                  final fontSize = cardWidth < 120 ? 20.0 : 28.0;
+                                  
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            gradient: AppColors.primaryGradient,
+                                            borderRadius: BorderRadius.circular(16),
                                           ),
-                                          Text(
-                                            'R\$ ${taxiPrice['tarifa1']}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 28,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                'Tarifa 1',
+                                                style: TextStyle(
+                                                  color: Colors.white.withOpacity(0.8),
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                alignment: Alignment.centerLeft,
+                                                child: Text(
+                                                  'R\$ ${(_taxiPrice!['valorTabela1'] ?? 0.0).toStringAsFixed(2)}',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: fontSize,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [AppColors.accent, AppColors.accent.withOpacity(0.8)],
                                         ),
-                                        borderRadius: BorderRadius.circular(16),
                                       ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Tarifa 2',
-                                            style: TextStyle(
-                                              color: Colors.white.withOpacity(0.8),
-                                              fontSize: 12,
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [AppColors.accent, AppColors.accent.withOpacity(0.8)],
                                             ),
+                                            borderRadius: BorderRadius.circular(16),
                                           ),
-                                          Text(
-                                            'R\$ ${taxiPrice['tarifa2']}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 28,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                'Tarifa 2',
+                                                style: TextStyle(
+                                                  color: Colors.white.withOpacity(0.8),
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                alignment: Alignment.centerLeft,
+                                                child: Text(
+                                                  'R\$ ${(_taxiPrice!['valorTabela2'] ?? 0.0).toStringAsFixed(2)}',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: fontSize,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ],
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ],
+                            
+                            if (_errorMessage != null) ...[
+                              const SizedBox(height: 16),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.red.shade200),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _errorMessage!,
+                                        style: TextStyle(
+                                          color: Colors.red.shade700,
+                                          fontSize: 12,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ],
                           ],

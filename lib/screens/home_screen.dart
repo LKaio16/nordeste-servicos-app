@@ -9,8 +9,9 @@ import '../widgets/whatsapp_button.dart';
 /// Tela inicial do app
 class HomeScreen extends StatefulWidget {
   final Function(String) onNavigate;
+  final Function(Article)? onNavigateToArticle; // Callback para navegar para artigo específico
 
-  const HomeScreen({super.key, required this.onNavigate});
+  const HomeScreen({super.key, required this.onNavigate, this.onNavigateToArticle});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -213,13 +214,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 8),
                 _ServiceCard(
-                  icon: Icons.directions_car_rounded,
-                  label: 'Aluguel de Veículos',
-                  description: 'Carros, motos e buggies',
-                  onTap: () => widget.onNavigate('rental'),
-                ),
-                const SizedBox(height: 8),
-                _ServiceCard(
                   icon: Icons.map_rounded,
                   label: 'Mapa da Ilha',
                   description: 'Pontos turísticos',
@@ -291,7 +285,14 @@ class _HomeScreenState extends State<HomeScreen> {
             title: dica.title,
             subtitle: dica.content,
             category: dica.category,
-            onTap: () => widget.onNavigate('articles'),
+            onTap: () {
+              // Se tem callback específico, usa ele, senão navega para lista
+              if (widget.onNavigateToArticle != null) {
+                widget.onNavigateToArticle!(dica);
+              } else {
+                widget.onNavigate('articles');
+              }
+            },
           ),
         );
       }).toList(),

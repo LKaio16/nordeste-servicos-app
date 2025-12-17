@@ -181,6 +181,14 @@ class ApiService {
     );
   }
 
+  /// Lista todos os aeroportos brasileiros
+  Future<ApiResponse<List<dynamic>>> getAirports() async {
+    return _client.get<List<dynamic>>(
+      ApiEndpoints.calculatorAirports,
+      fromJson: (json) => json as List<dynamic>,
+    );
+  }
+
   /// Lista passeios disponíveis na calculadora
   Future<ApiResponse<List<dynamic>>> getTravelTours() async {
     return _client.get<List<dynamic>>(
@@ -234,6 +242,14 @@ class ApiService {
   }
 
   // ==================== CALCULADORA DE TÁXI ====================
+  
+  /// Busca origens e destinos disponíveis para táxi
+  Future<ApiResponse<Map<String, dynamic>>> getTaxiOriginsDestinations() async {
+    return _client.get<Map<String, dynamic>>(
+      ApiEndpoints.taxiOriginsDestinations,
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
+  }
   
   /// Calcula valor da corrida de táxi
   Future<ApiResponse<Map<String, dynamic>>> calculateTaxi({

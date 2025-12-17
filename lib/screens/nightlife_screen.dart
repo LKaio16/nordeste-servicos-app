@@ -255,38 +255,42 @@ class _NightlifeScreenState extends State<NightlifeScreen> {
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: ElevatedButton.icon(
-                                          onPressed: () => AppUtils.openWhatsApp(
-                                            number: venue.whatsapp,
-                                            message: 'Olá! Gostaria de mais informações sobre ${venue.name}',
-                                          ),
-                                          icon: const Icon(Icons.chat, size: 18),
-                                          label: const Text('Chamar no WhatsApp'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.whatsappGreen,
-                                            padding: const EdgeInsets.symmetric(vertical: 12),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
+                                        child: SizedBox(
+                                          height: 48,
+                                          child: ElevatedButton.icon(
+                                            onPressed: () => AppUtils.openWhatsApp(
+                                              number: venue.whatsapp,
+                                              message: 'Olá! Gostaria de mais informações sobre ${venue.name}',
+                                            ),
+                                            icon: const Icon(Icons.chat, size: 18),
+                                            label: const Text('Chamar no WhatsApp'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppColors.whatsappGreen,
+                                              padding: EdgeInsets.zero,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-                                      Material(
-                                        color: AppColors.secondaryBg,
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: InkWell(
-                                          onTap: () {
-                                            if (venue.linkGoogleMaps != null && venue.linkGoogleMaps!.isNotEmpty) {
-                                              AppUtils.openUrl(venue.linkGoogleMaps!);
-                                            } else {
-                                              AppUtils.openGoogleMaps();
-                                            }
-                                          },
+                                      SizedBox(
+                                        height: 48,
+                                        width: 48,
+                                        child: Material(
+                                          color: AppColors.secondaryBg,
                                           borderRadius: BorderRadius.circular(12),
-                                          child: const Padding(
-                                            padding: EdgeInsets.all(12),
-                                            child: Icon(Icons.location_on, color: AppColors.primary),
+                                          child: InkWell(
+                                            onTap: () {
+                                              if (venue.linkGoogleMaps != null && venue.linkGoogleMaps!.isNotEmpty) {
+                                                AppUtils.openUrl(venue.linkGoogleMaps!);
+                                              } else {
+                                                AppUtils.openGoogleMaps();
+                                              }
+                                            },
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: const Icon(Icons.location_on, color: AppColors.primary),
                                           ),
                                         ),
                                       ),

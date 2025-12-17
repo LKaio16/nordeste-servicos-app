@@ -5,7 +5,7 @@ class AppConstants {
   static const String appTagline = 'Seu guia completo para Fernando de Noronha';
   
   // WhatsApp
-  static const String whatsappNumber = '5581999999999';
+  static const String whatsappNumber = '5581989353257';
   static const String whatsappBaseUrl = 'https://wa.me/';
   
   // URLs externas
@@ -23,7 +23,7 @@ class AppConstants {
 
 
   static const String apiBaseUrl = 'http://localhost:8080';
-  // static const String apiBaseUrl = 'https://me-leva-noronha-ms-homolog.up.railway.app';
+  //   static const String apiBaseUrl = 'https://me-leva-noronha-ms-homolog.up.railway.app';
 
   // Coordenadas de Fernando de Noronha (para API de clima)
   static const double noronhaLatitude = -3.8548;
@@ -74,9 +74,11 @@ class ApiEndpoints {
   static const String calculatorFlights = '/api/calculadora-viagem/passagens';
   static const String calculatorCosts = '/api/calculadora-viagem/calcular';
   static const String calculatorComplete = '/api/calculadora-viagem/calcular-completo';
+  static const String calculatorAirports = '/api/calculadora-viagem/aeroportos';
   
   // Calculadora de táxi
   static const String taxiCalculator = '/api/taxi/calcular';
+  static const String taxiOriginsDestinations = '/api/taxi/origens-destinos';
 }
 
 /// Mensagens padrão do WhatsApp

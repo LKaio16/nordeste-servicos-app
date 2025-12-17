@@ -5,6 +5,7 @@ import '../models/restaurant.dart';
 import '../services/api_service.dart';
 import '../services/mock_data_service.dart';
 import '../widgets/cached_image.dart';
+import '../widgets/pdf_viewer.dart';
 import '../core/utils.dart';
 import '../config/app_constants.dart';
 
@@ -382,24 +383,29 @@ class _RestaurantCard extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // Menu Button
-                OutlinedButton.icon(
-                  onPressed: () {
-                    AppUtils.openWhatsApp(
-                      number: restaurant.whatsapp,
-                      message: WhatsAppMessages.restaurantMenu(restaurant.name),
-                    );
-                  },
-                  icon: const Icon(Icons.menu_book, size: 18),
-                  label: const Text('Ver Cardápio'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    minimumSize: const Size(double.infinity, 44),
-                    side: const BorderSide(color: AppColors.primary, width: 2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                if (restaurant.linkCardapio != null && restaurant.linkCardapio!.isNotEmpty)
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => PdfViewer(
+                            pdfUrl: restaurant.linkCardapio!,
+                            title: 'Cardápio - ${restaurant.name}',
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.menu_book, size: 18),
+                    label: const Text('Ver Cardápio'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      minimumSize: const Size(double.infinity, 44),
+                      side: const BorderSide(color: AppColors.primary, width: 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
-                ),
                 const SizedBox(height: 8),
 
                 // Action Button

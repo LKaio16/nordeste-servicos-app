@@ -1,16 +1,20 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart' as cached;
 import '../config/app_colors.dart';
 import '../models/article.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/cached_image.dart';
 import '../widgets/whatsapp_button.dart';
 
 /// Tela de Dicas e Artigos
 class ArticlesScreen extends StatefulWidget {
   final VoidCallback? onBack;
+  final Article? initialArticle; // Artigo para mostrar diretamente
 
-  const ArticlesScreen({super.key, this.onBack});
+  const ArticlesScreen({super.key, this.onBack, this.initialArticle});
 
   @override
   State<ArticlesScreen> createState() => _ArticlesScreenState();
@@ -27,6 +31,10 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
   @override
   void initState() {
     super.initState();
+    // Se um artigo inicial foi fornecido, define como selecionado
+    if (widget.initialArticle != null) {
+      _selectedArticle = widget.initialArticle;
+    }
     _carregarDicas();
   }
 
@@ -69,10 +77,20 @@ class _ArticlesScreenState extends State<ArticlesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_selectedArticle != null) {
+    // Se tem artigo inicial ou selecionado, mostra o detalhe
+    final articleToShow = widget.initialArticle ?? _selectedArticle;
+    if (articleToShow != null) {
       return _ArticleDetailView(
-        article: _selectedArticle!,
-        onBack: () => setState(() => _selectedArticle = null),
+        article: articleToShow,
+        onBack: () {
+          if (widget.initialArticle != null) {
+            // Se veio de navegação direta (da home), usa o callback onBack
+            widget.onBack?.call();
+          } else {
+            // Se foi selecionado da lista, limpa a seleção para voltar à lista
+            setState(() => _selectedArticle = null);
+          }
+        },
       );
     }
 
@@ -309,14 +327,173 @@ class _ArticleCard extends StatelessWidget {
   }
 }
 
-class _ArticleDetailView extends StatelessWidget {
+class _ArticleDetailView extends StatefulWidget {
   final Article article;
   final VoidCallback onBack;
 
   const _ArticleDetailView({required this.article, required this.onBack});
 
   @override
+  State<_ArticleDetailView> createState() => _ArticleDetailViewState();
+}
+
+class _ArticleDetailViewState extends State<_ArticleDetailView> {
+  bool _isImageLoaded = false;
+  bool _isIconLoaded = false;
+  bool _isContentReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Precarrega as imagens
+    _preloadImages();
+  }
+
+  Future<void> _preloadImages() async {
+    // Aguarda um frame para garantir que o widget está montado
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    if (!mounted) return;
+
+    // Precarrega a imagem principal
+    try {
+      final imageProvider = cached.CachedNetworkImageProvider(
+        widget.article.imageUrl,
+        headers: _getAuthHeaders(),
+      );
+      final imageStream = imageProvider.resolve(const ImageConfiguration());
+      final completer = Completer<void>();
+      
+      final listener = ImageStreamListener((ImageInfo info, bool synchronousCall) {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+        if (mounted) {
+          setState(() => _isImageLoaded = true);
+        }
+      }, onError: (exception, stackTrace) {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+        if (mounted) {
+          setState(() => _isImageLoaded = true); // Mostra mesmo se der erro
+        }
+      });
+      
+      imageStream.addListener(listener);
+      await completer.future.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          if (mounted) {
+            setState(() => _isImageLoaded = true);
+          }
+        },
+      );
+      imageStream.removeListener(listener);
+    } catch (e) {
+      debugPrint('Erro ao precarregar imagem: $e');
+      if (mounted) {
+        setState(() => _isImageLoaded = true);
+      }
+    }
+
+    // Precarrega o ícone se for uma URL
+    if (widget.article.icon.isNotEmpty && widget.article.icon.startsWith('http')) {
+      try {
+        final iconProvider = cached.CachedNetworkImageProvider(
+          widget.article.icon,
+          headers: _getAuthHeaders(),
+        );
+        final iconStream = iconProvider.resolve(const ImageConfiguration());
+        final completer = Completer<void>();
+        
+        final listener = ImageStreamListener((ImageInfo info, bool synchronousCall) {
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+          if (mounted) {
+            setState(() => _isIconLoaded = true);
+          }
+        }, onError: (exception, stackTrace) {
+          if (!completer.isCompleted) {
+            completer.complete();
+          }
+          if (mounted) {
+            setState(() => _isIconLoaded = true);
+          }
+        });
+        
+        iconStream.addListener(listener);
+        await completer.future.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            if (mounted) {
+              setState(() => _isIconLoaded = true);
+            }
+          },
+        );
+        iconStream.removeListener(listener);
+      } catch (e) {
+        debugPrint('Erro ao precarregar ícone: $e');
+        if (mounted) {
+          setState(() => _isIconLoaded = true);
+        }
+      }
+    } else {
+      // Se não é URL, já está pronto
+      if (mounted) {
+        setState(() => _isIconLoaded = true);
+      }
+    }
+
+    // Aguarda um pouco mais para garantir que tudo está renderizado
+    await Future.delayed(const Duration(milliseconds: 200));
+    
+    if (mounted) {
+      setState(() => _isContentReady = true);
+    }
+  }
+
+  Map<String, String>? _getAuthHeaders() {
+    try {
+      final authService = AuthService();
+      final token = authService.accessToken;
+      if (token != null && token.isNotEmpty) {
+        return {'Authorization': 'Bearer $token'};
+      }
+    } catch (e) {
+      debugPrint('Erro ao obter token: $e');
+    }
+    return null;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Mostra loading enquanto as imagens não estão prontas
+    if (!_isContentReady || !_isImageLoaded) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(
+                color: AppColors.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Carregando...',
+                style: TextStyle(
+                  color: AppColors.gray600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -327,7 +504,7 @@ class _ArticleDetailView extends StatelessWidget {
                 height: 280,
                 width: double.infinity,
                 child: CachedImage(
-                  imageUrl: article.imageUrl,
+                  imageUrl: widget.article.imageUrl,
                   useAuth: true,
                 ),
               ),
@@ -352,7 +529,7 @@ class _ArticleDetailView extends StatelessWidget {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(50),
                   child: InkWell(
-                    onTap: onBack,
+                    onTap: widget.onBack,
                     borderRadius: BorderRadius.circular(50),
                     child: Container(
                       padding: const EdgeInsets.all(8),
@@ -380,7 +557,7 @@ class _ArticleDetailView extends StatelessWidget {
                         border: Border.all(color: Colors.white.withOpacity(0.3)),
                       ),
                       child: Text(
-                        article.category,
+                        widget.article.category,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -389,26 +566,36 @@ class _ArticleDetailView extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     // Ícone da dica (imagem da API)
-                    if (article.icon.isNotEmpty && article.icon.startsWith('http'))
+                    if (widget.article.icon.isNotEmpty && widget.article.icon.startsWith('http'))
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: SizedBox(
                           width: 56,
                           height: 56,
-                          child: CachedImage(
-                            imageUrl: article.icon,
-                            useAuth: true,
-                          ),
+                          child: _isIconLoaded
+                              ? CachedImage(
+                                  imageUrl: widget.article.icon,
+                                  useAuth: true,
+                                )
+                              : Container(
+                                  color: Colors.white.withOpacity(0.1),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  ),
+                                ),
                         ),
                       )
                     else
                       Text(
-                        article.icon,
+                        widget.article.icon,
                         style: const TextStyle(fontSize: 48),
                       ),
                     const SizedBox(height: 8),
                     Text(
-                      article.title,
+                      widget.article.title,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 28,
@@ -434,7 +621,7 @@ class _ArticleDetailView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    article.content,
+                    widget.article.content,
                     style: const TextStyle(
                       color: AppColors.gray700,
                       fontSize: 15,
@@ -445,7 +632,7 @@ class _ArticleDetailView extends StatelessWidget {
                 const SizedBox(height: 20),
                 WhatsAppButton(
                   text: 'Tire suas dúvidas no WhatsApp',
-                  phoneNumber: article.whatsappLink,
+                  phoneNumber: widget.article.whatsappLink,
                 ),
               ],
             ),
