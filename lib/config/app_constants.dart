@@ -22,8 +22,8 @@ class AppConstants {
   // - iOS simulator / Web local: http://localhost:8080
 
 
-  static const String apiBaseUrl = 'http://localhost:8080';
-  //   static const String apiBaseUrl = 'https://me-leva-noronha-ms-homolog.up.railway.app';
+  //static const String apiBaseUrl = 'http://localhost:8080';
+  static const String apiBaseUrl = 'https://me-leva-noronha-ms-homolog.up.railway.app';
 
   // Coordenadas de Fernando de Noronha (para API de clima)
   static const double noronhaLatitude = -3.8548;
