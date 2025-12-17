@@ -23,3 +23,4 @@ abstract class ReciboRepository {
   Future<Uint8List> downloadReciboPdf(int id);
 }
 
+
