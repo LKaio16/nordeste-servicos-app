@@ -11,19 +11,22 @@ part 'equipamento_model.g.dart';
 @JsonSerializable()
 class EquipamentoModel {
   final int? id;
-  final String tipo;
-  final String marcaModelo;
-  final String numeroSerieChassi;
+  @JsonKey(includeIfNull: true)
+  final String? tipo;
+  @JsonKey(includeIfNull: true)
+  final String? marcaModelo;
+  @JsonKey(includeIfNull: true)
+  final String? numeroSerieChassi;
   final double? horimetro;
-  final int clienteId;
+  final int? clienteId;
 
   EquipamentoModel({
     this.id,
-    required this.tipo,
-    required this.marcaModelo,
-    required this.numeroSerieChassi,
+    this.tipo,
+    this.marcaModelo,
+    this.numeroSerieChassi,
     this.horimetro,
-    required this.clienteId,
+    this.clienteId,
   });
 
   factory EquipamentoModel.fromJson(Map<String, dynamic> json) => _$EquipamentoModelFromJson(json);
@@ -33,11 +36,11 @@ class EquipamentoModel {
   Equipamento toEntity() {
     return Equipamento(
       id: id,
-      tipo: tipo,
-      marcaModelo: marcaModelo,
-      numeroSerieChassi: numeroSerieChassi,
+      tipo: tipo ?? '',
+      marcaModelo: marcaModelo ?? '',
+      numeroSerieChassi: numeroSerieChassi ?? '',
       horimetro: horimetro,
-      clienteId: clienteId,
+      clienteId: clienteId ?? 0,
     );
   }
 

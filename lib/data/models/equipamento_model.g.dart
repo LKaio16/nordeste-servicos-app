@@ -9,11 +9,11 @@ part of 'equipamento_model.dart';
 EquipamentoModel _$EquipamentoModelFromJson(Map<String, dynamic> json) =>
     EquipamentoModel(
       id: (json['id'] as num?)?.toInt(),
-      tipo: json['tipo'] as String,
-      marcaModelo: json['marcaModelo'] as String,
-      numeroSerieChassi: json['numeroSerieChassi'] as String,
+      tipo: json['tipo'] as String?,
+      marcaModelo: json['marcaModelo'] as String?,
+      numeroSerieChassi: json['numeroSerieChassi'] as String?,
       horimetro: (json['horimetro'] as num?)?.toDouble(),
-      clienteId: (json['clienteId'] as num).toInt(),
+      clienteId: (json['clienteId'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$EquipamentoModelToJson(EquipamentoModel instance) =>
