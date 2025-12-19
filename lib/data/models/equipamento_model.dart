@@ -29,7 +29,17 @@ class EquipamentoModel {
     this.clienteId,
   });
 
-  factory EquipamentoModel.fromJson(Map<String, dynamic> json) => _$EquipamentoModelFromJson(json);
+  factory EquipamentoModel.fromJson(Map<String, dynamic> json) {
+    return EquipamentoModel(
+      id: (json['id'] as num?)?.toInt(),
+      tipo: json['tipo'] as String?,
+      marcaModelo: json['marcaModelo'] as String?,
+      numeroSerieChassi: json['numeroSerieChassi'] as String?,
+      horimetro: (json['horimetro'] as num?)?.toDouble(),
+      clienteId: (json['clienteId'] as num?)?.toInt(),
+    );
+  }
+  
   Map<String, dynamic> toJson() => _$EquipamentoModelToJson(this);
 
 // Método para converter para Entity (se usar camada domain) - COMENTADO
