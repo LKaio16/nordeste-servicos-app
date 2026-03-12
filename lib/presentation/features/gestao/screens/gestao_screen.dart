@@ -6,6 +6,12 @@ import 'package:nordeste_servicos_app/presentation/features/funcionario/screens/
 import 'package:nordeste_servicos_app/presentation/features/servicos/screens/novo_tipo_servico_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/recibos/screens/recibo_list_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/recibos/screens/novo_recibo_screen.dart';
+import 'package:nordeste_servicos_app/presentation/features/fornecedores/screens/fornecedor_list_screen.dart';
+import 'package:nordeste_servicos_app/presentation/features/fornecedores/screens/novo_fornecedor_screen.dart';
+import 'package:nordeste_servicos_app/presentation/features/contas/screens/conta_list_screen.dart';
+import 'package:nordeste_servicos_app/presentation/features/contas/screens/nova_conta_screen.dart';
+import 'package:nordeste_servicos_app/presentation/features/notas_fiscais/screens/nota_fiscal_list_screen.dart';
+import 'package:nordeste_servicos_app/presentation/features/notas_fiscais/screens/nova_nota_fiscal_screen.dart';
 import '../../clientes/screens/cliente_list_screen.dart';
 import '../../clientes/screens/novo_cliente_screen.dart';
 import '../../equipamentos/screens/novo_equipamento_screen.dart';
@@ -208,6 +214,33 @@ class GestaoScreen extends StatelessWidget {
                         color: AppColors.successGreen,
                         onCardTap: () => navigateTo(const RecibosListScreen()),
                         onAddButtonTap: () => navigateTo(const NovoReciboScreen()),
+                      ),
+                      const SizedBox(height: 16),
+                      ManagementCard(
+                        icon: Icons.business_outlined,
+                        title: 'Fornecedores',
+                        subtitle: 'Cadastro de fornecedores',
+                        color: AppColors.infoBlue,
+                        onCardTap: () => navigateTo(const FornecedorListScreen()),
+                        onAddButtonTap: () => navigateTo(const NovoFornecedorScreen()),
+                      ),
+                      const SizedBox(height: 16),
+                      ManagementCard(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: 'Contas a pagar / receber',
+                        subtitle: 'Contas financeiras',
+                        color: AppColors.warningOrange,
+                        onCardTap: () => navigateTo(const ContaListScreen()),
+                        onAddButtonTap: () => navigateTo(const NovaContaScreen()),
+                      ),
+                      const SizedBox(height: 16),
+                      ManagementCard(
+                        icon: Icons.description_outlined,
+                        title: 'Notas Fiscais',
+                        subtitle: 'Notas fiscais de entrada e saída',
+                        color: AppColors.darkBlue,
+                        onCardTap: () => navigateTo(const NotaFiscalListScreen()),
+                        onAddButtonTap: () => navigateTo(const NovaNotaFiscalScreen()),
                       ),
                       const SizedBox(height: 20),
                     ],

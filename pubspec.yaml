@@ -4,11 +4,11 @@ description: "Sistemas de OS Nordeste Serviços"
 # Impede publicação acidental no pub.dev
 publish_to: 'none'
 
-# Versão da aplicação
-version: 1.0.0+4
+# Versão da aplicação (1.0.1 = versão Apple; 5 = build number)
+version: 1.0.1+5
 
 environment:
-  sdk: ^3.6.1
+  sdk: ^3.7.0
 
 dependencies:
   flutter:
@@ -22,7 +22,7 @@ dependencies:
 
   # Ícones e fontes
   cupertino_icons: ^1.0.8
-  google_fonts: ^6.2.1
+  google_fonts: ^6.3.2
   flutter_launcher_icons: ^0.13.1
 
   # HTTP e armazenamento seguro

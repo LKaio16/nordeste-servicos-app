@@ -30,12 +30,10 @@ class AssinaturaOsRepositoryImpl implements AssinaturaOsRepository {
         throw ApiException('Falha ao carregar assinatura da OS ${osId}: Status ${response.statusCode}');
       }
     } on ApiException catch(e) {
-      // Se o ApiClient lançou NotFoundException para 404, você pode retornar null
-      if (e is NotFoundException) {
-        return null;
-      }
-      rethrow; // Relança outras ApiExceptions
+      if (e is NotFoundException) return null;
+      rethrow;
     } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
       throw ApiException('Erro de rede ao carregar assinatura da OS ${osId}: ${e.message}');
     } catch (e) {
       throw ApiException('Erro inesperado ao carregar assinatura da OS ${osId}: ${e.toString()}');

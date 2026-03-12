@@ -8,13 +8,14 @@ part of 'foto_os_model.dart';
 
 FotoOSModel _$FotoOSModelFromJson(Map<String, dynamic> json) => FotoOSModel(
       id: (json['id'] as num?)?.toInt(),
-      ordemServicoId: (json['ordemServicoId'] as num).toInt(),
+      ordemServicoId: _ordemServicoIdFromJson(json['ordemServicoId']),
+      fotoBase64: json['fotoBase64'] as String?,
+      fotoUrl: json['fotoUrl'] as String?,
       descricao: json['descricao'] as String?,
       nomeArquivoOriginal: json['nomeArquivoOriginal'] as String?,
-      fotoBase64: json['fotoBase64'] as String,
       tipoConteudo: json['tipoConteudo'] as String?,
       tamanhoArquivo: (json['tamanhoArquivo'] as num?)?.toInt(),
-      dataUpload: DateTime.parse(json['dataUpload'] as String),
+      dataUpload: _parseDataUpload(json['dataUpload']),
     );
 
 Map<String, dynamic> _$FotoOSModelToJson(FotoOSModel instance) =>
@@ -22,6 +23,7 @@ Map<String, dynamic> _$FotoOSModelToJson(FotoOSModel instance) =>
       'id': instance.id,
       'ordemServicoId': instance.ordemServicoId,
       'fotoBase64': instance.fotoBase64,
+      'fotoUrl': instance.fotoUrl,
       'descricao': instance.descricao,
       'nomeArquivoOriginal': instance.nomeArquivoOriginal,
       'tipoConteudo': instance.tipoConteudo,

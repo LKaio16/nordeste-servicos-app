@@ -1680,7 +1680,20 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
               itemCount: fotosState.fotos.length,
               itemBuilder: (context, index) {
                 final foto = fotosState.fotos[index];
-                final imageBytes = base64Decode(foto.fotoBase64);
+                final url = foto.networkUrl;
+                final bytes = foto.imageBytes;
+                if ((url == null || url.isEmpty) && (bytes == null || bytes.isEmpty)) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey.shade600),
+                    ),
+                  );
+                }
 
                 return GestureDetector(
                   onTap: () => _showImageFullScreen(fotosState.fotos, index),
@@ -1701,10 +1714,21 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.memory(
-                            imageBytes,
-                            fit: BoxFit.cover,
-                          ),
+                          url != null
+                              ? Image.network(
+                                  url,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Center(
+                                    child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey.shade600),
+                                  ),
+                                )
+                              : Image.memory(
+                                  bytes!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Center(
+                                    child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey.shade600),
+                                  ),
+                                ),
                           if (foto.descricao != null &&
                               foto.descricao!.isNotEmpty)
                             Positioned(
@@ -2192,7 +2216,14 @@ class _ImageFullScreenViewerState extends State<_ImageFullScreenViewer> {
         itemCount: widget.fotos.length,
         itemBuilder: (context, index) {
           final foto = widget.fotos[index];
-          final imageBytes = base64Decode(foto.fotoBase64);
+          final url = foto.networkUrl;
+          final bytes = foto.imageBytes;
+
+          if ((url == null || url.isEmpty) && (bytes == null || bytes.isEmpty)) {
+            return Center(
+              child: Icon(Icons.broken_image_outlined, size: 64, color: Colors.grey.shade600),
+            );
+          }
 
           return InteractiveViewer(
             panEnabled: true,
@@ -2200,10 +2231,17 @@ class _ImageFullScreenViewerState extends State<_ImageFullScreenViewer> {
             minScale: 0.5,
             maxScale: 4.0,
             child: Center(
-              child: Image.memory(
-                imageBytes,
-                fit: BoxFit.contain,
-              ),
+              child: url != null
+                  ? Image.network(
+                      url,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Icon(Icons.broken_image_outlined, size: 64, color: Colors.grey.shade600),
+                    )
+                  : Image.memory(
+                      bytes!,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Icon(Icons.broken_image_outlined, size: 64, color: Colors.grey.shade600),
+                    ),
             ),
           );
         },

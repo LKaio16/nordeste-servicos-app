@@ -36,6 +36,12 @@ import '../../../data/repositories/tipo_servico_repository_impl.dart';
 import '../../../domain/repositories/tipo_servico_repository.dart';
 import '../../../data/repositories/recibo_repository_impl.dart';
 import '../../../domain/repositories/recibo_repository.dart';
+import '../../../data/repositories/fornecedor_repository_impl.dart';
+import '../../../domain/repositories/fornecedor_repository.dart';
+import '../../../data/repositories/conta_repository_impl.dart';
+import '../../../domain/repositories/conta_repository.dart';
+import '../../../data/repositories/nota_fiscal_repository_impl.dart';
+import '../../../domain/repositories/nota_fiscal_repository.dart';
 import '../../../core/db/database_service.dart';
 import '../../../data/datasources/local/os_local_data_source.dart';
 import '../../../data/datasources/local/sync_queue_local_data_source.dart';
@@ -149,6 +155,18 @@ final orcamentoRepositoryProvider = Provider<OrcamentoRepository>((ref) {
 final reciboRepositoryProvider = Provider<ReciboRepository>((ref) {
   final apiClient = ref.read(apiClientProvider);
   return ReciboRepositoryImpl(apiClient);
+});
+
+final fornecedorRepositoryProvider = Provider<FornecedorRepository>((ref) {
+  return FornecedorRepositoryImpl(ref.read(apiClientProvider));
+});
+
+final contaRepositoryProvider = Provider<ContaRepository>((ref) {
+  return ContaRepositoryImpl(ref.read(apiClientProvider));
+});
+
+final notaFiscalRepositoryProvider = Provider<NotaFiscalRepository>((ref) {
+  return NotaFiscalRepositoryImpl(ref.read(apiClientProvider));
 });
 
 // TODO: Adicionar providers para Use Cases aqui se você os criar na camada domain/usecases
