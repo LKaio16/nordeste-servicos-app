@@ -3,24 +3,35 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nordeste_servicos_app/core/error/exceptions.dart';
 import 'package:nordeste_servicos_app/domain/repositories/orcamento_repository.dart';
+import 'package:nordeste_servicos_app/presentation/features/auth/providers/auth_provider.dart';
+import 'package:nordeste_servicos_app/presentation/features/auth/providers/auth_state.dart';
 import 'package:nordeste_servicos_app/presentation/shared/providers/repository_providers.dart';
 import 'package:nordeste_servicos_app/presentation/features/orcamentos/providers/orcamento_dashboard_state.dart';
 
 import '../../dashboard/models/dashboard_data.dart';
 
-
 final orcamentoDashboardProvider = StateNotifierProvider<OrcamentoDashboardNotifier, OrcamentoDashboardState>((ref) {
   final orcamentoRepository = ref.read(orcamentoRepositoryProvider);
-  return OrcamentoDashboardNotifier(orcamentoRepository);
+  final notifier = OrcamentoDashboardNotifier(orcamentoRepository);
+
+  void scheduleIfReady(AuthState auth) {
+    if (auth.isLoading || !auth.isAuthenticated) return;
+    Future.microtask(() => notifier.fetchOrcamentoDashboardData());
+  }
+
+  ref.listen<AuthState>(authProvider, (previous, next) {
+    scheduleIfReady(next);
+  });
+
+  scheduleIfReady(ref.read(authProvider));
+
+  return notifier;
 });
 
 class OrcamentoDashboardNotifier extends StateNotifier<OrcamentoDashboardState> {
   final OrcamentoRepository _orcamentoRepository;
 
-  OrcamentoDashboardNotifier(this._orcamentoRepository) : super(OrcamentoDashboardState()) {
-    // Carrega os dados assim que o provider é criado
-    fetchOrcamentoDashboardData();
-  }
+  OrcamentoDashboardNotifier(this._orcamentoRepository) : super(OrcamentoDashboardState());
 
   Future<void> refresh() async {
     await fetchOrcamentoDashboardData();
@@ -32,7 +43,7 @@ class OrcamentoDashboardNotifier extends StateNotifier<OrcamentoDashboardState> 
       final stats = await _orcamentoRepository.getDashboardStats();
 
       final DashboardData dashboardData = DashboardData(
-        totalOS: 0, // OS não é foco aqui, pode ser zero ou buscar de outro provider
+        totalOS: 0,
         osEmAndamento: 0,
         osPendentes: 0,
         totalOrcamentos: stats['totalOrcamentos'] ?? 0,

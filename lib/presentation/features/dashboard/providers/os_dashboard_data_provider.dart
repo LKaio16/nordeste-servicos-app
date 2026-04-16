@@ -3,6 +3,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nordeste_servicos_app/core/error/exceptions.dart';
 import 'package:nordeste_servicos_app/domain/repositories/os_repository.dart';
+import 'package:nordeste_servicos_app/presentation/features/auth/providers/auth_provider.dart';
+import 'package:nordeste_servicos_app/presentation/features/auth/providers/auth_state.dart';
 import 'package:nordeste_servicos_app/presentation/features/dashboard/models/dashboard_data.dart';
 import 'package:nordeste_servicos_app/presentation/shared/providers/repository_providers.dart';
 
@@ -35,10 +37,7 @@ class OsDashboardState {
 class OsDashboardNotifier extends StateNotifier<OsDashboardState> {
   final OsRepository _osRepository;
 
-  OsDashboardNotifier(this._osRepository) : super(OsDashboardState()) {
-    // Carrega os dados assim que o provider é criado
-    fetchOsDashboardData();
-  }
+  OsDashboardNotifier(this._osRepository) : super(OsDashboardState());
 
   Future<void> fetchOsDashboardData() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
@@ -66,8 +65,21 @@ class OsDashboardNotifier extends StateNotifier<OsDashboardState> {
   }
 }
 
-// 3. O StateNotifierProvider
+// 3. O StateNotifierProvider — só busca dados quando a sessão está pronta (evita 401 logo após o login).
 final osDashboardProvider = StateNotifierProvider<OsDashboardNotifier, OsDashboardState>((ref) {
   final osRepository = ref.read(osRepositoryProvider);
-  return OsDashboardNotifier(osRepository);
+  final notifier = OsDashboardNotifier(osRepository);
+
+  void scheduleIfReady(AuthState auth) {
+    if (auth.isLoading || !auth.isAuthenticated) return;
+    Future.microtask(() => notifier.fetchOsDashboardData());
+  }
+
+  ref.listen<AuthState>(authProvider, (previous, next) {
+    scheduleIfReady(next);
+  });
+
+  scheduleIfReady(ref.read(authProvider));
+
+  return notifier;
 });
