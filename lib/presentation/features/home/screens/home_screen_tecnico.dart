@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,6 +11,7 @@ import '../../../perfil/screens/perfil_screen.dart';
 import '../../../shared/providers/navigation_providers.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/styles/app_colors.dart';
+import '../../../shared/widgets/user_profile_avatar.dart';
 import '../../../../domain/entities/usuario.dart';
 
 class TecnicoHomeScreen extends ConsumerStatefulWidget {
@@ -137,17 +135,6 @@ class _TecnicoHomeScreenState extends ConsumerState<TecnicoHomeScreen> {
     final authState = ref.watch(authProvider);
     final Usuario? tecnicoUser = authState.authenticatedUser;
 
-    // **NOVO** - Lógica para decodificar a imagem em Base64
-    Uint8List? imageBytes;
-    if (tecnicoUser?.fotoPerfil != null && tecnicoUser!.fotoPerfil!.isNotEmpty) {
-      try {
-        imageBytes = base64Decode(tecnicoUser.fotoPerfil!);
-      } catch (e) {
-        print("Erro ao decodificar imagem do técnico na AppBar: $e");
-        imageBytes = null;
-      }
-    }
-
     return AppBar(
       title: Text(
         'Portal do Técnico',
@@ -170,13 +157,12 @@ class _TecnicoHomeScreenState extends ConsumerState<TecnicoHomeScreen> {
           child: CircleAvatar(
             radius: 18,
             backgroundColor: Colors.white.withOpacity(0.9),
-            child: CircleAvatar(
+            child: UserProfileAvatar(
+              fotoPerfilBase64: tecnicoUser?.fotoPerfil,
               radius: 16,
-              // **MODIFICADO** - Usa a imagem decodificada ou um ícone de fallback
-              backgroundImage: imageBytes != null ? MemoryImage(imageBytes) : null,
-              child: imageBytes == null
-                  ? const Icon(Icons.engineering, size: 20, color: AppColors.primaryBlue)
-                  : null,
+              backgroundColor: Colors.white,
+              iconColor: AppColors.primaryBlue,
+              iconSize: 20,
             ),
           ),
         ),

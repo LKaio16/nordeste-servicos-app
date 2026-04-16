@@ -9,6 +9,14 @@ abstract class NotaFiscalRepository {
     String? tipo,
   });
   Future<NotaFiscal> getNotaFiscalById(int id);
+  Future<Map<String, dynamic>> getNotasFiscaisListagem({
+    int? fornecedorId,
+    int? clienteId,
+    String? tipo,
+    String? searchTerm,
+    int page = 0,
+    int size = 20,
+  });
   Future<NotaFiscal> createNotaFiscal(NotaFiscal notaFiscal);
   Future<void> deleteNotaFiscal(int id);
 }

@@ -2,13 +2,11 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nordeste_servicos_app/core/error/exceptions.dart';
-import 'package:nordeste_servicos_app/data/models/status_orcamento_model.dart';
 import 'package:nordeste_servicos_app/domain/repositories/orcamento_repository.dart';
 import 'package:nordeste_servicos_app/presentation/shared/providers/repository_providers.dart';
 import 'package:nordeste_servicos_app/presentation/features/orcamentos/providers/orcamento_dashboard_state.dart';
 
 import '../../dashboard/models/dashboard_data.dart';
-import '../../home/screens/admin_home_screen.dart';
 
 
 final orcamentoDashboardProvider = StateNotifierProvider<OrcamentoDashboardNotifier, OrcamentoDashboardState>((ref) {
@@ -31,17 +29,15 @@ class OrcamentoDashboardNotifier extends StateNotifier<OrcamentoDashboardState> 
   Future<void> fetchOrcamentoDashboardData() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final allOrcamentos = await _orcamentoRepository.getOrcamentos();
-      final approvedOrcamentos = await _orcamentoRepository.getOrcamentos(status: StatusOrcamentoModel.APROVADO);
-      final rejectedOrcamentos = await _orcamentoRepository.getOrcamentos(status: StatusOrcamentoModel.REJEITADO);
+      final stats = await _orcamentoRepository.getDashboardStats();
 
       final DashboardData dashboardData = DashboardData(
         totalOS: 0, // OS não é foco aqui, pode ser zero ou buscar de outro provider
         osEmAndamento: 0,
         osPendentes: 0,
-        totalOrcamentos: allOrcamentos.length,
-        orcamentosAprovados: approvedOrcamentos.length,
-        orcamentosRejeitados: rejectedOrcamentos.length,
+        totalOrcamentos: stats['totalOrcamentos'] ?? 0,
+        orcamentosAprovados: stats['orcamentosAprovados'] ?? 0,
+        orcamentosRejeitados: stats['orcamentosRejeitados'] ?? 0,
       );
 
       state = state.copyWith(data: dashboardData, isLoading: false);

@@ -1,15 +1,12 @@
-import 'dart:typed_data';
-import 'package:file_saver/file_saver.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:open_filex/open_filex.dart';
 
 import '../../../../domain/entities/recibo.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../../shared/styles/app_colors.dart';
+import '../../../shared/utils/pdf_download_flow.dart';
 import '../providers/recibo_detail_provider.dart';
 import '../providers/recibo_list_provider.dart';
 
@@ -71,55 +68,14 @@ class ReciboDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _downloadPdf(BuildContext context, WidgetRef ref, Recibo recibo) async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: Text('Baixando PDF do Recibo ${recibo.numeroRecibo}...'),
-        backgroundColor: AppColors.primaryBlue,
-      ),
+    await runPdfDownloadFlow(
+      context: context,
+      fetchPdf: () => ref.read(reciboRepositoryProvider).downloadReciboPdf(recibo.id!),
+      fileName: 'recibo_${recibo.numeroRecibo}.pdf',
+      loadingMessage: 'Baixando o PDF do recibo ${recibo.numeroRecibo}...\nAguarde um momento.',
+      sheetTitle: 'Recibo ${recibo.numeroRecibo}',
+      shareMessage: 'Recibo ${recibo.numeroRecibo} em PDF.',
     );
-
-    try {
-      final repository = ref.read(reciboRepositoryProvider);
-      final Uint8List pdfBytes = await repository.downloadReciboPdf(recibo.id!);
-
-      final String fileName = 'recibo_${recibo.numeroRecibo}.pdf';
-      String? filePath;
-
-      if (!kIsWeb) {
-        filePath = await FileSaver.instance.saveFile(
-          name: fileName,
-          bytes: pdfBytes,
-          ext: 'pdf',
-          mimeType: MimeType.pdf,
-        );
-      } else {
-        await FileSaver.instance.saveFile(name: fileName, bytes: pdfBytes, ext: 'pdf', mimeType: MimeType.pdf);
-      }
-
-      scaffoldMessenger.removeCurrentSnackBar();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: const Text('Download concluído!'),
-          backgroundColor: AppColors.successGreen,
-          action: (!kIsWeb && filePath != null)
-              ? SnackBarAction(
-            label: 'ABRIR',
-            textColor: Colors.white,
-            onPressed: () => OpenFilex.open(filePath!),
-          )
-              : null,
-        ),
-      );
-    } catch (e) {
-      scaffoldMessenger.removeCurrentSnackBar();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('Erro ao baixar PDF: ${e.toString()}'),
-          backgroundColor: AppColors.errorRed,
-        ),
-      );
-    }
   }
 
   @override

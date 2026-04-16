@@ -8,6 +8,16 @@ import '../../data/models/status_os_model.dart';
 
 
 abstract class OsRepository {
+  /// Obtém a lista paginada e resumida de ordens de serviço para a tela de listagem.
+  Future<List<OrdemServico>> getOrdensServicoListagem({
+    String? searchTerm,
+    int? clienteId,
+    int? tecnicoId,
+    StatusOSModel? status,
+    int page = 0,
+    int size = 20,
+  });
+
   /// Obtém a lista de ordens de serviço, com opções de filtro e paginação.
   Future<List<OrdemServico>> getOrdensServico({
     String? searchTerm,
@@ -20,7 +30,7 @@ abstract class OsRepository {
   });
 
   /// Obtém estatísticas do dashboard (sem buscar todas as OS)
-  Future<Map<String, int>> getDashboardStats();
+  Future<Map<String, dynamic>> getDashboardStats();
 
   /// Obtém uma ordem de serviço pelo seu ID.
   Future<OrdemServico> getOrdemServicoById(int id);

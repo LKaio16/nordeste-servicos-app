@@ -5,7 +5,6 @@ import '../../../../core/error/exceptions.dart';
 import '../../../../domain/usecases/get_os_dashboard_data_usecase.dart';
 import '../../../shared/providers/repository_providers.dart'; // Para o osRepositoryProvider
 import '../../dashboard/models/dashboard_data.dart';
-import '../screens/admin_home_screen.dart'; // Para a classe DashboardData
 
 // Define o estado para os dados do dashboard (incluindo loading e erro)
 class OsDashboardState {
@@ -50,7 +49,7 @@ class OsDashboardNotifier extends StateNotifier<OsDashboardState> {
   Future<void> fetchOsDashboardData() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final Map<String, int> result = await _getOsDashboardDataUseCase.call();
+      final Map<String, dynamic> result = await _getOsDashboardDataUseCase.call();
 
       // Mapeia o Map<String, int> retornado para o seu DashboardData
       final DashboardData dashboardData = DashboardData(
@@ -61,6 +60,8 @@ class OsDashboardNotifier extends StateNotifier<OsDashboardState> {
         totalOrcamentos: 0,
         orcamentosAprovados: 0,
         orcamentosRejeitados: 0,
+        totalClientes: result['totalClientes'] ?? 0,
+        totalEquipamentos: result['totalEquipamentos'] ?? 0,
       );
 
       state = state.copyWith(isLoading: false, data: dashboardData);

@@ -20,6 +20,7 @@ class OrcamentosListScreen extends ConsumerStatefulWidget {
 
 class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   // MUDANÇA 2: Recarregar dados ao iniciar a tela
   @override
@@ -30,11 +31,22 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
       final currentSearchTerm = ref.read(orcamentoListProvider).searchTerm;
       _searchController.text = currentSearchTerm;
     });
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.8) {
+      final state = ref.read(orcamentoListProvider);
+      if (!state.isLoadingMore && state.hasMore) {
+        ref.read(orcamentoListProvider.notifier).loadMoreOrcamentos();
+      }
+    }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -61,7 +73,6 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
       case StatusOrcamentoModel.PENDENTE: return 'Pendente';
       case StatusOrcamentoModel.REJEITADO: return 'Rejeitado';
       case StatusOrcamentoModel.CANCELADO: return 'Cancelado';
-      default: return 'Desconhecido';
     }
   }
 
@@ -181,10 +192,21 @@ class _OrcamentosListScreenState extends ConsumerState<OrcamentosListScreen> {
       onRefresh: () => notifier.refreshOrcamentos(),
       color: AppColors.primaryBlue,
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16.0),
         physics: const BouncingScrollPhysics(),
-        itemCount: state.orcamentos.length,
-        itemBuilder: (context, index) => _buildOrcamentoCard(context, state.orcamentos[index]),
+        itemCount: state.orcamentos.length + (state.hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == state.orcamentos.length) {
+            return state.isLoadingMore
+                ? const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
+                  )
+                : const SizedBox.shrink();
+          }
+          return _buildOrcamentoCard(context, state.orcamentos[index]);
+        },
       ),
     );
   }

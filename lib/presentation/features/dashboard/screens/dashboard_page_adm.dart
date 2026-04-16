@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,6 +11,7 @@ import '../providers/desempenho_tecnico_provider.dart';
 import '../providers/os_dashboard_data_provider.dart';
 import '../../../shared/providers/navigation_providers.dart';
 import '../../../shared/styles/app_colors.dart';
+import '../../../shared/widgets/user_profile_avatar.dart';
 
 
 class StatusItem {
@@ -244,16 +242,6 @@ class DashboardPageAdm extends ConsumerWidget {
     final Usuario? adminUser = authState.authenticatedUser;
     final String nome = adminUser?.nome.split(' ').first ?? 'Admin';
 
-    Uint8List? imageBytes;
-    if (adminUser?.fotoPerfil != null && adminUser!.fotoPerfil!.isNotEmpty) {
-      try {
-        imageBytes = base64Decode(adminUser.fotoPerfil!);
-      } catch (e) {
-        print("Erro ao decodificar imagem no Header do Dashboard: $e");
-        imageBytes = null;
-      }
-    }
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -276,12 +264,12 @@ class DashboardPageAdm extends ConsumerWidget {
           CircleAvatar(
             radius: 28,
             backgroundColor: Colors.white,
-            child: CircleAvatar(
+            child: UserProfileAvatar(
+              fotoPerfilBase64: adminUser?.fotoPerfil,
               radius: 26,
-              backgroundImage: imageBytes != null ? MemoryImage(imageBytes) : null,
-              child: imageBytes == null
-                  ? Icon(Icons.person, size: 30, color: AppColors.primaryBlue)
-                  : null,
+              backgroundColor: Colors.white,
+              iconColor: AppColors.primaryBlue,
+              iconSize: 30,
             ),
           ),
           const SizedBox(width: 16),
@@ -599,16 +587,6 @@ class TechnicianItemWidget extends StatelessWidget {
       performanceColor = AppColors.errorRed;
     }
 
-    Uint8List? imageBytes;
-    if (technician.fotoPerfil != null && technician.fotoPerfil!.isNotEmpty) {
-      try {
-        imageBytes = base64Decode(technician.fotoPerfil!);
-      } catch (e) {
-        print("Erro ao decodificar imagem do técnico ${technician.id}: $e");
-        imageBytes = null;
-      }
-    }
-
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -625,13 +603,12 @@ class TechnicianItemWidget extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          UserProfileAvatar(
+            fotoPerfilBase64: technician.fotoPerfil,
             radius: 24,
             backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
-            backgroundImage: imageBytes != null ? MemoryImage(imageBytes) : null,
-            child: imageBytes == null
-                ? const Icon(Icons.engineering, size: 24, color: AppColors.primaryBlue)
-                : null,
+            iconColor: AppColors.primaryBlue,
+            iconSize: 28,
           ),
           const SizedBox(width: 16),
           Expanded(

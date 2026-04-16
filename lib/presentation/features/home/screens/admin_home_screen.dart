@@ -1,22 +1,16 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:nordeste_servicos_app/presentation/features/dashboard/providers/desempenho_tecnico_provider.dart';
 import 'package:nordeste_servicos_app/presentation/features/dashboard/screens/dashboard_page_adm.dart';
 import 'package:nordeste_servicos_app/presentation/features/gestao/screens/gestao_screen.dart';
-import 'package:nordeste_servicos_app/presentation/features/orcamentos/providers/orcamento_dashboard_provider.dart';
 import 'package:nordeste_servicos_app/presentation/features/orcamentos/screens/orcamento_list_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/os/screens/os_list_screen.dart';
 
 import '../../../../domain/entities/usuario.dart';
 import '../../../shared/providers/navigation_providers.dart';
 import '../../../shared/styles/app_colors.dart';
+import '../../../shared/widgets/user_profile_avatar.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../dashboard/providers/os_dashboard_data_provider.dart';
-import '../../os/providers/os_list_provider.dart';
 
 class AdminHomeScreen extends ConsumerStatefulWidget {
   const AdminHomeScreen({Key? key}) : super(key: key);
@@ -170,16 +164,6 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
     final authState = ref.watch(authProvider);
     final Usuario? adminUser = authState.authenticatedUser;
 
-    Uint8List? imageBytes;
-    if (adminUser?.fotoPerfil != null && adminUser!.fotoPerfil!.isNotEmpty) {
-      try {
-        imageBytes = base64Decode(adminUser.fotoPerfil!);
-      } catch (e) {
-        print("Erro ao decodificar imagem do admin na AppBar: $e");
-        imageBytes = null;
-      }
-    }
-
     return AppBar(
       title: Text(
         'Admin Portal',
@@ -201,12 +185,12 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
           child: CircleAvatar(
             radius: 18,
             backgroundColor: Colors.white.withOpacity(0.9),
-            child: CircleAvatar(
+            child: UserProfileAvatar(
+              fotoPerfilBase64: adminUser?.fotoPerfil,
               radius: 16,
-              backgroundImage: imageBytes != null ? MemoryImage(imageBytes) : null,
-              child: imageBytes == null
-                  ? const Icon(Icons.admin_panel_settings, size: 20, color: AppColors.primaryBlue)
-                  : null,
+              backgroundColor: Colors.white,
+              iconColor: AppColors.primaryBlue,
+              iconSize: 20,
             ),
           ),
         ),
@@ -247,11 +231,6 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
       selectedLabelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
       unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
       onTap: (index) {
-        if (index == 0) {
-          ref.invalidate(osDashboardProvider);
-          ref.invalidate(orcamentoDashboardProvider);
-          ref.invalidate(desempenhoTecnicoProvider);
-        }
         // Apenas atualiza o estado. O listener cuidará da animação.
         ref.read(mainNavigationIndexProvider.notifier).state = index;
       },

@@ -31,22 +31,21 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-    <string>Este aplicativo precisa de acesso para salvar relatórios PDF em sua galeria.</string>
+	<string>O app precisa salvar arquivos na sua galeria quando você exportar relatórios.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>O app precisa acessar suas fotos para você anexar imagens à ordem de serviço.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>O app precisa da câmera para você tirar fotos e anexar à ordem de serviço.</string>
     <key>LSSupportsOpeningDocumentsInPlace</key>
     <true/>
 </dict>

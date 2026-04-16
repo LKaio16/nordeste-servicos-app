@@ -1,10 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:file_saver/file_saver.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -13,8 +9,6 @@ import 'package:intl/intl.dart';
 import 'package:nordeste_servicos_app/data/models/prioridade_os_model.dart';
 import 'package:nordeste_servicos_app/data/models/status_os_model.dart';
 import 'package:nordeste_servicos_app/presentation/features/os/screens/signature_screen.dart';
-import 'package:open_filex/open_filex.dart';
-
 import '../../../../data/models/perfil_usuario_model.dart';
 import '../../../../domain/entities/cliente.dart';
 import '../../../../domain/entities/equipamento.dart';
@@ -23,6 +17,8 @@ import '../../../../domain/entities/ordem_servico.dart';
 import '../../../../domain/entities/usuario.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../../shared/styles/app_colors.dart';
+import '../../../shared/widgets/os_foto_widgets.dart';
+import '../../../shared/utils/pdf_download_flow.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/assinatura_os_provider.dart';
 import '../providers/foto_os_provider.dart';
@@ -195,69 +191,14 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
 
   Future<void> _downloadPdf(
       BuildContext context, WidgetRef ref, OrdemServico os) async {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Baixando PDF da OS #${os.id}...'),
-          backgroundColor: AppColors.primaryBlue,
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    }
-
-    try {
-      final osRepository = ref.read(osRepositoryProvider);
-      final Uint8List pdfBytes = await osRepository.downloadOsPdf(os.id!);
-
-      final String fileName = 'relatorio_os_${os.id}.pdf';
-      String? filePath;
-
-      filePath = await FileSaver.instance.saveFile(
-        name: fileName,
-        bytes: pdfBytes,
-        ext: 'pdf',
-        mimeType: MimeType.pdf,
-      );
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).removeCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'Download concluído! Arquivo salvo em: ${filePath ?? 'local desconhecido'}'),
-            backgroundColor: AppColors.successGreen,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            action: (!kIsWeb && filePath != null && filePath.isNotEmpty)
-                ? SnackBarAction(
-                    label: 'ABRIR',
-                    textColor: Colors.white,
-                    onPressed: () {
-                      OpenFilex.open(filePath!);
-                    },
-                  )
-                : null,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).removeCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao baixar PDF: ${e.toString()}'),
-            backgroundColor: AppColors.errorRed,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
-    }
+    await runPdfDownloadFlow(
+      context: context,
+      fetchPdf: () => ref.read(osRepositoryProvider).downloadOsPdf(os.id!),
+      fileName: 'relatorio_os_${os.id}.pdf',
+      loadingMessage: 'Gerando o PDF da OS #${os.id}...\nAguarde, isso pode levar alguns segundos.',
+      sheetTitle: 'Relatório da OS #${os.id}',
+      shareMessage: 'Relatório em PDF da ordem de serviço #${os.id}.',
+    );
   }
 
   void _showImageFullScreen(List<FotoOS> fotos, int initialIndex) {
@@ -1714,21 +1655,11 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          url != null
-                              ? Image.network(
-                                  url,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Center(
-                                    child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey.shade600),
-                                  ),
-                                )
-                              : Image.memory(
-                                  bytes!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Center(
-                                    child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey.shade600),
-                                  ),
-                                ),
+                          OsFotoCoverImage(
+                            url: url,
+                            bytes: bytes,
+                            imageKey: foto.id ?? url ?? index,
+                          ),
                           if (foto.descricao != null &&
                               foto.descricao!.isNotEmpty)
                             Positioned(
@@ -1784,24 +1715,10 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          if (fotosState.fotos.length > 1)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                fotosState.fotos.length,
-                (index) => Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _currentImageIndex == index
-                        ? AppColors.primaryBlue
-                        : AppColors.textLight.withOpacity(0.3),
-                  ),
-                ),
-              ),
-            ),
+          OsPhotoPageIndicators(
+            count: fotosState.fotos.length,
+            currentIndex: _currentImageIndex,
+          ),
           const SizedBox(height: 16),
         ],
         Row(
@@ -2231,17 +2148,11 @@ class _ImageFullScreenViewerState extends State<_ImageFullScreenViewer> {
             minScale: 0.5,
             maxScale: 4.0,
             child: Center(
-              child: url != null
-                  ? Image.network(
-                      url,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => Icon(Icons.broken_image_outlined, size: 64, color: Colors.grey.shade600),
-                    )
-                  : Image.memory(
-                      bytes!,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => Icon(Icons.broken_image_outlined, size: 64, color: Colors.grey.shade600),
-                    ),
+              child: OsFotoContainImage(
+                url: url,
+                bytes: bytes,
+                imageKey: foto.id ?? url ?? index,
+              ),
             ),
           );
         },

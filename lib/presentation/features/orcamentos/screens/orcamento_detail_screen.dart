@@ -1,6 +1,3 @@
-import 'dart:typed_data';
-import 'package:file_saver/file_saver.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,7 +9,7 @@ import 'package:nordeste_servicos_app/presentation/features/orcamentos/providers
 import 'package:nordeste_servicos_app/presentation/features/orcamentos/providers/orcamento_list_provider.dart';
 import 'package:nordeste_servicos_app/presentation/shared/providers/repository_providers.dart';
 import 'package:nordeste_servicos_app/presentation/shared/styles/app_colors.dart';
-import 'package:open_filex/open_filex.dart';
+import 'package:nordeste_servicos_app/presentation/shared/utils/pdf_download_flow.dart';
 
 import 'orcamento_edit_screen.dart';
 
@@ -94,55 +91,14 @@ class OrcamentoDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _downloadPdf(BuildContext context, WidgetRef ref, Orcamento orcamento) async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: Text('Baixando PDF do Orçamento #${orcamento.numeroOrcamento}...'),
-        backgroundColor: AppColors.primaryBlue,
-      ),
+    await runPdfDownloadFlow(
+      context: context,
+      fetchPdf: () => ref.read(orcamentoRepositoryProvider).downloadOrcamentoPdf(orcamento.id!),
+      fileName: 'orcamento_${orcamento.numeroOrcamento}.pdf',
+      loadingMessage: 'Gerando o PDF do orçamento ${orcamento.numeroOrcamento}...\nAguarde, isso pode levar alguns segundos.',
+      sheetTitle: 'Orçamento ${orcamento.numeroOrcamento}',
+      shareMessage: 'Orçamento ${orcamento.numeroOrcamento} em PDF.',
     );
-
-    try {
-      final repository = ref.read(orcamentoRepositoryProvider);
-      final Uint8List pdfBytes = await repository.downloadOrcamentoPdf(orcamento.id!);
-
-      final String fileName = 'orcamento_${orcamento.numeroOrcamento}.pdf';
-      String? filePath;
-
-      if (!kIsWeb) {
-        filePath = await FileSaver.instance.saveFile(
-          name: fileName,
-          bytes: pdfBytes,
-          ext: 'pdf',
-          mimeType: MimeType.pdf,
-        );
-      } else {
-        await FileSaver.instance.saveFile(name: fileName, bytes: pdfBytes, ext: 'pdf', mimeType: MimeType.pdf);
-      }
-
-      scaffoldMessenger.removeCurrentSnackBar();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: const Text('Download concluído!'),
-          backgroundColor: AppColors.successGreen,
-          action: (!kIsWeb && filePath != null)
-              ? SnackBarAction(
-            label: 'ABRIR',
-            textColor: Colors.white,
-            onPressed: () => OpenFilex.open(filePath!),
-          )
-              : null,
-        ),
-      );
-    } catch (e) {
-      scaffoldMessenger.removeCurrentSnackBar();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('Erro ao baixar PDF: ${e.toString()}'),
-          backgroundColor: AppColors.errorRed,
-        ),
-      );
-    }
   }
 
 

@@ -7,6 +7,8 @@ class DashboardData {
   final int totalOrcamentos;
   final int orcamentosAprovados;
   final int orcamentosRejeitados;
+  final int totalClientes;
+  final int totalEquipamentos;
 
   DashboardData({
     required this.totalOS,
@@ -15,5 +17,7 @@ class DashboardData {
     required this.totalOrcamentos,
     required this.orcamentosAprovados,
     required this.orcamentosRejeitados,
+    this.totalClientes = 0,
+    this.totalEquipamentos = 0,
   });
 }

@@ -1,6 +1,7 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Importações dos seus arquivos
@@ -11,16 +12,15 @@ import 'package:nordeste_servicos_app/presentation/features/clientes/screens/nov
 import 'package:nordeste_servicos_app/presentation/features/funcionario/screens/novo_tecnico_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/home/screens/admin_home_screen.dart';
 import 'package:nordeste_servicos_app/presentation/features/home/screens/home_screen_tecnico.dart';
-import 'package:nordeste_servicos_app/presentation/features/home/providers/os_dashboard_data_provider.dart';
-import 'package:nordeste_servicos_app/presentation/features/orcamentos/providers/orcamento_dashboard_provider.dart';
-import 'package:nordeste_servicos_app/domain/entities/usuario.dart'; // Importe a entidade Usuario
 import 'package:nordeste_servicos_app/data/models/perfil_usuario_model.dart'; // Importe o PerfilUsuarioModel
 import 'package:nordeste_servicos_app/presentation/features/os/screens/nova_os_screen.dart';
-import 'package:nordeste_servicos_app/core/sync/sync_service.dart';
 import 'package:nordeste_servicos_app/presentation/shared/providers/repository_providers.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -40,9 +40,6 @@ class MyApp extends ConsumerWidget {
     ref.listen<AuthState>(authProvider, (previousState, newState) {
       if (newState.authenticatedUser != null && previousState?.authenticatedUser == null) {
         print('DEBUG: Usuário logado detectado. Acionando busca de dados do dashboard.');
-        // Aciona a busca de dados para ambos os tipos de dashboard, se necessário
-        ref.read(osDashboardProvider.notifier).fetchOsDashboardData();
-        ref.read(orcamentoDashboardProvider.notifier).fetchOrcamentoDashboardData();
       } else if (newState.authenticatedUser == null && previousState?.authenticatedUser != null) {
         print('DEBUG: Usuário deslogado detectado. Limpando dados (opcional).');
       }

@@ -1,14 +1,11 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:file_saver/file_saver.dart';
-import 'package:open_filex/open_filex.dart';
 
 import '../../../../domain/entities/recibo.dart';
 import '../../../shared/styles/app_colors.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/utils/pdf_download_flow.dart';
 import '../providers/recibo_list_provider.dart';
 
 class NovoReciboScreen extends ConsumerStatefulWidget {
@@ -43,7 +40,6 @@ class _NovoReciboScreenState extends ConsumerState<NovoReciboScreen> {
         final cliente = _clienteController.text.trim();
         final referenteA = _referenteAController.text.trim();
 
-        // Capitalizar primeira letra
         final referenteACapitalizado = referenteA.isNotEmpty
             ? referenteA[0].toUpperCase() + (referenteA.length > 1 ? referenteA.substring(1) : '')
             : referenteA;
@@ -53,50 +49,44 @@ class _NovoReciboScreenState extends ConsumerState<NovoReciboScreen> {
           cliente: cliente,
           referenteA: referenteACapitalizado,
           dataCriacao: DateTime.now(),
-          numeroRecibo: '', // Será gerado pela API
+          numeroRecibo: '',
         );
 
         final repository = ref.read(reciboRepositoryProvider);
-        
-        // Criar o recibo
-        final savedRecibo = await repository.createRecibo(recibo);
 
-        // Gerar e baixar o PDF
-        final pdfBytes = await repository.generateReciboPdf(savedRecibo);
+        if (!mounted) return;
+        openPdfLoadingDialog(context, 'Criando recibo e gerando PDF...\nAguarde um momento.');
 
-        final String fileName = 'recibo_${savedRecibo.numeroRecibo}.pdf';
-        String? filePath;
+        try {
+          final savedRecibo = await repository.createRecibo(recibo);
+          final pdfBytes = await repository.generateReciboPdf(savedRecibo);
 
-        if (!kIsWeb) {
-          filePath = await FileSaver.instance.saveFile(
-            name: fileName,
-            bytes: pdfBytes,
-            ext: 'pdf',
-            mimeType: MimeType.pdf,
-          );
-        } else {
-          await FileSaver.instance.saveFile(name: fileName, bytes: pdfBytes, ext: 'pdf', mimeType: MimeType.pdf);
-        }
+          if (!mounted) return;
+          dismissPdfLoadingDialog(context);
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).removeCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Recibo criado e PDF gerado com sucesso!'),
-              backgroundColor: AppColors.successGreen,
-              action: (!kIsWeb && filePath != null)
-                  ? SnackBarAction(
-                label: 'ABRIR',
-                textColor: Colors.white,
-                onPressed: () => OpenFilex.open(filePath!),
-              )
-                  : null,
-            ),
-          );
-          
-          // Invalida a lista para que ela seja recarregada ao voltar
           ref.invalidate(reciboListProvider);
-          Navigator.of(context).pop();
+
+          await presentPdfFromBytes(
+            context: context,
+            bytes: pdfBytes,
+            fileName: 'recibo_${savedRecibo.numeroRecibo}.pdf',
+            sheetTitle: 'Recibo ${savedRecibo.numeroRecibo}',
+            shareMessage: 'Recibo ${savedRecibo.numeroRecibo} em PDF.',
+          );
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Recibo criado com sucesso!', style: GoogleFonts.poppins()),
+                backgroundColor: AppColors.successGreen,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            Navigator.of(context).pop();
+          }
+        } catch (inner) {
+          if (mounted) dismissPdfLoadingDialog(context);
+          rethrow;
         }
       } catch (e) {
         if (mounted) {
@@ -151,13 +141,13 @@ class _NovoReciboScreenState extends ConsumerState<NovoReciboScreen> {
                   controller: _valorController,
                   label: 'Valor (R\$)*',
                   icon: Icons.attach_money,
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Por favor, informe o valor';
                     }
-                    final valor = double.tryParse(value.replaceAll('.', '').replaceAll(',', '.').replaceAll('R\$ ', '').trim());
-                    if (valor == null || valor <= 0) {
+                    final v = double.tryParse(value.replaceAll('.', '').replaceAll(',', '.').replaceAll('R\$ ', '').trim());
+                    if (v == null || v <= 0) {
                       return 'O valor deve ser maior que zero';
                     }
                     return null;

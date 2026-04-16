@@ -13,6 +13,11 @@ import '../datasources/local/os_local_data_source.dart';
 import '../datasources/local/sync_queue_local_data_source.dart';
 import '../models/sync_queue_item_model.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../domain/entities/cliente.dart';
+import '../../domain/entities/equipamento.dart';
+import '../../domain/entities/usuario.dart';
+import '../../data/models/tipo_cliente.dart';
+import '../../data/models/perfil_usuario_model.dart';
 
 
 
@@ -23,6 +28,88 @@ class OsRepositoryImpl implements OsRepository {
   final Connectivity connectivity;
 
   OsRepositoryImpl(this.apiClient, this.localDataSource, this.syncQueue, this.connectivity);
+
+  @override
+  Future<List<OrdemServico>> getOrdensServicoListagem({
+    String? searchTerm,
+    int? clienteId,
+    int? tecnicoId,
+    StatusOSModel? status,
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      final Map<String, dynamic> queryParameters = {
+        'page': page,
+        'size': size,
+      };
+      if (searchTerm != null && searchTerm.isNotEmpty) queryParameters['searchTerm'] = searchTerm;
+      if (clienteId != null) queryParameters['clienteId'] = clienteId;
+      if (tecnicoId != null) queryParameters['tecnicoId'] = tecnicoId;
+      if (status != null) queryParameters['status'] = status.name;
+
+      final response = await apiClient.get('/ordens-servico/paged', queryParameters: queryParameters);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = response.data as Map<String, dynamic>;
+        final List<dynamic> content = (data['content'] as List<dynamic>? ?? []);
+
+        return content.map((item) {
+          final json = item as Map<String, dynamic>;
+          final statusValue = StatusOSModel.values.firstWhere(
+            (s) => s.name == (json['status'] as String? ?? 'EM_ABERTO'),
+            orElse: () => StatusOSModel.EM_ABERTO,
+          );
+
+          return OrdemServico(
+            id: json['id'] as int?,
+            numeroOS: (json['numeroOS'] as String?) ?? 'OS-${json['id'] ?? ''}',
+            status: statusValue,
+            dataAbertura: json['dataAbertura'] != null
+                ? DateTime.tryParse(json['dataAbertura'] as String)
+                : null,
+            cliente: Cliente(
+              id: null,
+              tipoCliente: TipoCliente.PESSOA_FISICA,
+              nomeCompleto: (json['clienteNome'] as String?) ?? 'Cliente',
+              cpfCnpj: '',
+              email: '',
+              telefonePrincipal: '',
+              cep: '',
+              rua: '',
+              numero: '',
+              bairro: '',
+              cidade: '',
+              estado: '',
+            ),
+            equipamento: Equipamento(
+              id: null,
+              tipo: '',
+              marcaModelo: '',
+              numeroSerieChassi: '',
+              clienteId: 0,
+            ),
+            tecnicoAtribuido: (json['tecnicoNome'] as String?) != null
+                ? Usuario(
+                    id: null,
+                    nome: json['tecnicoNome'] as String,
+                    perfil: PerfilUsuarioModel.TECNICO,
+                  )
+                : null,
+            problemaRelatado: '',
+          );
+        }).toList();
+      } else {
+        throw ApiException('Falha ao carregar listagem de ordens de serviço: Status ${response.statusCode}');
+      }
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      throw ApiException('Erro de rede ao carregar listagem de ordens de serviço: ${e.message}');
+    } catch (e) {
+      throw ApiException('Erro inesperado ao carregar listagem de ordens de serviço: ${e.toString()}');
+    }
+  }
 
   @override
   Future<List<OrdemServico>> getOrdensServico({
@@ -108,18 +195,24 @@ class OsRepositoryImpl implements OsRepository {
   }
 
   @override
-  Future<Map<String, int>> getDashboardStats() async {
+  Future<Map<String, dynamic>> getDashboardStats() async {
     try {
       final response = await apiClient.get('/ordens-servico/dashboard/stats');
       
       if (response.statusCode == 200) {
-        final data = response.data;
+        final Map<String, dynamic> data = response.data as Map<String, dynamic>;
+        int toInt(dynamic value) => (value is num) ? value.toInt() : 0;
+
         return {
-          'totalOs': data['totalOs'] ?? 0,
-          'osEmAndamento': data['osEmAndamento'] ?? 0,
-          'osPendentes': data['osPendentes'] ?? 0,
-          'osAbertas': data['osAbertas'] ?? 0,
-          'osConcluidas': data['osConcluidas'] ?? 0,
+          'totalOs': toInt(data['totalOs']),
+          'osEmAndamento': toInt(data['osEmAndamento']),
+          'osPendentes': toInt(data['osPendentes']),
+          'osAbertas': toInt(data['osAbertas']),
+          'osConcluidas': toInt(data['osConcluidas']),
+          'totalClientes': toInt(data['totalClientes']),
+          'totalEquipamentos': toInt(data['totalEquipamentos']),
+          'osPorTecnico': data['osPorTecnico'] ?? const [],
+          'ordensRecentes': data['ordensRecentes'] ?? const [],
         };
       } else {
         throw ApiException('Falha ao carregar estatísticas: Status ${response.statusCode}');

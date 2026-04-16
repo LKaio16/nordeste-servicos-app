@@ -63,6 +63,50 @@ class NotaFiscalRepositoryImpl implements NotaFiscalRepository {
   }
 
   @override
+  Future<Map<String, dynamic>> getNotasFiscaisListagem({
+    int? fornecedorId,
+    int? clienteId,
+    String? tipo,
+    String? searchTerm,
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'page': page,
+        'size': size,
+      };
+      if (fornecedorId != null) queryParams['fornecedorId'] = fornecedorId;
+      if (clienteId != null) queryParams['clienteId'] = clienteId;
+      if (tipo != null && tipo.isNotEmpty) queryParams['tipo'] = tipo;
+      if (searchTerm != null && searchTerm.isNotEmpty) queryParams['searchTerm'] = searchTerm;
+
+      final response = await apiClient.get('/notas-fiscais/paged', queryParameters: queryParams);
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        final content = (data['content'] as List<dynamic>? ?? [])
+            .map((json) => NotaFiscalModel.fromJson(json).toEntity())
+            .toList();
+        return {
+          'content': content,
+          'page': data['page'] ?? page,
+          'size': data['size'] ?? size,
+          'totalElements': data['totalElements'] ?? content.length,
+          'totalPages': data['totalPages'] ?? 1,
+          'hasNext': data['hasNext'] ?? false,
+        };
+      }
+      throw ApiException('Falha ao carregar notas fiscais paginadas: Status ${response.statusCode}');
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      throw ApiException('Erro de rede ao carregar notas fiscais paginadas: ${e.message}');
+    } catch (e) {
+      throw ApiException('Erro inesperado ao carregar notas fiscais paginadas: ${e.toString()}');
+    }
+  }
+
+  @override
   Future<NotaFiscal> createNotaFiscal(NotaFiscal notaFiscal) async {
     try {
       final data = <String, dynamic>{

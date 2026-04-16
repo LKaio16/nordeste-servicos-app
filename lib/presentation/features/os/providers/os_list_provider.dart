@@ -113,7 +113,7 @@ class OsListNotifier extends StateNotifier<OsListState> {
     }
 
     try {
-      final ordens = await _osRepository.getOrdensServico(
+      final ordens = await _osRepository.getOrdensServicoListagem(
         searchTerm: currentSearchTerm.isNotEmpty ? currentSearchTerm : null,
         status: currentStatusFilter,
         page: page,

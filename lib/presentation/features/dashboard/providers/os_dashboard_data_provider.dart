@@ -53,6 +53,8 @@ class OsDashboardNotifier extends StateNotifier<OsDashboardState> {
         totalOrcamentos: 0, // Orçamentos não são foco aqui, pode ser zero ou buscar de outro provider
         orcamentosAprovados: 0,
         orcamentosRejeitados: 0,
+        totalClientes: stats['totalClientes'] ?? 0,
+        totalEquipamentos: stats['totalEquipamentos'] ?? 0,
       );
 
       state = state.copyWith(data: dashboardData, isLoading: false);

@@ -15,6 +15,8 @@ class ContaListScreen extends ConsumerStatefulWidget {
 }
 
 class _ContaListScreenState extends ConsumerState<ContaListScreen> {
+  final ScrollController _scrollController = ScrollController();
+
   String _formatDate(DateTime? d) => d != null ? DateFormat('dd/MM/yyyy').format(d) : '--';
   String _formatCurrency(double? v) => v != null ? NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(v) : 'R\$ --';
 
@@ -24,6 +26,22 @@ class _ContaListScreenState extends ConsumerState<ContaListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(contaListProvider.notifier).refreshContas();
     });
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    if (currentScroll >= (maxScroll - 200)) {
+      ref.read(contaListProvider.notifier).loadMoreContas();
+    }
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref, Conta c) async {
@@ -134,10 +152,19 @@ class _ContaListScreenState extends ConsumerState<ContaListScreen> {
       onRefresh: () => notifier.refreshContas(),
       color: AppColors.primaryBlue,
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         physics: const BouncingScrollPhysics(),
-        itemCount: state.contas.length,
-        itemBuilder: (context, index) => _buildCard(context, ref, state.contas[index]),
+        itemCount: state.contas.length + (state.hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index >= state.contas.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
+            );
+          }
+          return _buildCard(context, ref, state.contas[index]);
+        },
       ),
     );
   }

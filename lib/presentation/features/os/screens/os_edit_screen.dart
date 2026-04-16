@@ -18,6 +18,7 @@ import '../../../../domain/entities/foto_os.dart'; // Importar FotoOS
 
 // Importar os providers
 import '../../../shared/styles/app_colors.dart';
+import '../../../shared/widgets/os_foto_widgets.dart';
 import '../providers/os_detail_provider.dart';
 import '../providers/os_edit_provider.dart';
 import '../providers/os_edit_state.dart';
@@ -1214,21 +1215,11 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          url != null
-                              ? Image.network(
-                                  url,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Center(
-                                    child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey.shade600),
-                                  ),
-                                )
-                              : Image.memory(
-                                  bytes!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Center(
-                                    child: Icon(Icons.broken_image_outlined, size: 48, color: Colors.grey.shade600),
-                                  ),
-                                ),
+                          OsFotoCoverImage(
+                            url: url,
+                            bytes: bytes,
+                            imageKey: foto.id ?? url ?? index,
+                          ),
                           if (foto.descricao != null && foto.descricao!.isNotEmpty)
                             Positioned(
                               bottom: 0,
@@ -1342,24 +1333,10 @@ class _OsEditScreenState extends ConsumerState<OsEditScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          if (fotosState.fotos.length > 1)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                fotosState.fotos.length,
-                    (index) => Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _currentImageIndex == index
-                        ? AppColors.primaryBlue
-                        : AppColors.textLight.withOpacity(0.3),
-                  ),
-                ),
-              ),
-            ),
+          OsPhotoPageIndicators(
+            count: fotosState.fotos.length,
+            currentIndex: _currentImageIndex,
+          ),
           const SizedBox(height: 16),
         ],
         ElevatedButton.icon(
@@ -1514,17 +1491,11 @@ class _ImageFullScreenViewerState extends State<_ImageFullScreenViewer> {
             minScale: 0.5,
             maxScale: 4.0,
             child: Center(
-              child: url != null
-                  ? Image.network(
-                      url,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => Icon(Icons.broken_image_outlined, size: 64, color: Colors.grey.shade600),
-                    )
-                  : Image.memory(
-                      bytes!,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => Icon(Icons.broken_image_outlined, size: 64, color: Colors.grey.shade600),
-                    ),
+              child: OsFotoContainImage(
+                url: url,
+                bytes: bytes,
+                imageKey: foto.id ?? url ?? index,
+              ),
             ),
           );
         },

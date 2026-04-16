@@ -1,11 +1,9 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nordeste_servicos_app/presentation/features/auth/providers/auth_provider.dart';
 import 'package:nordeste_servicos_app/presentation/shared/styles/app_colors.dart';
+import 'package:nordeste_servicos_app/presentation/shared/widgets/user_profile_avatar.dart';
 
 import '../../../../domain/entities/usuario.dart';
 
@@ -45,28 +43,14 @@ class PerfilScreen extends ConsumerWidget {
   }
 
   Widget _buildProfileHeader(Usuario user) {
-    Uint8List? imageBytes;
-    if (user.fotoPerfil != null && user.fotoPerfil!.isNotEmpty) {
-      try {
-        imageBytes = base64Decode(user.fotoPerfil!);
-      } catch (e) {
-        imageBytes = null;
-      }
-    }
-
     return Column(
       children: [
-        CircleAvatar(
+        UserProfileAvatar(
+          fotoPerfilBase64: user.fotoPerfil,
           radius: 60,
           backgroundColor: AppColors.primaryBlue.withOpacity(0.2),
-          backgroundImage: imageBytes != null ? MemoryImage(imageBytes) : null,
-          child: imageBytes == null
-              ? const Icon(
-            Icons.person,
-            size: 60,
-            color: AppColors.primaryBlue,
-          )
-              : null,
+          iconColor: AppColors.primaryBlue,
+          iconSize: 60,
         ),
         const SizedBox(height: 16),
         Text(

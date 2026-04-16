@@ -15,6 +15,8 @@ class NotaFiscalListScreen extends ConsumerStatefulWidget {
 }
 
 class _NotaFiscalListScreenState extends ConsumerState<NotaFiscalListScreen> {
+  final ScrollController _scrollController = ScrollController();
+
   String _formatDate(DateTime? d) => d != null ? DateFormat('dd/MM/yyyy').format(d) : '--';
   String _formatCurrency(double? v) => v != null ? NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(v) : 'R\$ --';
 
@@ -24,6 +26,22 @@ class _NotaFiscalListScreenState extends ConsumerState<NotaFiscalListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(notaFiscalListProvider.notifier).refreshNotasFiscais();
     });
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    if (currentScroll >= (maxScroll - 200)) {
+      ref.read(notaFiscalListProvider.notifier).loadMoreNotasFiscais();
+    }
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref, NotaFiscal n) async {
@@ -127,10 +145,19 @@ class _NotaFiscalListScreenState extends ConsumerState<NotaFiscalListScreen> {
       onRefresh: () => notifier.refreshNotasFiscais(),
       color: AppColors.primaryBlue,
       child: ListView.builder(
+        controller: _scrollController,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         physics: const BouncingScrollPhysics(),
-        itemCount: state.notasFiscais.length,
-        itemBuilder: (context, index) => _buildCard(context, ref, state.notasFiscais[index]),
+        itemCount: state.notasFiscais.length + (state.hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index >= state.notasFiscais.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator(color: AppColors.primaryBlue)),
+            );
+          }
+          return _buildCard(context, ref, state.notasFiscais[index]);
+        },
       ),
     );
   }

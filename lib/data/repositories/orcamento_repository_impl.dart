@@ -16,6 +16,67 @@ class OrcamentoRepositoryImpl implements OrcamentoRepository {
   OrcamentoRepositoryImpl(this.apiClient);
 
   @override
+  Future<Map<String, dynamic>> getOrcamentosListagem({
+    int? clienteId,
+    StatusOrcamentoModel? status,
+    int? ordemServicoOrigemId,
+    String? searchTerm,
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      final Map<String, dynamic> queryParameters = {
+        'page': page,
+        'size': size,
+      };
+      if (clienteId != null) queryParameters['clienteId'] = clienteId;
+      if (status != null) queryParameters['status'] = status.name;
+      if (ordemServicoOrigemId != null) queryParameters['ordemServicoOrigemId'] = ordemServicoOrigemId;
+      if (searchTerm != null && searchTerm.isNotEmpty) queryParameters['searchTerm'] = searchTerm;
+
+      final response = await apiClient.get('/orcamentos/paged', queryParameters: queryParameters);
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = response.data as Map<String, dynamic>;
+        final List<dynamic> content = (data['content'] as List<dynamic>? ?? []);
+        final List<Orcamento> orcamentos = content.map((item) {
+          final json = item as Map<String, dynamic>;
+          final statusValue = StatusOrcamentoModel.values.firstWhere(
+            (s) => s.name == (json['status'] as String? ?? 'PENDENTE'),
+            orElse: () => StatusOrcamentoModel.PENDENTE,
+          );
+          return Orcamento(
+            id: json['id'] as int?,
+            numeroOrcamento: (json['numeroOrcamento'] as String?) ?? '',
+            dataCriacao: DateTime.now(),
+            dataValidade: json['dataValidade'] != null
+                ? DateTime.tryParse(json['dataValidade'] as String) ?? DateTime.now()
+                : DateTime.now(),
+            status: statusValue,
+            clienteId: 0,
+            nomeCliente: json['nomeCliente'] as String?,
+            valorTotal: (json['valorTotal'] as num?)?.toDouble(),
+          );
+        }).toList();
+
+        return {
+          'content': orcamentos,
+          'totalElements': (data['totalElements'] as num?)?.toInt() ?? 0,
+          'hasNext': data['hasNext'] == true,
+          'page': (data['page'] as num?)?.toInt() ?? page,
+          'size': (data['size'] as num?)?.toInt() ?? size,
+        };
+      }
+      throw ApiException('Falha ao carregar listagem paginada de orçamentos: Status ${response.statusCode}');
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      throw ApiException('Erro de rede ao carregar listagem paginada de orçamentos: ${e.message}');
+    } catch (e) {
+      throw ApiException('Erro inesperado ao carregar listagem paginada de orçamentos: ${e.toString()}');
+    }
+  }
+
+  @override
   Future<List<Orcamento>> getOrcamentos({
     int? clienteId,
     StatusOrcamentoModel? status,
@@ -182,6 +243,29 @@ class OrcamentoRepositoryImpl implements OrcamentoRepository {
       throw ApiException('Erro de rede ao baixar o PDF: ${e.message}');
     } catch (e) {
       throw ApiException('Erro inesperado ao baixar o PDF: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<Map<String, int>> getDashboardStats() async {
+    try {
+      final response = await apiClient.get('/orcamentos/dashboard/stats');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = response.data as Map<String, dynamic>;
+        int toInt(dynamic value) => (value is num) ? value.toInt() : 0;
+        return {
+          'totalOrcamentos': toInt(data['totalOrcamentos']),
+          'orcamentosAprovados': toInt(data['orcamentosAprovados']),
+          'orcamentosRejeitados': toInt(data['orcamentosRejeitados']),
+        };
+      }
+      throw ApiException('Falha ao carregar estatísticas de orçamentos: Status ${response.statusCode}');
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      throw ApiException('Erro de rede ao carregar estatísticas de orçamentos: ${e.message}');
+    } catch (e) {
+      throw ApiException('Erro inesperado ao carregar estatísticas de orçamentos: ${e.toString()}');
     }
   }
 }

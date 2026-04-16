@@ -100,6 +100,50 @@ class ContaRepositoryImpl implements ContaRepository {
   }
 
   @override
+  Future<Map<String, dynamic>> getContasListagem({
+    int? clienteId,
+    int? fornecedorId,
+    String? tipo,
+    String? status,
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'page': page,
+        'size': size,
+      };
+      if (clienteId != null) queryParams['clienteId'] = clienteId;
+      if (fornecedorId != null) queryParams['fornecedorId'] = fornecedorId;
+      if (tipo != null && tipo.isNotEmpty) queryParams['tipo'] = tipo;
+      if (status != null && status.isNotEmpty) queryParams['status'] = status;
+
+      final response = await apiClient.get('/contas/paged', queryParameters: queryParams);
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        final content = (data['content'] as List<dynamic>? ?? [])
+            .map((json) => ContaModel.fromJson(json).toEntity())
+            .toList();
+        return {
+          'content': content,
+          'page': data['page'] ?? page,
+          'size': data['size'] ?? size,
+          'totalElements': data['totalElements'] ?? content.length,
+          'totalPages': data['totalPages'] ?? 1,
+          'hasNext': data['hasNext'] ?? false,
+        };
+      }
+      throw ApiException('Falha ao carregar contas paginadas: Status ${response.statusCode}');
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      throw ApiException('Erro de rede ao carregar contas paginadas: ${e.message}');
+    } catch (e) {
+      throw ApiException('Erro inesperado ao carregar contas paginadas: ${e.toString()}');
+    }
+  }
+
+  @override
   Future<void> deleteConta(int id) async {
     try {
       final response = await apiClient.delete('/contas/$id');

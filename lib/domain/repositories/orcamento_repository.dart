@@ -5,9 +5,18 @@ import 'dart:typed_data';
 
 import '../../data/models/status_orcamento_model.dart';
 import '../entities/orcamento.dart';
-import '/core/error/exceptions.dart';
 
 abstract class OrcamentoRepository {
+  /// Obtém a listagem paginada e resumida de orçamentos.
+  Future<Map<String, dynamic>> getOrcamentosListagem({
+    int? clienteId,
+    StatusOrcamentoModel? status,
+    int? ordemServicoOrigemId,
+    String? searchTerm,
+    int page = 0,
+    int size = 20,
+  });
+
   /// Obtém a lista de orçamentos, com opções de filtro.
   Future<List<Orcamento>> getOrcamentos({
     int? clienteId,
@@ -29,6 +38,9 @@ abstract class OrcamentoRepository {
   Future<void> deleteOrcamento(int id);
 
   Future<Uint8List> downloadOrcamentoPdf(int orcamentoId);
+
+  /// Obtém estatísticas agregadas para o dashboard de orçamentos.
+  Future<Map<String, int>> getDashboardStats();
 
   // Métodos para gerenciar itens do orçamento (alternativa a repositório separado para itens)
   // Future<List<ItemOrcamento>> getItemOrcamentosByOrcamentoId(int orcamentoId);

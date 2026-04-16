@@ -9,7 +9,7 @@ class GetOsDashboardDataUseCase {
   GetOsDashboardDataUseCase(this.repository);
 
   // Agora usa o método otimizado do repository que busca apenas estatísticas
-  Future<Map<String, int>> call() async {
+  Future<Map<String, dynamic>> call() async {
     try {
       // Usa o novo método que busca apenas estatísticas (sem buscar todas as OS)
       return await repository.getDashboardStats();

@@ -8,29 +8,49 @@ import '../../../shared/providers/repository_providers.dart';
 class ContaListState extends Equatable {
   final List<Conta> contas;
   final bool isLoading;
+  final bool isLoadingMore;
+  final int currentPage;
+  final bool hasMore;
+  final int total;
+  final int pageSize;
   final String? errorMessage;
 
   const ContaListState({
     this.contas = const [],
     this.isLoading = false,
+    this.isLoadingMore = false,
+    this.currentPage = 0,
+    this.hasMore = true,
+    this.total = 0,
+    this.pageSize = 20,
     this.errorMessage,
   });
 
   ContaListState copyWith({
     List<Conta>? contas,
     bool? isLoading,
+    bool? isLoadingMore,
+    int? currentPage,
+    bool? hasMore,
+    int? total,
+    int? pageSize,
     String? errorMessage,
     bool clearError = false,
   }) {
     return ContaListState(
       contas: contas ?? this.contas,
       isLoading: isLoading ?? this.isLoading,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      currentPage: currentPage ?? this.currentPage,
+      hasMore: hasMore ?? this.hasMore,
+      total: total ?? this.total,
+      pageSize: pageSize ?? this.pageSize,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
 
   @override
-  List<Object?> get props => [contas, isLoading, errorMessage];
+  List<Object?> get props => [contas, isLoading, isLoadingMore, currentPage, hasMore, total, pageSize, errorMessage];
 }
 
 class ContaListNotifier extends StateNotifier<ContaListState> {
@@ -42,32 +62,51 @@ class ContaListNotifier extends StateNotifier<ContaListState> {
 
   Future<void> loadContas({
     bool refresh = false,
+    bool loadMore = false,
     int? clienteId,
     int? fornecedorId,
     String? tipo,
     String? status,
   }) async {
-    if (refresh) {
+    if (loadMore) {
+      if (!state.hasMore || state.isLoading || state.isLoadingMore) return;
+      state = state.copyWith(isLoadingMore: true, clearError: true);
+    } else if (refresh) {
       state = state.copyWith(isLoading: true, clearError: true);
     } else {
       state = state.copyWith(isLoading: true);
     }
     try {
-      final list = await _repository.getContas(
+      final targetPage = refresh ? 0 : (loadMore ? state.currentPage + 1 : 0);
+      final result = await _repository.getContasListagem(
         clienteId: clienteId,
         fornecedorId: fornecedorId,
         tipo: tipo,
         status: status,
+        page: targetPage,
+        size: state.pageSize,
       );
-      state = state.copyWith(contas: list, isLoading: false, clearError: true);
+      final List<Conta> list = (result['content'] as List<Conta>? ?? []);
+      final bool hasNext = result['hasNext'] == true;
+      final int total = (result['totalElements'] as num?)?.toInt() ?? list.length;
+      state = state.copyWith(
+        contas: loadMore ? [...state.contas, ...list] : list,
+        isLoading: false,
+        isLoadingMore: false,
+        currentPage: targetPage,
+        hasMore: hasNext,
+        total: total,
+        clearError: true,
+      );
     } on ApiException catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.message);
+      state = state.copyWith(isLoading: false, isLoadingMore: false, errorMessage: e.message);
     } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: 'Erro: ${e.toString()}');
+      state = state.copyWith(isLoading: false, isLoadingMore: false, errorMessage: 'Erro: ${e.toString()}');
     }
   }
 
   Future<void> refreshContas() => loadContas(refresh: true);
+  Future<void> loadMoreContas() => loadContas(loadMore: true);
 
   Future<void> deleteConta(int id) async {
     try {
