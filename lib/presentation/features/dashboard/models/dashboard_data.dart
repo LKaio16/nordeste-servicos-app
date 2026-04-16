@@ -9,6 +9,8 @@ class DashboardData {
   final int orcamentosRejeitados;
   final int totalClientes;
   final int totalEquipamentos;
+  final int lembretesProximos7Dias;
+  final int lembretesAtrasados;
 
   DashboardData({
     required this.totalOS,
@@ -19,5 +21,7 @@ class DashboardData {
     required this.orcamentosRejeitados,
     this.totalClientes = 0,
     this.totalEquipamentos = 0,
+    this.lembretesProximos7Dias = 0,
+    this.lembretesAtrasados = 0,
   });
 }

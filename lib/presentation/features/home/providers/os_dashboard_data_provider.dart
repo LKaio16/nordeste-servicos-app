@@ -62,6 +62,8 @@ class OsDashboardNotifier extends StateNotifier<OsDashboardState> {
         orcamentosRejeitados: 0,
         totalClientes: result['totalClientes'] ?? 0,
         totalEquipamentos: result['totalEquipamentos'] ?? 0,
+        lembretesProximos7Dias: result['lembretesProximos7Dias'] ?? 0,
+        lembretesAtrasados: result['lembretesAtrasados'] ?? 0,
       );
 
       state = state.copyWith(isLoading: false, data: dashboardData);

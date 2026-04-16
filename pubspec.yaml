@@ -4,8 +4,8 @@ description: "Sistemas de OS Nordeste Serviços"
 # Impede publicação acidental no pub.dev
 publish_to: 'none'
 
-# Versão da aplicação (1.0.2 = versão Apple; 6 = build number)
-version: 1.0.2+6
+# Versão da aplicação (1.0.3 = versão Apple; 7 = build number)
+version: 1.0.3+7
 
 environment:
   sdk: ^3.7.0

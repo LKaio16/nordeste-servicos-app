@@ -9,6 +9,7 @@ class DesempenhoTecnicoModel {
   final int id;
   final String nome;
   final String? fotoPerfil;
+  final String? fotoUrl;
   final int totalOS;
   final double desempenho;
 
@@ -16,6 +17,7 @@ class DesempenhoTecnicoModel {
     required this.id,
     required this.nome,
     this.fotoPerfil,
+    this.fotoUrl,
     required this.totalOS,
     required this.desempenho,
   });
@@ -30,6 +32,7 @@ class DesempenhoTecnicoModel {
       id: id,
       nome: nome,
       fotoPerfil: fotoPerfil,
+      fotoUrl: fotoUrl,
       totalOS: totalOS,
       desempenho: desempenho,
     );

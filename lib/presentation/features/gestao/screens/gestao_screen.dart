@@ -18,6 +18,7 @@ import '../../equipamentos/screens/novo_equipamento_screen.dart';
 import '../../pecas/screens/nova_peca_material_screen.dart';
 import '../../pecas/screens/peca_material_list_screen.dart';
 import '../../servicos/screens/tipo_servico_list_screen.dart';
+import '../../os/screens/os_lembretes_list_screen.dart';
 import '../../../shared/styles/app_colors.dart';
 
 class GestaoScreen extends StatelessWidget {
@@ -169,6 +170,15 @@ class GestaoScreen extends StatelessWidget {
                         color: AppColors.primaryBlue,
                         onCardTap: () => navigateTo(const ClienteListScreen()),
                         onAddButtonTap: () => navigateTo(const NovoClienteScreen()),
+                      ),
+                      const SizedBox(height: 16),
+                      ManagementCard(
+                        icon: Icons.notifications_active_outlined,
+                        title: 'Lembretes de OS',
+                        subtitle: 'OS fechadas com lembrete ativo',
+                        color: AppColors.warningOrange,
+                        onCardTap: () => navigateTo(const OsLembretesListScreen()),
+                        onAddButtonTap: () => navigateTo(const OsLembretesListScreen()),
                       ),
                       const SizedBox(height: 16),
                       ManagementCard(

@@ -11,6 +11,23 @@ import '../../domain/entities/usuario.dart';
 
 part 'ordem_servico_model.g.dart';
 
+DateTime? _lembreteDataAlvoFromJson(dynamic value) {
+  if (value == null) return null;
+  if (value is String) {
+    return DateTime.tryParse(value);
+  }
+  if (value is List && value.isNotEmpty) {
+    final y = (value[0] as num).toInt();
+    final m = value.length > 1 ? (value[1] as num).toInt() : 1;
+    final d = value.length > 2 ? (value[2] as num).toInt() : 1;
+    return DateTime.utc(y, m, d);
+  }
+  return null;
+}
+
+dynamic _lembreteDataAlvoToJson(DateTime? value) =>
+    value?.toIso8601String().split('T').first;
+
 @JsonSerializable(explicitToJson: true)
 class OrdemServicoModel {
   final int? id;
@@ -38,6 +55,12 @@ class OrdemServicoModel {
   final String? solucaoAplicada;
   final PrioridadeOSModel? prioridade;
 
+  @JsonKey(defaultValue: false)
+  final bool lembreteAtivo;
+  final int? lembreteDiasAposFechamento;
+  @JsonKey(fromJson: _lembreteDataAlvoFromJson, toJson: _lembreteDataAlvoToJson)
+  final DateTime? lembreteDataAlvo;
+
   OrdemServicoModel({
     this.id,
     required this.numeroOS,
@@ -53,6 +76,9 @@ class OrdemServicoModel {
     this.analiseFalha,
     this.solucaoAplicada,
     this.prioridade,
+    this.lembreteAtivo = false,
+    this.lembreteDiasAposFechamento,
+    this.lembreteDataAlvo,
   });
 
   factory OrdemServicoModel.fromJson(Map<String, dynamic> json) =>
@@ -77,6 +103,9 @@ class OrdemServicoModel {
       problemaRelatado: problemaRelatado,
       analiseFalha: analiseFalha,
       solucaoAplicada: solucaoAplicada,
+      lembreteAtivo: lembreteAtivo,
+      lembreteDiasAposFechamento: lembreteDiasAposFechamento,
+      lembreteDataAlvo: lembreteDataAlvo,
     );
   }
 
@@ -98,6 +127,9 @@ class OrdemServicoModel {
       problemaRelatado: entity.problemaRelatado,
       analiseFalha: entity.analiseFalha,
       solucaoAplicada: entity.solucaoAplicada,
+      lembreteAtivo: entity.lembreteAtivo,
+      lembreteDiasAposFechamento: entity.lembreteDiasAposFechamento,
+      lembreteDataAlvo: entity.lembreteDataAlvo,
     );
   }
 
@@ -116,6 +148,9 @@ class OrdemServicoModel {
     String? analiseFalha,
     String? solucaoAplicada,
     PrioridadeOSModel? prioridade,
+    bool? lembreteAtivo,
+    int? lembreteDiasAposFechamento,
+    DateTime? lembreteDataAlvo,
   }) {
     return OrdemServicoModel(
       id: id ?? this.id,
@@ -132,6 +167,10 @@ class OrdemServicoModel {
       analiseFalha: analiseFalha ?? this.analiseFalha,
       solucaoAplicada: solucaoAplicada ?? this.solucaoAplicada,
       prioridade: prioridade ?? this.prioridade,
+      lembreteAtivo: lembreteAtivo ?? this.lembreteAtivo,
+      lembreteDiasAposFechamento:
+          lembreteDiasAposFechamento ?? this.lembreteDiasAposFechamento,
+      lembreteDataAlvo: lembreteDataAlvo ?? this.lembreteDataAlvo,
     );
   }
 }

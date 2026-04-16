@@ -63,6 +63,16 @@ abstract class OsRepository {
   /// Atualiza o status de uma ordem de serviço.
   Future<void> updateOrdemServicoStatus(int id, StatusOSModel status);
 
+  /// Define ou remove lembrete pós-fechamento (somente OS concluída/encerrada com data de fechamento).
+  Future<OrdemServico> updateOrdemServicoLembrete({
+    required int osId,
+    required bool ativo,
+    int? diasAposFechamento,
+  });
+
+  /// Lista OS com lembrete ativo, ordenadas pela data alvo.
+  Future<List<OrdemServico>> listarLembretesAtivos();
+
 // Métodos para gerenciar detalhes da OS (alternativa a repositórios separados para detalhes)
 // Future<List<RegistroTempo>> getRegistrosTempoByOsId(int osId);
 // Future<RegistroTempo> createRegistroTempo(RegistroTempo registro); // Pode precisar de DTO

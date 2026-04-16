@@ -35,6 +35,10 @@ OrdemServicoModel _$OrdemServicoModelFromJson(Map<String, dynamic> json) =>
       solucaoAplicada: json['solucaoAplicada'] as String?,
       prioridade:
           $enumDecodeNullable(_$PrioridadeOSModelEnumMap, json['prioridade']),
+      lembreteAtivo: json['lembreteAtivo'] as bool? ?? false,
+      lembreteDiasAposFechamento:
+          (json['lembreteDiasAposFechamento'] as num?)?.toInt(),
+      lembreteDataAlvo: _lembreteDataAlvoFromJson(json['lembreteDataAlvo']),
     );
 
 Map<String, dynamic> _$OrdemServicoModelToJson(OrdemServicoModel instance) =>
@@ -53,6 +57,10 @@ Map<String, dynamic> _$OrdemServicoModelToJson(OrdemServicoModel instance) =>
       'analiseFalha': instance.analiseFalha,
       'solucaoAplicada': instance.solucaoAplicada,
       'prioridade': _$PrioridadeOSModelEnumMap[instance.prioridade],
+      'lembreteAtivo': instance.lembreteAtivo,
+      'lembreteDiasAposFechamento': instance.lembreteDiasAposFechamento,
+      'lembreteDataAlvo':
+          _lembreteDataAlvoToJson(instance.lembreteDataAlvo),
     };
 
 const _$StatusOSModelEnumMap = {

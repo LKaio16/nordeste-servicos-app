@@ -36,6 +36,11 @@ class OrdemServico extends Equatable {
   final List<FotoOS>? fotos;
   final AssinaturaOS? assinatura;
 
+  /// Lembrete pós-fechamento (dias corridos após data de fechamento; sem vínculo com usuário).
+  final bool lembreteAtivo;
+  final int? lembreteDiasAposFechamento;
+  final DateTime? lembreteDataAlvo;
+
   OrdemServico({
     this.id,
     required this.numeroOS,
@@ -56,6 +61,9 @@ class OrdemServico extends Equatable {
     this.itensUtilizados,
     this.fotos,
     this.assinatura,
+    this.lembreteAtivo = false,
+    this.lembreteDiasAposFechamento,
+    this.lembreteDataAlvo,
   });
 
   OrdemServico copyWith({
@@ -73,6 +81,9 @@ class OrdemServico extends Equatable {
     String? problemaRelatado,
     String? analiseFalha,
     String? solucaoAplicada,
+    bool? lembreteAtivo,
+    int? lembreteDiasAposFechamento,
+    DateTime? lembreteDataAlvo,
   }) {
     return OrdemServico(
       id: id ?? this.id,
@@ -91,6 +102,10 @@ class OrdemServico extends Equatable {
       solucaoAplicada: solucaoAplicada ?? this.solucaoAplicada,
       fotos: this.fotos, // Keep existing photos
       assinatura: this.assinatura, // Keep existing signature
+      lembreteAtivo: lembreteAtivo ?? this.lembreteAtivo,
+      lembreteDiasAposFechamento:
+          lembreteDiasAposFechamento ?? this.lembreteDiasAposFechamento,
+      lembreteDataAlvo: lembreteDataAlvo ?? this.lembreteDataAlvo,
     );
   }
 
@@ -115,5 +130,8 @@ class OrdemServico extends Equatable {
     itensUtilizados,
     fotos,
     assinatura,
+    lembreteAtivo,
+    lembreteDiasAposFechamento,
+    lembreteDataAlvo,
   ];
 }

@@ -211,6 +211,8 @@ class OsRepositoryImpl implements OsRepository {
           'osConcluidas': toInt(data['osConcluidas']),
           'totalClientes': toInt(data['totalClientes']),
           'totalEquipamentos': toInt(data['totalEquipamentos']),
+          'lembretesProximos7Dias': toInt(data['lembretesProximos7Dias']),
+          'lembretesAtrasados': toInt(data['lembretesAtrasados']),
           'osPorTecnico': data['osPorTecnico'] ?? const [],
           'ordensRecentes': data['ordensRecentes'] ?? const [],
         };
@@ -538,6 +540,67 @@ class OsRepositoryImpl implements OsRepository {
         print('*******************************************');
       }
       return null;
+    }
+  }
+
+  @override
+  Future<OrdemServico> updateOrdemServicoLembrete({
+    required int osId,
+    required bool ativo,
+    int? diasAposFechamento,
+  }) async {
+    try {
+      final Map<String, dynamic> body = {'ativo': ativo};
+      if (ativo) {
+        body['diasAposFechamento'] = diasAposFechamento;
+      }
+      final response = await apiClient.patch(
+        '/ordens-servico/$osId/lembrete',
+        data: body,
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> json = response.data as Map<String, dynamic>;
+        final model = OrdemServicoModel.fromJson(json);
+        await localDataSource.saveOrUpdateOs(model);
+        return model.toEntity();
+      }
+      throw ApiException(
+          'Falha ao atualizar lembrete: Status ${response.statusCode}');
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      String msg = e.message ?? 'Erro de rede';
+      if (e.response?.data is Map<String, dynamic>) {
+        final m = e.response!.data as Map<String, dynamic>;
+        msg = (m['message'] ?? m['error'] ?? msg).toString();
+      } else if (e.response?.data != null) {
+        msg = e.response!.data.toString();
+      }
+      throw ApiException('Erro ao atualizar lembrete: $msg');
+    } catch (e) {
+      throw ApiException('Erro inesperado ao atualizar lembrete: $e');
+    }
+  }
+
+  @override
+  Future<List<OrdemServico>> listarLembretesAtivos() async {
+    try {
+      final response = await apiClient.get('/ordens-servico/lembretes');
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = response.data as List<dynamic>;
+        return jsonList
+            .map((e) => OrdemServicoModel.fromJson(e as Map<String, dynamic>))
+            .map((m) => m.toEntity())
+            .toList();
+      }
+      throw ApiException(
+          'Falha ao listar lembretes: Status ${response.statusCode}');
+    } on ApiException {
+      rethrow;
+    } on DioException catch (e) {
+      throw ApiException('Erro de rede ao listar lembretes: ${e.message}');
+    } catch (e) {
+      throw ApiException('Erro inesperado ao listar lembretes: $e');
     }
   }
 

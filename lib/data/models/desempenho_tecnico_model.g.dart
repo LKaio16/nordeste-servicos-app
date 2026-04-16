@@ -12,6 +12,7 @@ DesempenhoTecnicoModel _$DesempenhoTecnicoModelFromJson(
       id: (json['id'] as num).toInt(),
       nome: json['nome'] as String,
       fotoPerfil: json['fotoPerfil'] as String?,
+      fotoUrl: json['fotoUrl'] as String?,
       totalOS: (json['totalOS'] as num).toInt(),
       desempenho: (json['desempenho'] as num).toDouble(),
     );
@@ -22,6 +23,7 @@ Map<String, dynamic> _$DesempenhoTecnicoModelToJson(
       'id': instance.id,
       'nome': instance.nome,
       'fotoPerfil': instance.fotoPerfil,
+      'fotoUrl': instance.fotoUrl,
       'totalOS': instance.totalOS,
       'desempenho': instance.desempenho,
     };

@@ -9,6 +9,7 @@ import '../../orcamentos/providers/orcamento_dashboard_provider.dart';
 import '../models/dashboard_data.dart';
 import '../providers/desempenho_tecnico_provider.dart';
 import '../providers/os_dashboard_data_provider.dart';
+import '../../os/screens/os_lembretes_list_screen.dart';
 import '../../../shared/providers/navigation_providers.dart';
 import '../../../shared/styles/app_colors.dart';
 import '../../../shared/widgets/user_profile_avatar.dart';
@@ -224,6 +225,18 @@ class DashboardPageAdm extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 14),
+            _DashboardLembretesStrip(
+              proximos7Dias: displayOsData.lembretesProximos7Dias,
+              atrasados: displayOsData.lembretesAtrasados,
+              onOpenLista: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const OsLembretesListScreen(),
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 24),
             QuickActionsWidget(actions: mockQuickActions),
             const SizedBox(height: 24),
@@ -355,12 +368,110 @@ class DashboardPageAdm extends ConsumerWidget {
   }
 }
 
+/// Faixa horizontal com resumo de lembretes e atalho para a lista (abaixo de OS e Orçamentos).
+class _DashboardLembretesStrip extends StatelessWidget {
+  final int proximos7Dias;
+  final int atrasados;
+  final VoidCallback onOpenLista;
+
+  const _DashboardLembretesStrip({
+    required this.proximos7Dias,
+    required this.atrasados,
+    required this.onOpenLista,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      elevation: 2,
+      shadowColor: AppColors.primaryBlue.withOpacity(0.12),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onOpenLista,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.notifications_active_outlined,
+                  color: AppColors.primaryBlue,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Lembretes de OS',
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 14,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'Próximos 7 dias: $proximos7Dias',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            color: AppColors.infoBlue,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          'Atrasados: $atrasados',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            color: atrasados > 0 ? AppColors.errorRed : AppColors.textLight,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Abrir lembretes',
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue.withOpacity(0.12),
+                  foregroundColor: AppColors.primaryBlue,
+                ),
+                onPressed: onOpenLista,
+                icon: const Icon(Icons.arrow_forward_rounded),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class DashboardCardWidget extends StatelessWidget {
   final String title;
   final int count;
   final IconData icon;
   final List<StatusItem> statusItems;
   final VoidCallback? onTap;
+  final String? bottomLinkLabel;
+  final VoidCallback? onBottomLink;
 
   const DashboardCardWidget({
     Key? key,
@@ -369,6 +480,8 @@ class DashboardCardWidget extends StatelessWidget {
     required this.icon,
     required this.statusItems,
     this.onTap,
+    this.bottomLinkLabel,
+    this.onBottomLink,
   }) : super(key: key);
 
   @override
@@ -445,6 +558,23 @@ class DashboardCardWidget extends StatelessWidget {
                   ),
                 )).toList(),
               ),
+              if (bottomLinkLabel != null && onBottomLink != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: onBottomLink,
+                    child: Text(
+                      bottomLinkLabel!,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -604,6 +734,7 @@ class TechnicianItemWidget extends StatelessWidget {
       child: Row(
         children: [
           UserProfileAvatar(
+            fotoUrl: technician.fotoUrl,
             fotoPerfilBase64: technician.fotoPerfil,
             radius: 24,
             backgroundColor: AppColors.primaryBlue.withOpacity(0.1),

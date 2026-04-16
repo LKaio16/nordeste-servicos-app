@@ -45,6 +45,9 @@ extension OrdemServicoCopyWith on OrdemServico {
     String? problemaRelatado,
     String? analiseFalha,
     String? solucaoAplicada,
+    bool? lembreteAtivo,
+    int? lembreteDiasAposFechamento,
+    DateTime? lembreteDataAlvo,
   }) {
     return OrdemServico(
       id: id ?? this.id,
@@ -61,6 +64,10 @@ extension OrdemServicoCopyWith on OrdemServico {
       problemaRelatado: problemaRelatado ?? this.problemaRelatado,
       analiseFalha: analiseFalha ?? this.analiseFalha,
       solucaoAplicada: solucaoAplicada ?? this.solucaoAplicada,
+      lembreteAtivo: lembreteAtivo ?? this.lembreteAtivo,
+      lembreteDiasAposFechamento:
+          lembreteDiasAposFechamento ?? this.lembreteDiasAposFechamento,
+      lembreteDataAlvo: lembreteDataAlvo ?? this.lembreteDataAlvo,
     );
   }
 }
@@ -472,6 +479,13 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
                     ),
                   ],
                 ),
+                if (isAdmin &&
+                    !shouldHideActions &&
+                    (ordemServico.status == StatusOSModel.CONCLUIDA ||
+                        ordemServico.status == StatusOSModel.ENCERRADA)) ...[
+                  const SizedBox(height: 16),
+                  _LembreteOsSection(osId: widget.osId, os: ordemServico),
+                ],
                 const SizedBox(height: 16),
                 _buildInfoCard(
                   title: 'Problema Relatado',
@@ -2073,6 +2087,292 @@ class _OsDetailScreenState extends ConsumerState<OsDetailScreen> {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _LembreteOsSection extends ConsumerStatefulWidget {
+  final int osId;
+  final OrdemServico os;
+
+  const _LembreteOsSection({required this.osId, required this.os});
+
+  @override
+  ConsumerState<_LembreteOsSection> createState() => _LembreteOsSectionState();
+}
+
+class _LembreteOsSectionState extends ConsumerState<_LembreteOsSection> {
+  late bool _ativo;
+  late final TextEditingController _diasController;
+  bool _salvando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ativo = widget.os.lembreteAtivo;
+    _diasController = TextEditingController(
+      text: (widget.os.lembreteDiasAposFechamento ?? 30).toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _diasController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LembreteOsSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.os.lembreteAtivo != widget.os.lembreteAtivo ||
+        oldWidget.os.lembreteDiasAposFechamento !=
+            widget.os.lembreteDiasAposFechamento) {
+      _ativo = widget.os.lembreteAtivo;
+      _diasController.text =
+          (widget.os.lembreteDiasAposFechamento ?? 30).toString();
+    }
+  }
+
+  Future<void> _salvar() async {
+    if (widget.os.dataFechamento == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Esta OS não tem data de fechamento registrada; não é possível definir lembrete.'),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
+      return;
+    }
+
+    int? dias;
+    if (_ativo) {
+      dias = int.tryParse(_diasController.text.trim());
+      if (dias == null || dias < 1 || dias > 365) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Informe um número de dias entre 1 e 365.'),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+        return;
+      }
+    }
+
+    setState(() => _salvando = true);
+    try {
+      await ref.read(osRepositoryProvider).updateOrdemServicoLembrete(
+            osId: widget.osId,
+            ativo: _ativo,
+            diasAposFechamento: dias,
+          );
+      ref.invalidate(osDetailProvider(widget.osId));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Lembrete atualizado.'),
+            backgroundColor: AppColors.successGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro: $e'),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _salvando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final alvo = widget.os.lembreteDataAlvo;
+    final alvoStr = alvo != null
+        ? DateFormat('dd/MM/yyyy').format(alvo)
+        : (_ativo ? '— (salve para calcular)' : '—');
+
+    return _buildInfoCard(
+      title: 'Lembrete pós-fechamento',
+      icon: Icons.notifications_active_outlined,
+      children: [
+        Text(
+          'Dias corridos após a data de fechamento da OS. O lembrete não fica vinculado a um usuário.',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: AppColors.textLight,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            'Lembrete ativo',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+          ),
+          value: _ativo,
+          activeColor: AppColors.primaryBlue,
+          onChanged: _salvando
+              ? null
+              : (v) {
+                  setState(() => _ativo = v);
+                },
+        ),
+        if (_ativo) ...[
+          TextField(
+            controller: _diasController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Dias após o fechamento',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        _buildDetailRow(
+          label: 'Data alvo atual',
+          value: alvoStr,
+          icon: Icons.event_note_outlined,
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _salvando ? null : _salvar,
+            icon: _salvando
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.save_outlined, color: Colors.white),
+            label: Text(
+              _salvando ? 'Salvando...' : 'Salvar lembrete',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(16.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, size: 20, color: AppColors.primaryBlue),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
+                ),
+              ],
+            ),
+            if (children.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Divider(
+                color: AppColors.dividerColor.withOpacity(0.3),
+                thickness: 1,
+              ),
+              const SizedBox(height: 16),
+              ...children,
+            ]
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow({
+    required String label,
+    String? value,
+    IconData? icon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 18, color: AppColors.textLight),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            flex: 2,
+            child: Text(
+              '$label:',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: AppColors.textLight,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value ?? '--',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
