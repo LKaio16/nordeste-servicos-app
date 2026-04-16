@@ -2,14 +2,18 @@
 
 import 'package:dio/dio.dart';
 import '../../config/app_config.dart';
+import '../auth/session_bus.dart';
 import '../error/exceptions.dart';
-import '../storage/secure_storage_service.dart'; // Importe o SecureStorageService
+import '../storage/secure_storage_service.dart';
+
+const String _kSkipAuth = 'skipAuth';
 
 class ApiClient {
   final Dio _dio;
-  final SecureStorageService _secureStorageService; // Injete o serviço de storage
+  final SecureStorageService _secureStorageService;
 
-  // Construtor: Agora recebe o Dio e o SecureStorageService
+  Future<bool>? _refreshInFlight;
+
   ApiClient(this._dio, this._secureStorageService) {
     _dio.options.baseUrl = AppConfig.apiBaseUrl;
     _dio.options.connectTimeout = const Duration(seconds: AppConfig.apiTimeoutSeconds);
@@ -17,55 +21,98 @@ class ApiClient {
     _dio.options.headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'ngrok-skip-browser-warning': 'true', // <--- ADICIONE ESTA LINHA
+      'ngrok-skip-browser-warning': 'true',
     };
 
-    // Adiciona Interceptors para logging e autenticação
     _dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
 
-    // Interceptor para adicionar o token JWT
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        // Não adiciona o token para a requisição de login (ou registro, se houver)
+        if (options.extra[_kSkipAuth] == true) {
+          options.headers.remove('Authorization');
+          return handler.next(options);
+        }
         if (!options.path.contains('/auth/login') && !options.path.contains('/auth/register')) {
           final storedData = await _secureStorageService.getLoginData();
           final String? token = storedData['token'];
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
-            print('Token JWT adicionado ao header: $token'); // Para depuração
-          } else {
-            print('Nenhum token JWT encontrado ou token vazio.'); // Para depuração
           }
         }
-        // Se você quiser garantir que o ngrok-skip-browser-warning seja ADICIONADO A TODAS as requisições,
-        // incluindo login, ele já estará nas options.headers definidas acima.
-        // Não precisa adicionar novamente aqui, a menos que haja uma lógica específica
-        // para removê-lo em algum lugar.
         return handler.next(options);
       },
       onError: (DioException error, handler) async {
-        // Tratamento para 401 Unauthorized (token expirado ou inválido)
-        if (error.response?.statusCode == 401) {
-          print('Erro 401: Token inválido ou expirado. Forçando logout e limpando storage.');
-          await _secureStorageService.deleteLoginData(); // Limpa os dados persistentes
-          // TODO: Você precisará de um mecanismo para notificar a UI para navegar para a tela de login.
-          // Isso geralmente não é feito diretamente no interceptor para evitar dependências de UI.
-          // Uma abordagem é usar um EventEmitter, um stream global, ou um listener no authProvider
-          // para reagir a essa situação e redirecionar a navegação.
-          // Por exemplo, seu authProvider pode ter um método `forceLogout()` que o interceptor chama.
+        final status = error.response?.statusCode;
+        final path = error.requestOptions.path;
+
+        if (status == 401 &&
+            !path.contains('/auth/login') &&
+            !path.contains('/auth/register') &&
+            !path.contains('/auth/refresh')) {
+          final ok = await _refreshTokensLocked();
+          if (ok) {
+            final opts = error.requestOptions;
+            final data = await _secureStorageService.getLoginData();
+            final token = data['token'];
+            if (token != null && token.isNotEmpty) {
+              opts.headers['Authorization'] = 'Bearer $token';
+            }
+            try {
+              final response = await _dio.fetch(opts);
+              return handler.resolve(response);
+            } on DioException catch (e) {
+              return handler.next(e);
+            }
+          }
+          await _secureStorageService.deleteLoginData();
+          SessionBus.instance.emitExpired();
         }
         return handler.next(error);
       },
     ));
   }
 
-  // Métodos genéricos para requisição GET, POST, PUT, DELETE
+  Future<bool> _performTokenRefresh() async {
+    final stored = await _secureStorageService.getLoginData();
+    final refresh = stored['refreshToken'];
+    if (refresh == null || refresh.isEmpty) {
+      return false;
+    }
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/auth/refresh',
+        data: {'refreshToken': refresh},
+        options: Options(extra: {_kSkipAuth: true}),
+      );
+      if (res.statusCode == 200 && res.data != null) {
+        final access = res.data!['accessToken'] as String?;
+        final newRefresh = res.data!['refreshToken'] as String?;
+        if (access == null || newRefresh == null) {
+          return false;
+        }
+        await _secureStorageService.updateTokens(accessToken: access, refreshToken: newRefresh);
+        return true;
+      }
+    } on DioException catch (_) {
+      return false;
+    } catch (_) {
+      return false;
+    }
+    return false;
+  }
+
+  Future<bool> _refreshTokensLocked() {
+    _refreshInFlight ??= _performTokenRefresh().whenComplete(() {
+      _refreshInFlight = null;
+    });
+    return _refreshInFlight!;
+  }
 
   Future<Response> get(
-      String path, {
-        Map<String, dynamic>? queryParameters,
-        Options? options,
-      }) async {
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
     try {
       final response = await _dio.get(
         path,
@@ -124,7 +171,6 @@ class ApiClient {
     }
   }
 
-  // Método para tratar erros específicos do Dio (permanece o mesmo)
   ApiException _handleError(DioException error) {
     String message;
     switch (error.type) {
@@ -143,9 +189,6 @@ class ApiClient {
         if (error.response?.statusCode == 404) {
           throw NotFoundException("Recurso não encontrado.");
         }
-        // Nota: O tratamento de 401 para token expirado/inválido já está no interceptor onError.
-        // Se você tiver 401 por credenciais inválidas no login, o DioException.badResponse
-        // ainda será capturado e você pode adicionar uma exceção mais específica aqui se quiser.
         break;
       case DioExceptionType.cancel:
         message = "Requisição cancelada.";
@@ -158,9 +201,6 @@ class ApiClient {
         break;
       case DioExceptionType.unknown:
         message = "Ocorreu um erro inesperado: ${error.message}";
-        break;
-      default: // Para garantir que todos os casos são tratados, embora 'unknown' já cubra muitos.
-        message = "Erro desconhecido: ${error.message}";
         break;
     }
     return ApiException(message);

@@ -7,11 +7,17 @@ import '../../../../domain/entities/auth_result.dart';
 import 'auth_state.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../../../data/models/perfil_usuario_model.dart';
+import '../../../../core/auth/session_bus.dart';
 
 final authProvider = StateNotifierProvider<AuthStateNotifier, AuthState>((ref) {
   final usuarioRepository = ref.read(usuarioRepositoryProvider);
   final secureStorageService = ref.read(secureStorageServiceProvider);
-  return AuthStateNotifier(usuarioRepository, secureStorageService);
+  final notifier = AuthStateNotifier(usuarioRepository, secureStorageService);
+  final sub = SessionBus.instance.onExpired.listen((_) {
+    notifier.logout();
+  });
+  ref.onDispose(sub.cancel);
+  return notifier;
 });
 
 class AuthStateNotifier extends StateNotifier<AuthState> {
@@ -64,7 +70,8 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
     try {
       final AuthResult authResult = await _usuarioRepository.login(email, password);
       await _secureStorageService.saveLoginData(
-        token: authResult.token,
+        accessToken: authResult.accessToken,
+        refreshToken: authResult.refreshToken,
         user: authResult.user,
       );
       state = state.copyWith(

@@ -169,7 +169,8 @@ class UsuarioRepositoryImpl implements UsuarioRepository {
 
         return AuthResult(
           user: loginResponseModel.toUsuarioEntity(),
-          token: loginResponseModel.token,
+          accessToken: loginResponseModel.accessToken,
+          refreshToken: loginResponseModel.refreshToken,
         );
 
       } else {
